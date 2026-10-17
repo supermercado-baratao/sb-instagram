@@ -22,6 +22,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV DATA_DIR=/data
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# The PNG is a screenshot taken by Chromium, installed by the same playwright-core version the app
+# uses, so the browser revision matches the one the e2e tests run on
+RUN --mount=type=bind,from=deps,source=/app/node_modules,target=/deps \
+  node /deps/playwright-core/cli.js install --with-deps chromium-headless-shell \
+  && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /data && chown node:node /data
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/.next/standalone ./
