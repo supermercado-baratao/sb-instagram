@@ -30,10 +30,11 @@ Os dados da instância (banco e fotos enviadas) ficam no volume nomeado `data`, 
 
 ### Desenvolvimento
 
-Instale as dependências e inicie o servidor de desenvolvimento (versão do Node no `.nvmrc`, gerenciador de pacotes: pnpm):
+Instale as dependências, o Chromium (usado para gerar o PNG do pôster e pelos testes E2E) e inicie o servidor de desenvolvimento (versão do Node no `.nvmrc`, gerenciador de pacotes: pnpm):
 
 ```bash
 pnpm install
+pnpm exec playwright install chromium
 pnpm dev
 ```
 
@@ -87,6 +88,12 @@ Abaixo estão os destaques das convenções.
 - Os componentes são agrupados por papel: `ui/` para blocos visuais (os do shadcn em `ui/shadcn/`), `blocks/` para peças compostas reutilizadas entre páginas (agrupadas por domínio, ex.: `blocks/post/`), `providers/` para providers de contexto e `layouts/` para as estruturas de página, cujas partes privadas ficam numa pasta `_components/` ao lado.
 - Os estilos globais ficam em `src/app/styles/globals.css`.
 - O que não é exclusivo do frontend, como `src/tests`, fica direto em `src`, ao lado de `app`. Os tipos e as regras do domínio (pôster, layouts, modelos de arte), usados pela interface e pelo servidor, ficam em `src/domain`.
+
+### Pôster em PNG
+
+- O PNG é uma captura do componente do pôster feita pelo Chromium headless (`playwright-core`), então sai idêntico à pré-visualização. O `ImageResponse` (Satori) não é usado porque não suporta grid, variáveis CSS nem cores relativas.
+- As fontes do pôster são servidas pela própria instância (`next/font`), então a geração funciona sem internet.
+- O Chromium vem dentro da imagem Docker, que por isso tem cerca de 1,3 GB.
 
 ### Estilo e UI
 

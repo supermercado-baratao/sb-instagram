@@ -1,3 +1,4 @@
+import { Download } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -8,26 +9,17 @@ import {
   products,
   templates
 } from '@/app/(pages)/preview/_components/fixtures'
+import { getPreviewOptions } from '@/app/(pages)/preview/_components/preview-options'
 import { Poster } from '@/app/components/blocks/poster'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
-import {
-  DEFAULT_POSTER_LAYOUT,
-  getPageTemplate,
-  isPosterLayout,
-  posterLayouts
-} from '@/domain/poster'
+import { posterLayouts } from '@/domain/poster'
 
 export const metadata: Metadata = {
   title: 'Pré-visualização do pôster'
 }
 
 const Preview = async ({ searchParams }: PageProps<'/preview'>) => {
-  const parameters = await searchParams
-  const requestedLayout = Number(parameters.layout)
-  const layout = isPosterLayout(requestedLayout)
-    ? requestedLayout
-    : DEFAULT_POSTER_LAYOUT
-  const template = getPageTemplate(templates, String(parameters.template))
+  const { layout, template } = getPreviewOptions(await searchParams)
   if (!template) notFound()
 
   return (
@@ -67,6 +59,14 @@ const Preview = async ({ searchParams }: PageProps<'/preview'>) => {
           </Link>
         ))}
       </nav>
+      <a
+        href={`/preview/poster.png?${new URLSearchParams({ layout: String(layout), template: template.id })}`}
+        download
+        className={buttonVariants()}
+      >
+        <Download data-icon="inline-start" aria-hidden />
+        Baixar PNG
+      </a>
       <div className="zoom-[0.3] sm:zoom-[0.55] lg:zoom-[0.7]">
         <Poster
           brand={brand}

@@ -29,7 +29,7 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 
 ### Docker & data directory
 
-- The app is built with `output: 'standalone'` (`next.config.ts`) and shipped by the multi-stage `Dockerfile` (`node:24-slim`, pnpm from `packageManager` via corepack). The runtime stage has no pnpm, runs `node server.js` as the unprivileged `node` user and only holds the standalone output, `.next/static`, `public` and the migrations folder (read from disk at startup, so output file tracing doesn't copy it).
+- The app is built with `output: 'standalone'` (`next.config.ts`) and shipped by the multi-stage `Dockerfile` (`node:24-slim`, pnpm from `packageManager` via corepack). The runtime stage has no pnpm, runs `node server.js` as the unprivileged `node` user and only holds the standalone output, `.next/static`, `public` and the migrations folder (read from disk at startup, so output file tracing doesn't copy it), plus the Chromium headless shell used to render the poster PNG (see Poster PNG).
 - `compose.yaml` runs one instance with the named volume `data` mounted at `/data`. Run it with `docker compose up -d --build`.
 - Everything the instance persists (SQLite database, uploaded photos) lives under the data directory, read from `dataDirectory` in `src/infra/data-directory.ts`: `DATA_DIR` when set (`/data` in the image), otherwise `data/` at the project root (git-ignored). Never write instance data anywhere else, or it is lost when the container is replaced.
 - Keep the base image on Debian (`-slim`), not Alpine: native modules (SQLite driver, `sharp`) ship glibc prebuilds.
@@ -45,6 +45,14 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - Each feature's issue adds its own tables and columns. `products` starts with only `code` and `name`.
 - Relational queries use the 1.0 API: relations are declared with `defineRelations` and passed to `drizzle()` as `relations`, not `schema`. When following Drizzle examples, check they are for 1.0 and not 0.x.
 - `better-sqlite3` ships N-API prebuilds inside the package, so its install script stays blocked (`allowBuilds` in `pnpm-workspace.yaml`): allowing it would compile from source, which fails in the slim image (no Python or compiler).
+
+### Poster PNG
+
+- The PNG is a screenshot of the `Poster` component taken by headless Chromium through `playwright-core` (`renderPosterPng` in `src/infra/poster-renderer.ts`), so it matches the on-screen preview pixel for pixel. Don't switch to `ImageResponse` (Satori): it supports neither CSS grid, CSS variables nor relative colors, nor the SVG `textLength` the price tag relies on, so the poster would need a second, diverging implementation.
+- The renderer opens a page of the same server (`localhost:$PORT`), so it captures a route that renders only the poster at its real size (`POSTER_SIZE`), with no zoom or controls. One browser is launched lazily and shared by every request; each request gets its own page.
+- The poster fonts come from `next/font`, which serves them from the instance, so rendering needs no internet access. The renderer waits for `document.fonts.ready` before the screenshot.
+- `playwright-core` stays on the same version as `@playwright/test`, so `pnpm dev`, the e2e tests and the image all use the same Chromium revision. Locally the browser comes from `pnpm exec playwright install chromium`; the `Dockerfile` installs `chromium-headless-shell` with its system dependencies into `PLAYWRIGHT_BROWSERS_PATH` (`/ms-playwright`), which is what makes the image about 1.3 GB.
+- Output file tracing misses `playwright-core/browsers.json`, read at runtime, so `next.config.ts` adds it through `outputFileTracingIncludes`.
 
 ### Package manager
 
