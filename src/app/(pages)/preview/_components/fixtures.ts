@@ -1,40 +1,10 @@
-import type {
-  Brand,
-  Offer,
-  OfferProduct,
-  PosterTemplate
-} from '@/domain/poster'
-
-export const brand: Brand = {
-  name: 'Supermercado Exemplo',
-  logo: null,
-  slogan: 'O menor preço da cidade',
-  instagram: '@supermercadoexemplo'
-}
+import type { Offer, OfferProduct } from '@/domain/poster'
 
 export const offer: Offer = {
   validUntil: '20/10/2026',
   highlightTitle: 'Ofertas da semana',
   highlightMessage: 'Só nesta loja'
 }
-
-export const templates: PosterTemplate[] = [
-  {
-    id: 'mercado',
-    name: 'Mercado',
-    colors: { primary: '#1a1d6b', accent: '#e01b22' }
-  },
-  {
-    id: 'acougue',
-    name: 'Açougue',
-    colors: { primary: '#5c1310', accent: '#e01b22' }
-  },
-  {
-    id: 'hortifruti',
-    name: 'Hortifrúti',
-    colors: { primary: '#14532d', accent: '#ea580c' }
-  }
-]
 
 const product = (
   code: string,
@@ -69,3 +39,8 @@ export const products: OfferProduct[] = [
   product('8', '', '', '', 0),
   product('9', 'Macarrão espaguete', 'Renata Superiore Grano Duro', '500g', 105)
 ]
+
+export {
+  DEFAULT_BRAND as brand,
+  DEFAULT_TEMPLATES as templates
+} from '@/domain/poster-defaults'
