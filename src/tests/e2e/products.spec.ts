@@ -9,7 +9,7 @@ const PHOTO = Buffer.from(
 test('saves a scanned product and fills the form when it is scanned again', async ({
   page
 }) => {
-  // The dev server keeps the local data directory, so each run uses a code it never saw
+  // A reused e2e server keeps its data between runs, so each run uses a code it never saw
   const code = `E2E-${Date.now()}`
   const codeField = page.getByLabel('Código de barras ou código interno')
 

@@ -130,7 +130,7 @@ Abaixo estão os destaques das convenções.
 ### Testes
 
 - **Testes unitários:** Vitest com `jsdom` e Testing Library. Rode `pnpm test` (uma vez) ou `pnpm test:watch`. Só arquivos `src/**/*.test.{ts,tsx}` são considerados.
-- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. O servidor de desenvolvimento sobe automaticamente.
+- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. Os testes sobem um servidor de desenvolvimento próprio na porta 3100, com os dados em `.next/e2e/data`, então nunca alteram os dados de `data/` e podem rodar com o `pnpm dev` aberto.
 - Testamos apenas a lógica que escrevemos, não o comportamento de bibliotecas ou do framework.
 
 ### Git hooks e CI
