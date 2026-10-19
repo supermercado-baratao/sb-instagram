@@ -4,10 +4,10 @@ import path from 'node:path'
 import { eq } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
-import { CATALOG_IMAGE_EXTENSION } from '@/domain/catalog'
 import {
   type FoundProduct,
   getCodeType,
+  getPhotoFileName,
   normalizeCode,
   type Product
 } from '@/domain/product'
@@ -60,7 +60,7 @@ const copyCatalogPhoto = async (
   catalog: string,
   photos: string
 ) => {
-  const photo = `${code}${CATALOG_IMAGE_EXTENSION}`
+  const photo = getPhotoFileName(code)
   await mkdir(photos, { recursive: true })
   try {
     await copyFile(getCatalogImageFile(code, catalog), path.join(photos, photo))

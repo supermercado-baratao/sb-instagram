@@ -45,7 +45,7 @@ Abra [http://localhost:3000](http://localhost:3000) no navegador. Fora do Docker
 Os produtos sem código de barras (carnes, hortifrúti, padaria) são identificados pelo código interno do seu mercado, o mesmo usado no caixa ou na balança. O catálogo não conhece esse código, então a foto é associada a ele no seu mercado:
 
 1. Escolha a imagem em [`catalog/no-ean/`](./catalog/no-ean/), pelo nome da descrição do produto (ex.: `picanha-bovina.png`).
-2. Ao cadastrar o produto com o código interno, escolha essa imagem. O app copia a imagem para o diretório de dados da instância, já com o nome do código interno. _(A escolha no cadastro ainda está em desenvolvimento.)_
+2. Em **Produtos** (`/produtos`), bipe ou digite o código interno e escolha essa imagem em "Ou escolha uma imagem do catálogo". O app copia a imagem para o diretório de dados da instância, já com o nome do código interno.
 
 Como alternativa, copie o arquivo para a pasta de fotos de produtos no diretório de dados e renomeie-o para o código interno, mantendo a extensão (ex.: `picanha-bovina.png` vira `1234.png`).
 
@@ -92,6 +92,7 @@ Abaixo estão os destaques das convenções.
 - SQLite com **Drizzle ORM** 1.0 (linha `1.0.0-rc`, a mesma da documentação atual do Drizzle) e o driver `better-sqlite3`. O banco é o arquivo `database.sqlite` no diretório de dados.
 - O cliente, o schema e as migrations ficam em `src/infra/database`. As migrations pendentes são aplicadas automaticamente quando a aplicação inicia, no `pnpm dev` e no container.
 - Os produtos da instância ficam na tabela `products`, identificados pelo código (EAN ou código interno). A busca por código procura primeiro na instância e, para um EAN, no catálogo comunitário; ao ser usado, o produto do catálogo é salvo na instância com uma cópia da foto em `photos/`, no diretório de dados.
+- As fotos enviadas no cadastro são reduzidas para no máximo 800 px e salvas em PNG como `photos/<código>.png`, no diretório de dados. A rota `/fotos/<código>` serve a foto do mercado e, se ela não existir, a do catálogo. Por isso, o código só aceita letras sem acento, números, ponto, hífen e sublinhado.
 - Para mudar o schema, edite `schema.ts`, rode `pnpm db:generate --name <mudança>` e versione a pasta da migration gerada. Uma migration que já foi para a `main` nunca é editada: crie outra.
 
 ### Estrutura do projeto
@@ -129,7 +130,7 @@ Abaixo estão os destaques das convenções.
 ### Testes
 
 - **Testes unitários:** Vitest com `jsdom` e Testing Library. Rode `pnpm test` (uma vez) ou `pnpm test:watch`. Só arquivos `src/**/*.test.{ts,tsx}` são considerados.
-- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. O servidor de desenvolvimento sobe automaticamente.
+- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. Os testes sobem um servidor de desenvolvimento próprio na porta 3100, com os dados em `.next/e2e/data`, então nunca alteram os dados de `data/` e podem rodar com o `pnpm dev` aberto.
 - Testamos apenas a lógica que escrevemos, não o comportamento de bibliotecas ou do framework.
 
 ### Git hooks e CI
