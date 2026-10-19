@@ -10,7 +10,7 @@ O projeto nasceu no Supermercado Baratão e foi pensado para qualquer supermerca
 - **Dados locais:** produtos, ofertas e configurações ficam num banco SQLite, e as fotos enviadas pelo mercado ficam no mesmo volume de dados do container.
 - **Marca configurável:** logo, cores, slogan e @ do Instagram são definidos no próprio app.
 - **Produtos por código:** cada produto é identificado pelo código de barras (EAN) ou, quando não tem um (carnes, hortifrúti, padaria), pelo código interno do mercado. Bipar um produto já usado preenche nome, marca, unidade e foto automaticamente. O código é lido por leitor USB ou digitado.
-- **Catálogo comunitário:** o repositório mantém um catálogo aberto a contribuições, com fotos e dados de produtos por EAN e uma pasta de fotos de produtos sem EAN, nomeadas pela descrição (ex.: `picanha-bovina.png`). Como o código interno muda de mercado para mercado, cada mercado associa uma dessas fotos ao próprio código.
+- **Catálogo comunitário:** o repositório mantém um catálogo aberto a contribuições, com fotos e dados de produtos por EAN (`catalog/ean/`) e uma pasta de fotos de produtos sem EAN, nomeadas pela descrição (`catalog/no-ean/`, ex.: `picanha-bovina.png`). Como o código interno muda de mercado para mercado, cada mercado associa uma dessas fotos ao próprio código. Para contribuir com produtos, veja o [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 Ainda não fazem parte da primeira versão: login, leitura do código pela câmera, publicação direta no Instagram, agendamento de posts, legendas geradas por IA e editor visual de artes.
 
@@ -40,6 +40,15 @@ pnpm dev
 
 Abra [http://localhost:3000](http://localhost:3000) no navegador. Fora do Docker, os dados ficam em `data/` na raiz do projeto (ignorada pelo git), a menos que `DATA_DIR` aponte para outro lugar.
 
+### Usando uma imagem sem EAN
+
+Os produtos sem código de barras (carnes, hortifrúti, padaria) são identificados pelo código interno do seu mercado, o mesmo usado no caixa ou na balança. O catálogo não conhece esse código, então a foto é associada a ele no seu mercado:
+
+1. Escolha a imagem em [`catalog/no-ean/`](./catalog/no-ean/), pelo nome da descrição do produto (ex.: `picanha-bovina.png`).
+2. Ao cadastrar o produto com o código interno, escolha essa imagem. O app copia a imagem para o diretório de dados da instância, já com o nome do código interno. _(A escolha no cadastro ainda está em desenvolvimento.)_
+
+Como alternativa, copie o arquivo para a pasta de fotos de produtos no diretório de dados e renomeie-o para o código interno, mantendo a extensão (ex.: `picanha-bovina.png` vira `1234.png`).
+
 ## Scripts
 
 | Script                                      | O que faz                                                   |
@@ -52,6 +61,8 @@ Abra [http://localhost:3000](http://localhost:3000) no navegador. Fora do Docker
 | `pnpm prettier:check` / `pnpm prettier:fix` | Confere (e reescreve) a formatação                          |
 | `pnpm test` / `pnpm test:watch`             | Roda os testes unitários (Vitest)                           |
 | `pnpm test:e2e` / `pnpm test:e2e:ui`        | Roda os testes end-to-end (Playwright)                      |
+| `pnpm catalog:check`                        | Valida os arquivos do catálogo comunitário                  |
+| `pnpm catalog:optimize`                     | Redimensiona e comprime as imagens do catálogo              |
 | `pnpm db:generate`                          | Gera uma migration a partir do schema do banco              |
 | `pnpm db:studio`                            | Abre o Drizzle Studio no banco local                        |
 | `pnpm shadcn:add <name>`                    | Adiciona um componente do shadcn/ui                         |
@@ -87,7 +98,8 @@ Abaixo estão os destaques das convenções.
 - `src/app` guarda apenas código exclusivo do frontend. As rotas ficam no route group `src/app/(pages)` (que não altera a URL), os componentes compartilhados em `src/app/components`, os hooks do React em `src/app/hooks` e os demais helpers em `src/app/helpers`. Não há barrels `index.ts`: cada módulo é importado direto do seu arquivo pelo alias `@/`.
 - Os componentes são agrupados por papel: `ui/` para blocos visuais (os do shadcn em `ui/shadcn/`), `blocks/` para peças compostas reutilizadas entre páginas (agrupadas por domínio, ex.: `blocks/post/`), `providers/` para providers de contexto e `layouts/` para as estruturas de página, cujas partes privadas ficam numa pasta `_components/` ao lado.
 - Os estilos globais ficam em `src/app/styles/globals.css`.
-- O que não é exclusivo do frontend, como `src/tests`, fica direto em `src`, ao lado de `app`. Os tipos e as regras do domínio (pôster, layouts, modelos de arte), usados pela interface e pelo servidor, ficam em `src/domain`.
+- O que não é exclusivo do frontend, como `src/tests`, fica direto em `src`, ao lado de `app`. Os tipos e as regras do domínio (pôster, layouts, modelos de arte, catálogo), usados pela interface e pelo servidor, ficam em `src/domain`.
+- O catálogo comunitário fica em `catalog/`, na raiz: `catalog/ean/` com `<ean>.png` e `<ean>.json` e `catalog/no-ean/` com as imagens nomeadas pela descrição. As regras de nome, de JSON e de imagem estão no [`CONTRIBUTING.md`](./CONTRIBUTING.md) e são conferidas por `pnpm catalog:check`.
 
 ### Pôster em PNG
 
@@ -122,13 +134,13 @@ Abaixo estão os destaques das convenções.
 ### Git hooks e CI
 
 - **Hooks do Husky:**
-  - `pre-commit` roda o `lint-staged` (Prettier, ESLint e `vitest related` nos arquivos em stage).
+  - `pre-commit` roda o `lint-staged` (Prettier, ESLint e `vitest related` nos arquivos em stage, e a otimização das imagens do catálogo).
   - `commit-msg` adiciona o emoji do prefixo e roda o `commitlint`.
   - `pre-push` roda `pnpm type-check` e `pnpm test:e2e`.
 - **Mensagens de commit** são escritas em inglês, no imperativo e em minúsculas, com um prefixo semântico, por exemplo `✨ feat: add product page`. Basta digitar `feat: ...`, pois o hook adiciona o emoji.
 - **Branches:** o trabalho de cada issue vai numa branch nova chamada `<scope>/<title>#<issue>`, em que `<scope>` é o prefixo do commit sem o emoji, por exemplo `feat/home-page#3`. Para um trabalho bem específico, acrescente um alvo opcional entre parênteses (uma página, componente ou outra área), por exemplo `fix(card)/focus-ring#7`. Nada de uma issue é commitado direto na `main`.
 - **Issues** são criadas a partir do template **Tarefa** (`.github/ISSUE_TEMPLATE/task.md`). Marque todos os itens concluídos da lista no corpo da issue antes de fechá-la.
-- **GitHub Actions** (`.github/workflows/ci.yml`) roda em todo pull request: commitlint, type-check, ESLint, Prettier, testes unitários e testes E2E.
+- **GitHub Actions** (`.github/workflows/ci.yml`) roda em todo pull request: commitlint, type-check, ESLint, Prettier, testes unitários, validação do catálogo e testes E2E.
 
 ### Configuração do assistente de IA
 
