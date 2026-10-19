@@ -76,6 +76,9 @@ const PLACEHOLDER_FILE = '.gitkeep'
 // Requires a letter so a code can't be committed as if it were a description
 const DESCRIPTION_NAME_PATTERN = /^(?=.*[a-z])[a-z\d]+(?:-[a-z\d]+)*$/
 
+export const isCatalogDescriptionName = (name: string) =>
+  DESCRIPTION_NAME_PATTERN.test(name)
+
 const splitFileName = (fileName: string) => {
   const dotIndex = fileName.lastIndexOf('.')
   return dotIndex <= 0
@@ -152,7 +155,7 @@ export const checkNoEanFileNames = (fileNames: string[]): CatalogError[] =>
       ]
     }
 
-    if (!DESCRIPTION_NAME_PATTERN.test(base)) {
+    if (!isCatalogDescriptionName(base)) {
       return [
         {
           file: fileName,
