@@ -1,0 +1,80 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "f77796b5-2ba9-408d-b96d-3b64c201a589",
+  "prevIds": ["d89c6dee-23f3-48c4-a35b-c738fcd6ad14"],
+  "ddl": [
+    {
+      "name": "products",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "code",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "codeType",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "brand",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "unit",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "photo",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "columns": ["code"],
+      "nameExplicit": false,
+      "name": "products_pk",
+      "entityType": "pks",
+      "table": "products"
+    }
+  ],
+  "renames": []
+}

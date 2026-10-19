@@ -91,6 +91,7 @@ Abaixo estão os destaques das convenções.
 
 - SQLite com **Drizzle ORM** 1.0 (linha `1.0.0-rc`, a mesma da documentação atual do Drizzle) e o driver `better-sqlite3`. O banco é o arquivo `database.sqlite` no diretório de dados.
 - O cliente, o schema e as migrations ficam em `src/infra/database`. As migrations pendentes são aplicadas automaticamente quando a aplicação inicia, no `pnpm dev` e no container.
+- Os produtos da instância ficam na tabela `products`, identificados pelo código (EAN ou código interno). A busca por código procura primeiro na instância e, para um EAN, no catálogo comunitário; ao ser usado, o produto do catálogo é salvo na instância com uma cópia da foto em `photos/`, no diretório de dados.
 - Para mudar o schema, edite `schema.ts`, rode `pnpm db:generate --name <mudança>` e versione a pasta da migration gerada. Uma migration que já foi para a `main` nunca é editada: crie outra.
 
 ### Estrutura do projeto
