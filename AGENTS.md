@@ -19,7 +19,7 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - **No login in v1.** The instance runs on the store's network; whoever reaches the URL can use it.
 - **Store branding is data, not code.** Logo, colors, slogan and Instagram handle are configured per instance in the app, so nothing store-specific (including Supermercado Baratão, where the project started) is hardcoded.
 - **Products are keyed by code:** the barcode (EAN) when the product has one, otherwise the store's internal code (the one used by its POS or scale). Barcodes are read from a USB scanner or typed; camera scanning is out of v1.
-- **Community catalog.** The only content versioned in git and open to contributions is the product catalog, in two folders: products with an EAN (an image plus a data file with name, brand and unit, both named after the EAN) and products without an EAN (images only, named after the product description, e.g. `picanha-bovina.webp`). Internal codes differ from store to store, so a product without an EAN never enters the catalog by its code: the store assigns a catalog image to its own internal code.
+- **Community catalog.** The only content versioned in git and open to contributions is the product catalog, in two folders: products with an EAN (an image plus a data file with name, brand and unit, both named after the EAN) and products without an EAN (images only, named after the product description, e.g. `picanha-bovina.png`). Internal codes differ from store to store, so a product without an EAN never enters the catalog by its code: the store assigns a catalog image to its own internal code. See Catalog below.
 - **Out of v1:** publishing to Instagram, scheduling, AI-generated captions and a visual template editor. Don't add them without an issue.
 
 ### Language
@@ -53,6 +53,16 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - The poster fonts come from `next/font`, which serves them from the instance, so rendering needs no internet access. The renderer waits for `document.fonts.ready` before the screenshot.
 - `playwright-core` stays on the same version as `@playwright/test`, so `pnpm dev`, the e2e tests and the image all use the same Chromium revision. Locally the browser comes from `pnpm exec playwright install chromium`; the `Dockerfile` installs `chromium-headless-shell` with its system dependencies into `PLAYWRIGHT_BROWSERS_PATH` (`/ms-playwright`), which is what makes the image about 1.3 GB.
 - Output file tracing misses `playwright-core/browsers.json`, read at runtime, so `next.config.ts` adds it through `outputFileTracingIncludes`.
+
+### Catalog
+
+- Lives in `catalog/` at the project root: `catalog/ean/` holds `<ean>.png` + `<ean>.json` pairs and `catalog/no-ean/` holds `<description>.png` images (lowercase kebab-case, no accents, at least one letter). Each folder keeps a `.gitkeep`, which the validation ignores. The contributor-facing rules are in `CONTRIBUTING.md` (Portuguese); keep it in sync with the code.
+- An EAN is 8, 12 (UPC-A) or 13 digits with a valid check digit (`isValidEan` in `src/domain/ean.ts`, also the way to tell an EAN from an internal code).
+- The JSON has exactly `name`, `brand` and `unit`, all non-empty strings, validated by hand in `src/domain/catalog.ts` (no schema library for three fields). Images are lossless PNG, square, 600 to 800 px per side, at most 1 MB, with the four corners fully transparent (the poster card has a colored background). The poster shows a photo at about 340 px at most (the 4-product layout), so 800 px is a 2x margin; revisit the limit if a layout shows the photo larger. The limits are `CATALOG_IMAGE_RULES` in the same file.
+- `src/domain/catalog.ts` holds the pure rules (file names, image/JSON pairs, JSON schema, image limits); `src/infra/catalog/` reads the disk and the image metadata with `sharp` (`image.ts`) and returns the list of errors (`check.ts`). `pnpm catalog:check` runs `src/infra/catalog/check-cli.ts` through `tsx` and exits non-zero when there is an error.
+- Contributors may add large PNGs: `pnpm catalog:optimize` (`src/infra/catalog/optimize-cli.ts`, also run by `lint-staged` on staged `catalog/**/*.png`) rewrites every image that breaks a rule. `optimizeCatalogImage` (`src/infra/catalog/optimize.ts`) trims the transparent border, shrinks without ever enlarging, centers the product in a square with a 5% transparent margin (`getCatalogImageLayout` in `src/domain/catalog.ts`) and encodes a lossless PNG (no palette quantization, which bands gradients and blurs label text). Images that already pass are left untouched, so the hook doesn't re-encode them on every commit.
+- The framing margin makes the corners transparent, so the transparent background rule is checked on the original before optimizing (`hasTransparentBackground`), and a photo with a background is rejected without being rewritten. After optimization the corner check can no longer tell a cut-out from a photo with a background; that's a known limit of the CI check.
+- `sharp` is a direct dependency pinned to the same version Next.js resolves, so the project keeps a single copy. Its install script stays blocked (`allowBuilds`): it ships prebuilt binaries in `@img/sharp-*`.
 
 ### Package manager
 
@@ -92,7 +102,7 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 
 ### Git hooks (husky)
 
-- `pre-commit`: runs `lint-staged` (`lint-staged.config.js`) — prettier + eslint + `vitest related --passWithNoTests` scoped per staged file type, invoked directly via `pnpm exec` rather than through `package.json` scripts.
+- `pre-commit`: runs `lint-staged` (`lint-staged.config.js`) — prettier + eslint + `vitest related --passWithNoTests` scoped per staged file type, plus the catalog optimizer on staged `catalog/**/*.png`, invoked directly via `pnpm exec` rather than through `package.json` scripts.
 - `commit-msg`: auto-prepends the emoji prefix from the Commit Rules below based on the leading word (e.g. `feat: ...` → `✨ feat: ...`), then runs `commitlint` (`commitlint-config-emoji-convention`). You can type the plain word and let the hook add the emoji.
 - `pre-push`: runs `pnpm type-check` and `pnpm test:e2e` (full Playwright suite).
 
@@ -102,7 +112,7 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - E2E tests: **Playwright** (`playwright.config.ts`), tests live in `src/tests/e2e`, single `chromium` project, `webServer` auto-starts `pnpm dev` against `http://localhost:3000`. Failure artifacts go to `test-results/` (git- and ESLint-ignored). There are no global retries: a known flaky test gets `test.describe.configure({ retries })` in its own `describe`, with a comment linking the issue that tracks it.
 - Only test logic we wrote (filtering, lookups, mappings, transforms). Don't test library or framework behavior (e.g. a component that only passes props or HTML through, schema defaults, `Link` routing), and drop a test whose main cost is a mock needed only to render. Prefer a unit test; add an e2e test only for what a unit test can't cover.
 - Scripts: `pnpm test` (unit, run once) / `pnpm test:watch` (unit, watch mode) / `pnpm test:e2e` (e2e) / `pnpm test:e2e:ui` (e2e, Playwright UI mode).
-- CI (`.github/workflows/ci.yml`, triggered on `pull_request`) runs, in order: `commitlint` over the PR's commit range, `pnpm type-check`, `pnpm eslint:check`, `pnpm prettier:check`, `pnpm test`, then installs Chromium (`pnpm exec playwright install --with-deps chromium`) and runs `pnpm test:e2e`.
+- CI (`.github/workflows/ci.yml`, triggered on `pull_request`) runs, in order: `commitlint` over the PR's commit range, `pnpm type-check`, `pnpm eslint:check`, `pnpm prettier:check`, `pnpm test`, `pnpm catalog:check`, then installs Chromium (`pnpm exec playwright install --with-deps chromium`) and runs `pnpm test:e2e`.
 
 ### Styling & UI
 
