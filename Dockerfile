@@ -34,6 +34,8 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 # Migrations are read from disk at startup, so output file tracing doesn't pick them up
 COPY --from=build --chown=node:node /app/src/infra/database/migrations ./src/infra/database/migrations
+# Product lookups read the catalog from disk at runtime, so output file tracing doesn't pick it up
+COPY --from=build --chown=node:node /app/catalog ./catalog
 USER node
 VOLUME /data
 EXPOSE 3000

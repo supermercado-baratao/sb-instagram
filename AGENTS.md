@@ -29,9 +29,9 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 
 ### Docker & data directory
 
-- The app is built with `output: 'standalone'` (`next.config.ts`) and shipped by the multi-stage `Dockerfile` (`node:24-slim`, pnpm from `packageManager` via corepack). The runtime stage has no pnpm, runs `node server.js` as the unprivileged `node` user and only holds the standalone output, `.next/static`, `public` and the migrations folder (read from disk at startup, so output file tracing doesn't copy it), plus the Chromium headless shell used to render the poster PNG (see Poster PNG).
+- The app is built with `output: 'standalone'` (`next.config.ts`) and shipped by the multi-stage `Dockerfile` (`node:24-slim`, pnpm from `packageManager` via corepack). The runtime stage has no pnpm, runs `node server.js` as the unprivileged `node` user and only holds the standalone output, `.next/static`, `public`, the migrations folder and `catalog/` (both read from disk at runtime, so output file tracing doesn't copy them), plus the Chromium headless shell used to render the poster PNG (see Poster PNG).
 - `compose.yaml` runs one instance with the named volume `data` mounted at `/data`. Run it with `docker compose up -d --build`.
-- Everything the instance persists (SQLite database, uploaded photos) lives under the data directory, read from `dataDirectory` in `src/infra/data-directory.ts`: `DATA_DIR` when set (`/data` in the image), otherwise `data/` at the project root (git-ignored). Never write instance data anywhere else, or it is lost when the container is replaced.
+- Everything the instance persists (SQLite database, product photos in `photos/`) lives under the data directory, read from `dataDirectory` in `src/infra/data-directory.ts`: `DATA_DIR` when set (`/data` in the image), otherwise `data/` at the project root (git-ignored). Never write instance data anywhere else, or it is lost when the container is replaced.
 - Keep the base image on Debian (`-slim`), not Alpine: native modules (SQLite driver, `sharp`) ship glibc prebuilds.
 
 ### Database
@@ -42,7 +42,7 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - Pending migrations are applied on startup by `register()` in `src/instrumentation.ts`, both with `pnpm dev`/`pnpm start` and in the container. There is no separate migrate command.
 - To change the schema, edit `schema.ts` and run `pnpm db:generate --name <change>` (a short kebab-case name, e.g. `create-products`), then commit the schema and the new migration folder (`migration.sql` and `snapshot.json`) together. Never edit or delete a migration that was already merged: instances in the field already applied it, so write a new one instead. `pnpm db:studio` opens Drizzle Studio on the local database.
 - A `text` primary key is declared at table level (`primaryKey({ columns: [...] })` on a `.notNull()` column), not with a column-level `.primaryKey()`: drizzle-kit then omits `NOT NULL`, and SQLite lets a non-integer primary key hold `NULL`.
-- Each feature's issue adds its own tables and columns. `products` starts with only `code` and `name`.
+- Each feature's issue adds its own tables and columns.
 - Relational queries use the 1.0 API: relations are declared with `defineRelations` and passed to `drizzle()` as `relations`, not `schema`. When following Drizzle examples, check they are for 1.0 and not 0.x.
 - `better-sqlite3` ships N-API prebuilds inside the package, so its install script stays blocked (`allowBuilds` in `pnpm-workspace.yaml`): allowing it would compile from source, which fails in the slim image (no Python or compiler).
 
@@ -53,6 +53,13 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - The poster fonts come from `next/font`, which serves them from the instance, so rendering needs no internet access. The renderer waits for `document.fonts.ready` before the screenshot.
 - `playwright-core` stays on the same version as `@playwright/test`, so `pnpm dev`, the e2e tests and the image all use the same Chromium revision. Locally the browser comes from `pnpm exec playwright install chromium`; the `Dockerfile` installs `chromium-headless-shell` with its system dependencies into `PLAYWRIGHT_BROWSERS_PATH` (`/ms-playwright`), which is what makes the image about 1.3 GB.
 - Output file tracing misses `playwright-core/browsers.json`, read at runtime, so `next.config.ts` adds it through `outputFileTracingIncludes`.
+
+### Products
+
+- A row of `products` (`src/infra/database/schema.ts`) has `code`, `codeType` (`ean` or `internal`, derived by `getCodeType` in `src/domain/product.ts` from `isValidEan`, never chosen by the user), `name`, and the optional `brand`, `unit` and `photo` (a file name inside `photos/` in the data directory). Codes go through `normalizeCode` (strips whitespace) before any lookup or write.
+- `findProductByCode` (`src/infra/product.ts`) looks in the instance first and, only for an EAN, falls back to the community catalog (`readCatalogProduct` in `src/infra/catalog/product.ts`, which ignores a file that breaks the schema). The result says where it came from (`source`: `instance` or `catalog`).
+- `saveProduct` upserts by code. A product that came from the catalog gets its catalog image copied to `photos/<ean>.png`, so a later catalog update never changes a product the store already uses.
+- Both take the Drizzle database as their first argument, and the catalog and photos folders as options, so the unit tests run against an in-memory SQLite with the migrations applied (`migrationsFolder` in `src/infra/database/file.ts`) and temporary folders.
 
 ### Catalog
 
