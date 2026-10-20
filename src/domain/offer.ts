@@ -1,9 +1,10 @@
 import {
   DEFAULT_POSTER_LAYOUT,
+  isPosterLayout,
   PAGE_PRODUCT_COUNT,
   type PosterLayout
 } from '@/domain/poster'
-import type { Product } from '@/domain/product'
+import { CODE_TYPES, isValidCode, type Product } from '@/domain/product'
 
 export type OfferItem = {
   product: Product
@@ -77,3 +78,94 @@ export const formatValidUntil = (validUntil: string | null) => {
   const [, year, month, day] = match
   return `${day}/${month}/${year}`
 }
+
+export const addPage = (pages: OfferPage[], templateId: string) => {
+  const last = pages.at(-1)
+  return [
+    ...pages,
+    {
+      ...createOfferPage(last?.templateId ?? templateId),
+      layout: last?.layout ?? DEFAULT_POSTER_LAYOUT
+    }
+  ]
+}
+
+// Generic so the editor can apply the same change to the keys it keeps for each page
+export const removePage = <T>(pages: T[], index: number) =>
+  pages.length > 1 ? pages.toSpliced(index, 1) : pages
+
+export const movePage = <T>(pages: T[], from: number, to: number) => {
+  if (from === to || to < 0 || to >= pages.length) return pages
+  const moved = pages.toSpliced(from, 1)
+  return moved.toSpliced(to, 0, pages[from])
+}
+
+export const setSlot = (
+  page: OfferPage,
+  position: number,
+  slot: OfferSlot
+): OfferPage => ({ ...page, slots: page.slots.with(position, slot) })
+
+const PRICE_PATTERN = /^\d+(?:[.,]\d{1,2})?$/
+
+// Accepts what a cashier types ("12,90", "12.9", "12"), with or without "R$" and thousands dots
+export const parsePrice = (text: string) => {
+  let value = text.replaceAll(/\s|R\$/gi, '')
+  if (value.includes(',')) value = value.replaceAll('.', '')
+  if (!PRICE_PATTERN.test(value)) return null
+  return Math.round(Number(value.replace(',', '.')) * 100)
+}
+
+export const formatPrice = (priceInCents: number) =>
+  `${Math.trunc(priceInCents / 100)},${String(priceInCents % 100).padStart(2, '0')}`
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const isOptionalText = (value: unknown) =>
+  value === null || typeof value === 'string'
+
+const isProduct = (value: unknown): value is Product =>
+  isRecord(value) &&
+  typeof value.code === 'string' &&
+  isValidCode(value.code) &&
+  CODE_TYPES.includes(value.codeType as Product['codeType']) &&
+  typeof value.name === 'string' &&
+  isOptionalText(value.brand) &&
+  isOptionalText(value.unit) &&
+  isOptionalText(value.photo)
+
+const isSlot = (value: unknown): value is OfferSlot =>
+  value === null ||
+  (isRecord(value) &&
+    isProduct(value.product) &&
+    Number.isSafeInteger(value.priceInCents) &&
+    (value.priceInCents as number) >= 0)
+
+const isPage = (value: unknown): value is OfferPage =>
+  isRecord(value) &&
+  typeof value.templateId === 'string' &&
+  isPosterLayout(value.layout) &&
+  Array.isArray(value.slots) &&
+  value.slots.length === PAGE_PRODUCT_COUNT &&
+  value.slots.every(isSlot)
+
+// A Server Action is a public endpoint, so the editor's content is checked again on the server
+export const isOfferContent = (value: unknown): value is OfferContent =>
+  isRecord(value) &&
+  typeof value.name === 'string' &&
+  value.name.trim() !== '' &&
+  (value.validUntil === null ||
+    (typeof value.validUntil === 'string' &&
+      ISO_DATE_PATTERN.test(value.validUntil))) &&
+  typeof value.highlightTitle === 'string' &&
+  typeof value.highlightMessage === 'string' &&
+  Array.isArray(value.pages) &&
+  value.pages.length > 0 &&
+  value.pages.every(isPage)
+
+// A product placed on a page starts without a price, which the poster would print as R$ 0,00
+export const findPageWithoutPrice = (pages: OfferPage[]) =>
+  pages.findIndex((page) =>
+    page.slots.some((slot) => slot !== null && slot.priceInCents === 0)
+  )
