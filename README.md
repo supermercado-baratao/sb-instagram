@@ -92,6 +92,7 @@ Abaixo estão os destaques das convenções.
 - SQLite com **Drizzle ORM** 1.0 (linha `1.0.0-rc`, a mesma da documentação atual do Drizzle) e o driver `better-sqlite3`. O banco é o arquivo `database.sqlite` no diretório de dados.
 - O cliente, o schema e as migrations ficam em `src/infra/database`. As migrations pendentes são aplicadas automaticamente quando a aplicação inicia, no `pnpm dev` e no container.
 - Os produtos da instância ficam na tabela `products`, identificados pelo código (EAN ou código interno). A busca por código procura primeiro na instância e, para um EAN, no catálogo comunitário; ao ser usado, o produto do catálogo é salvo na instância com uma cópia da foto em `photos/`, no diretório de dados.
+- As ofertas ficam nas tabelas `offers`, `offer_pages` e `offer_page_items`: a oferta guarda o nome, a validade e o destaque; cada página guarda o modelo de arte e o layout; e cada produto da página guarda a posição, o código do produto e o preço. A lista de ofertas fica em `/ofertas`.
 - As fotos enviadas no cadastro são reduzidas para no máximo 800 px e salvas em PNG como `photos/<código>.png`, no diretório de dados. A rota `/fotos/<código>` serve a foto do mercado e, se ela não existir, a do catálogo. Por isso, o código só aceita letras sem acento, números, ponto, hífen e sublinhado.
 - Para mudar o schema, edite `schema.ts`, rode `pnpm db:generate --name <mudança>` e versione a pasta da migration gerada. Uma migration que já foi para a `main` nunca é editada: crie outra.
 
