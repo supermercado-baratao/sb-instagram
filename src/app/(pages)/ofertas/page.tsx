@@ -1,5 +1,6 @@
 import { Copy, Plus } from 'lucide-react'
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { connection } from 'next/server'
 
 import { formatValidUntil, type OfferSummary } from '@/domain/offer'
@@ -67,7 +68,14 @@ const OffersPage = async () => {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4"
               >
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <h2 className="font-medium wrap-break-word">{offer.name}</h2>
+                  <h2 className="font-medium wrap-break-word">
+                    <Link
+                      href={`/ofertas/${offer.id}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {offer.name}
+                    </Link>
+                  </h2>
                   <p className="text-sm text-muted-foreground">
                     {describeOffer(offer)}
                   </p>
