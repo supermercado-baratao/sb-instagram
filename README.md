@@ -40,6 +40,8 @@ pnpm dev
 
 Abra [http://localhost:3000](http://localhost:3000) no navegador. Fora do Docker, os dados ficam em `data/` na raiz do projeto (ignorada pelo git), a menos que `DATA_DIR` aponte para outro lugar.
 
+No primeiro acesso, o app pede a marca do mercado (nome, logo, slogan, @ do Instagram e as cores dos modelos de arte) antes de liberar as ofertas e os produtos. Para mudar depois, use o botão **Marca** em **Ofertas** (`/configuracoes`).
+
 ### Usando uma imagem sem EAN
 
 Os produtos sem código de barras (carnes, hortifrúti, padaria) são identificados pelo código interno do seu mercado, o mesmo usado no caixa ou na balança. O catálogo não conhece esse código, então a foto é associada a ele no seu mercado:
@@ -92,6 +94,7 @@ Abaixo estão os destaques das convenções.
 - SQLite com **Drizzle ORM** 1.0 (linha `1.0.0-rc`, a mesma da documentação atual do Drizzle) e o driver `better-sqlite3`. O banco é o arquivo `database.sqlite` no diretório de dados.
 - O cliente, o schema e as migrations ficam em `src/infra/database`. As migrations pendentes são aplicadas automaticamente quando a aplicação inicia, no `pnpm dev` e no container.
 - Os produtos da instância ficam na tabela `products`, identificados pelo código (EAN ou código interno). A busca por código procura primeiro na instância e, para um EAN, no catálogo comunitário; ao ser usado, o produto do catálogo é salvo na instância com uma cópia da foto em `photos/`, no diretório de dados.
+- A marca fica na tabela `brand` (uma única linha) e os modelos de arte na tabela `templates`, editados em `/configuracoes`. Enquanto a marca não foi salva, as páginas que a usam levam ao primeiro acesso nessa tela. O logo é salvo como `logo.png` no diretório de dados (no máximo 600 px, mantendo a proporção e a transparência) e servido em `/marca/logo`. Uma página de oferta cujo modelo foi removido passa a usar o primeiro modelo da lista.
 - As ofertas ficam nas tabelas `offers`, `offer_pages` e `offer_page_items`: a oferta guarda o nome, a validade e o destaque; cada página guarda o modelo de arte e o layout; e cada produto da página guarda a posição, o código do produto e o preço. A lista de ofertas fica em `/ofertas`.
 - O editor da oferta fica em `/ofertas/<id>`: os textos valem para todas as páginas, e cada página tem modelo de arte, quantidade de produtos (9, 6, 4 ou 3) e os produtos, colocados pelo código (com o leitor ou digitando e apertando Enter) com o preço. A pré-visualização do pôster fica ao lado, e as alterações só valem depois de clicar em "Salvar".
 - "Baixar páginas (PNG)" gera um arquivo ZIP com uma imagem por página (`pagina-1.png`, `pagina-2.png`...), na ordem da oferta.
@@ -133,7 +136,7 @@ Abaixo estão os destaques das convenções.
 ### Testes
 
 - **Testes unitários:** Vitest com `jsdom` e Testing Library. Rode `pnpm test` (uma vez) ou `pnpm test:watch`. Só arquivos `src/**/*.test.{ts,tsx}` são considerados.
-- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. Os testes sobem um servidor de desenvolvimento próprio na porta 3100, com os dados em `.next/e2e/data`, então nunca alteram os dados de `data/` e podem rodar com o `pnpm dev` aberto.
+- **Testes E2E:** Playwright (Chromium) em `src/tests/e2e`. Rode `pnpm test:e2e` ou `pnpm test:e2e:ui`. Os testes sobem um servidor de desenvolvimento próprio na porta 3100, com os dados em `.next/e2e/data`, então nunca alteram os dados de `data/` e podem rodar com o `pnpm dev` aberto. O projeto `setup` (`*.setup.ts`) configura a marca antes dos demais testes.
 - Testamos apenas a lógica que escrevemos, não o comportamento de bibliotecas ou do framework.
 
 ### Git hooks e CI

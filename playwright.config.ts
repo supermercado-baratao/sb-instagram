@@ -22,8 +22,15 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`
   },
   projects: [
+    // Every page that uses the brand sends a new instance to the first setup, so it runs first
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'] }
+    },
     {
       name: 'chromium',
+      dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'] }
     }
   ]
