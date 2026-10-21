@@ -3,7 +3,6 @@
 import { Select as SelectPrimitive } from '@base-ui/react/select'
 import { cn } from 'cn'
 import {
-  ArrowLeft,
   CircleAlert,
   CircleCheck,
   ImageOff,
@@ -11,7 +10,6 @@ import {
   Save,
   Trash2
 } from 'lucide-react'
-import Link from 'next/link'
 import {
   type ChangeEvent,
   type FormEvent,
@@ -23,7 +21,7 @@ import {
 import { flushSync } from 'react-dom'
 
 import { Poster } from '@/app/components/blocks/poster'
-import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
+import { Button } from '@/app/components/ui/shadcn/button'
 import {
   Field,
   FieldDescription,
@@ -221,30 +219,15 @@ export const BrandSettingsForm = ({
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-4">
-        {!firstSetup && (
-          <Link
-            href="/ofertas"
-            className={buttonVariants({
-              variant: 'ghost',
-              size: 'sm',
-              className: 'self-start'
-            })}
-          >
-            <ArrowLeft data-icon="inline-start" aria-hidden />
-            Ofertas
-          </Link>
-        )}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {firstSetup ? 'Boas-vindas! Configure a sua marca' : 'Marca'}
-          </h1>
-          <p className="text-muted-foreground">
-            {firstSetup
-              ? 'Antes de montar as ofertas, conte como o mercado aparece nos pôsteres. Dá para mudar tudo depois.'
-              : 'Como o mercado aparece em todos os pôsteres.'}
-          </p>
-        </div>
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {firstSetup ? 'Boas-vindas! Configure a sua marca' : 'Marca'}
+        </h1>
+        <p className="text-muted-foreground">
+          {firstSetup
+            ? 'Antes de montar as ofertas, conte como o mercado aparece nos pôsteres. Dá para mudar tudo depois.'
+            : 'Como o mercado aparece em todos os pôsteres.'}
+        </p>
       </header>
 
       <form

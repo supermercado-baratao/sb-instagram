@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
+import { AppLayout } from '@/app/components/layouts/app'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
 import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
@@ -8,8 +9,11 @@ import { database } from '@/infra/database/client'
 
 import { BrandSettingsForm } from './_components/brand-settings-form'
 
-export const metadata: Metadata = {
-  title: 'Configurações da marca'
+export const generateMetadata = async (): Promise<Metadata> => {
+  await connection()
+  return {
+    title: findBrandSettings(database) ? 'Marca' : 'Configure a sua marca'
+  }
 }
 
 const SettingsPage = async () => {
@@ -17,13 +21,16 @@ const SettingsPage = async () => {
   await connection()
   const settings = findBrandSettings(database)
 
-  return (
+  const form = (
     <BrandSettingsForm
       firstSetup={!settings}
       initialContent={createBrandContent(settings)}
       initialLogoUrl={settings ? getLogoUrl(settings.brand) : null}
     />
   )
+
+  // The first setup has no brand to show yet and nowhere else to go until it is saved
+  return settings ? <AppLayout brand={settings.brand}>{form}</AppLayout> : form
 }
 
 export default SettingsPage
