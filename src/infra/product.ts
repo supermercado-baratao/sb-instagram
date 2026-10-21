@@ -1,15 +1,18 @@
 import { copyFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import { eq } from 'drizzle-orm'
+import { count, eq, or, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import {
   type FoundProduct,
   getCodeType,
   getPhotoFileName,
   normalizeCode,
-  type Product
+  type Product,
+  type ProductPage,
+  PRODUCTS_PAGE_SIZE
 } from '@/domain/product'
 import { eanDirectory } from '@/infra/catalog/directory'
 import {
@@ -93,4 +96,40 @@ export const saveProduct = async (
     .run()
 
   return saved
+}
+
+const escapeLike = (text: string) => text.replaceAll(/[\\%_]/g, String.raw`\$&`)
+
+const contains = (column: SQLiteColumn, text: string): SQL =>
+  sql`${column} LIKE ${`%${escapeLike(text)}%`} ESCAPE '\\'`
+
+export const listProducts = (
+  database: Database,
+  { query = '', page = 1 }: { query?: string; page?: number } = {}
+): ProductPage => {
+  const name = query.trim()
+  const where =
+    name === ''
+      ? undefined
+      : or(
+          contains(products.name, name),
+          contains(products.code, normalizeCode(query))
+        )
+
+  const total =
+    database.select({ total: count() }).from(products).where(where).get()
+      ?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE))
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount)
+
+  const rows = database
+    .select()
+    .from(products)
+    .where(where)
+    .orderBy(sql`${products.name} COLLATE NOCASE`, products.code)
+    .limit(PRODUCTS_PAGE_SIZE)
+    .offset((current - 1) * PRODUCTS_PAGE_SIZE)
+    .all()
+
+  return { products: rows, total, page: current, pageCount }
 }

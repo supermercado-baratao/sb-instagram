@@ -41,3 +41,30 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
     1
   )
 })
+
+test('finds a saved product by name and opens it from the list', async ({
+  page
+}) => {
+  const code = `E2E-${Date.now()}`
+  const name = `Alcatra ${code}`
+  const codeField = page.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await codeField.fill(code)
+  await codeField.press('Enter')
+  await page.getByLabel('Nome').fill(name)
+  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  const searchField = page.getByLabel('Pesquisar produtos')
+  await searchField.fill(name.toUpperCase())
+  await searchField.press('Enter')
+
+  await expect(page).toHaveURL(/\?q=/)
+  await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name }).click()
+
+  await expect(page.getByText('Produto já cadastrado')).toBeVisible()
+  await expect(page.getByLabel('Nome')).toHaveValue(name)
+  await expect(page.getByLabel('Nome')).toBeFocused()
+})

@@ -8,11 +8,11 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, onTestFinished, test } from 'vitest'
 
-import type { Product } from '@/domain/product'
+import { type Product, PRODUCTS_PAGE_SIZE } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { products } from '@/infra/database/schema'
 
-import { findProductByCode, saveProduct } from './product'
+import { findProductByCode, listProducts, saveProduct } from './product'
 
 const EAN = '7891000100103'
 const catalogProduct = {
@@ -144,5 +144,79 @@ describe('saveProduct', () => {
       savedProduct,
       { ...savedProduct, code: '1234', codeType: 'internal', name: 'Picanha' }
     ])
+  })
+})
+
+const product = (code: string, name: string): Product => ({
+  ...savedProduct,
+  code,
+  codeType: 'internal',
+  name
+})
+
+describe('listProducts', () => {
+  test('searches the name ignoring case and the code by any part', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values([
+        product('1001', 'picanha bovina'),
+        product('2002', 'Alcatra'),
+        product('3010', 'Fraldinha')
+      ])
+      .run()
+
+    const names = (query: string) =>
+      listProducts(database, { query }).products.map(({ name }) => name)
+
+    expect(names('PICANHA')).toEqual(['picanha bovina'])
+    expect(names(' 01 ')).toEqual(['Fraldinha', 'picanha bovina'])
+    expect(names('')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
+  })
+
+  test('takes % and _ in the query literally', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values([product('1', 'Desconto 50%'), product('2', 'Arroz 5 kg')])
+      .run()
+
+    expect(
+      listProducts(database, { query: '50%' }).products.map(({ code }) => code)
+    ).toEqual(['1'])
+    expect(listProducts(database, { query: '_' }).total).toBe(0)
+  })
+
+  test('pages the products and keeps the page within range', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values(
+        Array.from({ length: PRODUCTS_PAGE_SIZE + 1 }, (_, index) =>
+          product(String(index), `Produto ${String(index).padStart(3, '0')}`)
+        )
+      )
+      .run()
+
+    const first = listProducts(database)
+    expect(first).toMatchObject({ total: 51, page: 1, pageCount: 2 })
+    expect(first.products).toHaveLength(PRODUCTS_PAGE_SIZE)
+
+    const last = listProducts(database, { page: 2 })
+    expect(last.products.map(({ code }) => code)).toEqual(['50'])
+    expect(listProducts(database, { page: 9 }).page).toBe(2)
+    expect(listProducts(database, { page: NaN }).page).toBe(1)
+    expect(listProducts(database, { page: -1 }).page).toBe(1)
+  })
+
+  test('answers one empty page when nothing matches', async () => {
+    const { database } = await setup()
+
+    expect(listProducts(database, { query: 'picanha', page: 3 })).toEqual({
+      products: [],
+      total: 0,
+      page: 1,
+      pageCount: 1
+    })
   })
 })
