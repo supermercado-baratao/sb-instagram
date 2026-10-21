@@ -6,13 +6,18 @@ import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import type { Product } from '@/domain/product'
+import type { Product, ProductPage } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from '../actions'
 import { ProductForm } from './product-form'
+import { ProductList } from './product-list'
+import { ProductPagination } from './product-pagination'
+import { ProductSearch } from './product-search'
 
 type ProductEditorProps = {
   noEanImages: string[]
+  productPage: ProductPage
+  query: string
 }
 
 type Lookup = Exclude<LookupResult, { status: 'error' }> & { id: number }
@@ -28,18 +33,27 @@ const getLookupMessage = (lookup: Lookup) => {
     : 'Produto encontrado no catálogo da comunidade. Confira os dados e salve para usar.'
 }
 
-export const ProductEditor = ({ noEanImages }: ProductEditorProps) => {
+const getListSummary = ({ total }: ProductPage, query: string) => {
+  if (total === 0) {
+    return query === ''
+      ? 'Nenhum produto cadastrado ainda. Bipe um código acima para cadastrar.'
+      : `Nenhum produto encontrado para “${query}”.`
+  }
+  return total === 1 ? '1 produto' : `${total} produtos`
+}
+
+export const ProductEditor = ({
+  noEanImages,
+  productPage,
+  query
+}: ProductEditorProps) => {
   const [lookup, setLookup] = useState<Lookup>()
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState<Product>()
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
 
-  const search = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const form = event.currentTarget
-    const code = String(new FormData(form).get('code') ?? '')
-
+  const openProduct = (code: string, onFound?: () => void) => {
     startSearch(async () => {
       const result = await lookupProduct(code)
       setSaved(undefined)
@@ -52,8 +66,15 @@ export const ProductEditor = ({ noEanImages }: ProductEditorProps) => {
       }
       setError(undefined)
       setLookup({ ...result, id: Date.now() })
-      form.reset()
+      onFound?.()
     })
+  }
+
+  const search = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const form = event.currentTarget
+    const code = String(new FormData(form).get('code') ?? '')
+    openProduct(code, () => form.reset())
   }
 
   const handleSaved = (product: Product) => {
@@ -131,6 +152,35 @@ export const ProductEditor = ({ noEanImages }: ProductEditorProps) => {
           onSaved={handleSaved}
         />
       )}
+
+      <section aria-labelledby="products-title" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 id="products-title" className="text-lg font-semibold">
+            Produtos cadastrados
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Clique num produto para alterar os dados ou a foto.
+          </p>
+        </div>
+        <ProductSearch query={query} />
+        <p aria-live="polite" className="text-sm text-muted-foreground">
+          {getListSummary(productPage, query)}
+        </p>
+        {productPage.products.length > 0 && (
+          <ProductList
+            products={productPage.products}
+            busy={searching}
+            onOpen={openProduct}
+          />
+        )}
+        {productPage.pageCount > 1 && (
+          <ProductPagination
+            query={query}
+            page={productPage.page}
+            pageCount={productPage.pageCount}
+          />
+        )}
+      </section>
     </div>
   )
 }

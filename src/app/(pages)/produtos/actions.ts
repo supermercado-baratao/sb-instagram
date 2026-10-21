@@ -1,5 +1,7 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+
 import {
   type CodeType,
   type FoundProduct,
@@ -106,5 +108,6 @@ export const saveProductForm = async (
     source
   })
 
+  revalidatePath('/produtos')
   return { status: 'saved', product }
 }

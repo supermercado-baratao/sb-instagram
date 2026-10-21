@@ -40,3 +40,12 @@ export const PHOTO_MAX_SIDE = CATALOG_IMAGE_RULES.maxSide
 
 // Keep below serverActions.bodySizeLimit in next.config.ts, which also counts the form fields
 export const PHOTO_MAX_MEGABYTES = 10
+
+export const PRODUCTS_PAGE_SIZE = 50
+
+export type ProductPage = {
+  products: Product[]
+  total: number
+  page: number
+  pageCount: number
+}
