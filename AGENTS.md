@@ -115,6 +115,8 @@ An open-source, non-profit tool for supermarkets to create Instagram offer posts
 - `src/app/components` groups components by role: `ui/` for visual building blocks (shadcn ones under `ui/shadcn/`, our own under `ui/custom/`), `blocks/` for composed pieces reused across pages, grouped by domain (e.g. `blocks/post/`; a block that belongs to no domain stays directly in `blocks/`), `providers/` for context providers without UI of their own and `layouts/` for page shells.
 - A layout lives in its own folder (`layouts/<name>/index.tsx`), with the parts only it uses in a private `_components/` folder next to it. Code outside the layout imports only `layouts/<name>`, never its `_components/`. The same goes for a route: parts used by a single page live in a `_components/` folder next to it.
 - `favicon.ico` stays directly in `src/app/`, not nested in a route group.
+- Pages with the header (logo or store name and the Ofertas, Produtos and Marca menu) wrap their content in `AppLayout` (`src/app/components/layouts/app`), passing the brand they already got from `requireBrandSettings`. It is a component, not a route `layout.tsx`, because the poster-only render page lives under `/ofertas` and must stay bare; the first setup and `/preview` also go without it. `/` only redirects to `/ofertas`, and page titles fill the `%s · SB Instagram` template of the root layout.
+- `public/` keeps a `.gitkeep` while it has no files, because the `Dockerfile` copies it.
 - React Compiler is enabled (`reactCompiler: true` in `next.config.ts`, `babel-plugin-react-compiler` devDependency).
 
 ### Linting & formatting

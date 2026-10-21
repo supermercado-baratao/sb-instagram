@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { AppLayout } from '@/app/components/layouts/app'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { database } from '@/infra/database/client'
@@ -27,12 +28,14 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
 
   const { id, ...content } = offer
   return (
-    <OfferEditor
-      id={id}
-      offer={content}
-      brand={getPosterBrand(brand)}
-      templates={templates}
-    />
+    <AppLayout brand={brand}>
+      <OfferEditor
+        id={id}
+        offer={content}
+        brand={getPosterBrand(brand)}
+        templates={templates}
+      />
+    </AppLayout>
   )
 }
 

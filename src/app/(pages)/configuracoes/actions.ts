@@ -1,5 +1,6 @@
 'use server'
 
+import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { getLogoUrl } from '@/app/helpers/brand-poster'
@@ -99,6 +100,9 @@ export const saveBrandSettingsAction = async (
 
   // The first setup came from a page that needed the brand, so it goes on to the offers
   if (!current) redirect('/ofertas')
+
+  // The header shows the brand name and logo
+  refresh()
 
   // New templates got their ids on the server, so the form takes them back to keep them on the
   // next save
