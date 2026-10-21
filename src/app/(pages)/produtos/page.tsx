@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
+import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { listNoEanImages } from '@/infra/photo'
 
 import { ProductEditor } from './_components/product-editor'
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 const ProductsPage = async () => {
   // Renders per request, so `next build` never reads the catalog or opens the database
   await connection()
+  requireBrandSettings()
   const noEanImages = await listNoEanImages()
 
   return (

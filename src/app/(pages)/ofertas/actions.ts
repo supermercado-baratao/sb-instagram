@@ -3,13 +3,14 @@
 import { refresh } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { createOfferContent } from '@/domain/offer'
-import { DEFAULT_TEMPLATES } from '@/domain/poster-defaults'
 import { database } from '@/infra/database/client'
 import { createOffer, deleteOffer, duplicateOffer } from '@/infra/offer'
 
 export const createOfferAction = async () => {
-  const id = createOffer(database, createOfferContent(DEFAULT_TEMPLATES[0].id))
+  const { templates } = requireBrandSettings()
+  const id = createOffer(database, createOfferContent(templates[0].id))
   redirect(`/ofertas/${id}`)
 }
 

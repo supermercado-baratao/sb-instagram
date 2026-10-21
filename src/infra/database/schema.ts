@@ -1,4 +1,6 @@
+import { sql } from 'drizzle-orm'
 import {
+  check,
   foreignKey,
   integer,
   primaryKey,
@@ -79,4 +81,36 @@ export const offerPageItems = sqliteTable(
       foreignColumns: [products.code]
     })
   ]
+)
+
+// One row per instance, since each store runs its own instance
+export const brand = sqliteTable(
+  'brand',
+  {
+    id: integer().primaryKey(),
+    name: text().notNull(),
+    slogan: text().notNull(),
+    instagram: text().notNull(),
+    logo: text(),
+    // Versions the logo URL, so milliseconds keep two saves within a second apart
+    updatedAt: integer({ mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdateFn(() => new Date())
+  },
+  (table) => [check('brand_single_row', sql`${table.id} = 1`)]
+)
+
+// Offer pages keep the template id without a foreign key, so deleting a template leaves them on
+// the first one (getPageTemplate) instead of failing or deleting the pages
+export const templates = sqliteTable(
+  'templates',
+  {
+    id: text().notNull(),
+    name: text().notNull(),
+    primaryColor: text().notNull(),
+    accentColor: text().notNull(),
+    position: integer().notNull()
+  },
+  (table) => [primaryKey({ columns: [table.id] })]
 )

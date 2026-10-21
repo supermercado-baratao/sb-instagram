@@ -1,4 +1,14 @@
-import type { Offer, OfferProduct } from '@/domain/poster'
+import type { Brand, Offer, OfferProduct } from '@/domain/poster'
+
+// The preview shows the poster art apart from any store, so it doesn't read the saved brand
+export const brand: Brand = {
+  name: 'Supermercado Exemplo',
+  logo: null,
+  slogan: 'O menor preço da cidade',
+  instagram: '@supermercadoexemplo'
+}
+
+export { INITIAL_TEMPLATES as templates } from '@/domain/brand'
 
 export const offer: Offer = {
   validUntil: '20/10/2026',
@@ -39,8 +49,3 @@ export const products: OfferProduct[] = [
   product('8', '', '', '', 0),
   product('9', 'Macarrão espaguete', 'Renata Superiore Grano Duro', '500g', 105)
 ]
-
-export {
-  DEFAULT_BRAND as brand,
-  DEFAULT_TEMPLATES as templates
-} from '@/domain/poster-defaults'

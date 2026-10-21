@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
-import { DEFAULT_BRAND, DEFAULT_TEMPLATES } from '@/domain/poster-defaults'
+import { getPosterBrand } from '@/app/helpers/brand-poster'
+import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { database } from '@/infra/database/client'
 import { findOffer } from '@/infra/offer'
 
@@ -20,6 +21,7 @@ export const generateMetadata = async ({
 }
 
 const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
+  const { brand, templates } = requireBrandSettings()
   const offer = await findOfferByParams(params)
   if (!offer) notFound()
 
@@ -28,8 +30,8 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
     <OfferEditor
       id={id}
       offer={content}
-      brand={DEFAULT_BRAND}
-      templates={DEFAULT_TEMPLATES}
+      brand={getPosterBrand(brand)}
+      templates={templates}
     />
   )
 }

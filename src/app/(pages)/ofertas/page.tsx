@@ -1,8 +1,13 @@
-import { Copy, Plus } from 'lucide-react'
+import { Copy, Palette, Plus } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { connection } from 'next/server'
 
+import { buttonVariants } from '@/app/components/ui/shadcn/button'
+import {
+  requireBrandSettings,
+  SETTINGS_PATH
+} from '@/app/helpers/brand-settings'
 import { formatValidUntil, type OfferSummary } from '@/domain/offer'
 import { database } from '@/infra/database/client'
 import { listOffers } from '@/infra/offer'
@@ -30,6 +35,7 @@ const describeOffer = ({ validUntil, pageCount }: OfferSummary) => {
 const OffersPage = async () => {
   // Renders per request, so `next build` never opens the database
   await connection()
+  requireBrandSettings()
   const offers = listOffers(database)
 
   return (
@@ -48,12 +54,21 @@ const OffersPage = async () => {
               Cada oferta reúne as páginas que vão juntas para o Instagram.
             </p>
           </div>
-          <form action={createOfferAction}>
-            <SubmitButton>
-              <Plus data-icon="inline-start" aria-hidden />
-              Nova oferta
-            </SubmitButton>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={SETTINGS_PATH}
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              <Palette data-icon="inline-start" aria-hidden />
+              Marca
+            </Link>
+            <form action={createOfferAction}>
+              <SubmitButton>
+                <Plus data-icon="inline-start" aria-hidden />
+                Nova oferta
+              </SubmitButton>
+            </form>
+          </div>
         </header>
 
         {offers.length === 0 ? (
