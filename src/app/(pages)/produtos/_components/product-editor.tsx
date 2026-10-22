@@ -9,6 +9,7 @@ import { Input } from '@/app/components/ui/shadcn/input'
 import type { Product, ProductPage } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from '../actions'
+import { PRODUCTS_HEADING_ID } from './delete-product-button'
 import { ProductForm } from './product-form'
 import { ProductList } from './product-list'
 import { ProductPagination } from './product-pagination'
@@ -50,6 +51,7 @@ export const ProductEditor = ({
   const [lookup, setLookup] = useState<Lookup>()
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState<Product>()
+  const [deleted, setDeleted] = useState<Product>()
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
 
@@ -57,6 +59,7 @@ export const ProductEditor = ({
     startSearch(async () => {
       const result = await lookupProduct(code)
       setSaved(undefined)
+      setDeleted(undefined)
       if (result.status === 'error') {
         setError(result.message)
         setLookup(undefined)
@@ -79,8 +82,18 @@ export const ProductEditor = ({
 
   const handleSaved = (product: Product) => {
     setSaved(product)
+    setDeleted(undefined)
     setLookup(undefined)
     codeInput.current?.focus()
+  }
+
+  const handleDeleted = (product: Product) => {
+    setDeleted(product)
+    setSaved(undefined)
+    setError(undefined)
+    if (lookup?.status === 'found' && lookup.product.code === product.code) {
+      setLookup(undefined)
+    }
   }
 
   return (
@@ -130,6 +143,12 @@ export const ProductEditor = ({
             {saved.name} salvo. Bipe o próximo código.
           </p>
         )}
+        {deleted && (
+          <p className="flex items-center gap-2 text-sm">
+            <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            {deleted.name} excluído.
+          </p>
+        )}
         {lookup && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="size-4 shrink-0" />
@@ -153,13 +172,21 @@ export const ProductEditor = ({
         />
       )}
 
-      <section aria-labelledby="products-title" className="flex flex-col gap-4">
+      <section
+        aria-labelledby={PRODUCTS_HEADING_ID}
+        className="flex flex-col gap-4"
+      >
         <div className="flex flex-col gap-1">
-          <h2 id="products-title" className="text-lg font-semibold">
+          <h2
+            id={PRODUCTS_HEADING_ID}
+            tabIndex={-1}
+            className="text-lg font-semibold outline-none"
+          >
             Produtos cadastrados
           </h2>
           <p className="text-sm text-muted-foreground">
-            Clique num produto para alterar os dados ou a foto.
+            Clique num produto para alterar os dados ou a foto, ou na lixeira
+            para excluir.
           </p>
         </div>
         <ProductSearch query={query} />
@@ -171,6 +198,7 @@ export const ProductEditor = ({
             products={productPage.products}
             busy={searching}
             onOpen={openProduct}
+            onDeleted={handleDeleted}
           />
         )}
         {productPage.pageCount > 1 && (

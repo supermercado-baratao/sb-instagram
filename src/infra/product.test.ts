@@ -1,5 +1,12 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -10,9 +17,19 @@ import { describe, expect, onTestFinished, test } from 'vitest'
 
 import { type Product, PRODUCTS_PAGE_SIZE } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
-import { products } from '@/infra/database/schema'
+import {
+  offerPageItems,
+  offerPages,
+  offers,
+  products
+} from '@/infra/database/schema'
 
-import { findProductByCode, listProducts, saveProduct } from './product'
+import {
+  deleteProduct,
+  findProductByCode,
+  listProducts,
+  saveProduct
+} from './product'
 
 const EAN = '7891000100103'
 const catalogProduct = {
@@ -43,7 +60,9 @@ const setup = async () => {
   )
   await writeFile(path.join(catalog, `${EAN}.png`), 'image')
 
-  const database = drizzle({ client: new Database(':memory:') })
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
   migrate(database, { migrationsFolder })
 
   return { database, catalog, photos }
@@ -218,5 +237,104 @@ describe('listProducts', () => {
       page: 1,
       pageCount: 1
     })
+  })
+})
+
+const addOffer = (
+  database: Awaited<ReturnType<typeof setup>>['database'],
+  name: string,
+  codes: string[]
+) => {
+  const offer = database
+    .insert(offers)
+    .values({ name, highlightTitle: '', highlightMessage: '' })
+    .returning()
+    .get()
+  for (const [position, code] of codes.entries()) {
+    const page = database
+      .insert(offerPages)
+      .values({
+        offerId: offer.id,
+        position,
+        templateId: 'mercado',
+        layout: 4
+      })
+      .returning()
+      .get()
+    database
+      .insert(offerPageItems)
+      .values({
+        pageId: page.id,
+        position: 0,
+        productCode: code,
+        priceInCents: 100
+      })
+      .run()
+  }
+}
+
+describe('deleteProduct', () => {
+  test('deletes the product and its photo', async () => {
+    const { database, photos } = await setup()
+    database
+      .insert(products)
+      .values([
+        { ...savedProduct, photo: `${EAN}.png` },
+        product('1234', 'Picanha')
+      ])
+      .run()
+    await mkdir(photos)
+    await writeFile(path.join(photos, `${EAN}.png`), 'image')
+
+    expect(await deleteProduct(database, ` ${EAN}`, { photos })).toEqual({
+      status: 'deleted'
+    })
+    expect(database.select().from(products).all()).toEqual([
+      product('1234', 'Picanha')
+    ])
+    await expect(access(path.join(photos, `${EAN}.png`))).rejects.toThrow()
+  })
+
+  test('deletes a product without a photo', async () => {
+    const { database, photos } = await setup()
+    database.insert(products).values(product('1234', 'Picanha')).run()
+
+    expect(await deleteProduct(database, '1234', { photos })).toEqual({
+      status: 'deleted'
+    })
+    expect(database.select().from(products).all()).toEqual([])
+  })
+
+  test('refuses a product used in offers and names each offer once', async () => {
+    const { database, photos } = await setup()
+    database
+      .insert(products)
+      .values([
+        { ...savedProduct, photo: `${EAN}.png` },
+        product('1234', 'Picanha')
+      ])
+      .run()
+    await mkdir(photos)
+    await writeFile(path.join(photos, `${EAN}.png`), 'image')
+    addOffer(database, 'Semana', [EAN, EAN])
+    addOffer(database, 'Açougue', ['1234'])
+    addOffer(database, 'Fim de semana', ['1234', EAN])
+
+    expect(await deleteProduct(database, EAN, { photos })).toEqual({
+      status: 'in-use',
+      offers: ['Fim de semana', 'Semana']
+    })
+    expect(database.select().from(products).all()).toHaveLength(2)
+    expect(await readFile(path.join(photos, `${EAN}.png`), 'utf8')).toBe(
+      'image'
+    )
+  })
+
+  test('rejects a code that could name a file outside the photos folder', async () => {
+    const { database, photos } = await setup()
+
+    await expect(
+      deleteProduct(database, '../logo', { photos })
+    ).rejects.toThrow()
   })
 })

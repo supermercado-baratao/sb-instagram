@@ -1,7 +1,7 @@
-import { copyFile, mkdir } from 'node:fs/promises'
+import { copyFile, mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 
-import { count, eq, or, type SQL, sql } from 'drizzle-orm'
+import { asc, count, eq, or, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
@@ -9,6 +9,7 @@ import {
   type FoundProduct,
   getCodeType,
   getPhotoFileName,
+  isValidCode,
   normalizeCode,
   type Product,
   type ProductPage,
@@ -19,7 +20,12 @@ import {
   getCatalogImageFile,
   readCatalogProduct
 } from '@/infra/catalog/product'
-import { products } from '@/infra/database/schema'
+import {
+  offerPageItems,
+  offerPages,
+  offers,
+  products
+} from '@/infra/database/schema'
 import { photosDirectory } from '@/infra/photos-directory'
 
 type Database = BetterSQLite3Database
@@ -132,4 +138,35 @@ export const listProducts = (
     .all()
 
   return { products: rows, total, page: current, pageCount }
+}
+
+export const findOffersUsingProduct = (database: Database, code: string) =>
+  database
+    .selectDistinct({ id: offers.id, name: offers.name })
+    .from(offerPageItems)
+    .innerJoin(offerPages, eq(offerPages.id, offerPageItems.pageId))
+    .innerJoin(offers, eq(offers.id, offerPages.offerId))
+    .where(eq(offerPageItems.productCode, normalizeCode(code)))
+    .orderBy(asc(offers.name), asc(offers.id))
+    .all()
+    .map(({ name }) => name)
+
+export type DeleteProductResult =
+  { status: 'deleted' } | { status: 'in-use'; offers: string[] }
+
+// Offers are left untouched: whoever deletes the product takes it out of them first (#28)
+export const deleteProduct = async (
+  database: Database,
+  rawCode: string,
+  { photos = photosDirectory }: ProductDirectories = {}
+): Promise<DeleteProductResult> => {
+  const code = normalizeCode(rawCode)
+  if (!isValidCode(code)) throw new Error(`Invalid product code: ${code}`)
+
+  const offerNames = findOffersUsingProduct(database, code)
+  if (offerNames.length > 0) return { status: 'in-use', offers: offerNames }
+
+  database.delete(products).where(eq(products.code, code)).run()
+  await rm(path.join(photos, getPhotoFileName(code)), { force: true })
+  return { status: 'deleted' }
 }
