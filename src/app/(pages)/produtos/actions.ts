@@ -14,7 +14,12 @@ import {
 } from '@/domain/product'
 import { database } from '@/infra/database/client'
 import { copyNoEanImage, savePhoto } from '@/infra/photo'
-import { findProductByCode, saveProduct } from '@/infra/product'
+import {
+  deleteProduct,
+  type DeleteProductResult,
+  findProductByCode,
+  saveProduct
+} from '@/infra/product'
 
 export type LookupResult =
   | ({ status: 'found' } & FoundProduct)
@@ -110,4 +115,17 @@ export const saveProductForm = async (
 
   revalidatePath('/produtos')
   return { status: 'saved', product }
+}
+
+export const deleteProductAction = async (
+  rawCode: string
+): Promise<DeleteProductResult | { status: 'error'; message: string }> => {
+  const code = normalizeCode(rawCode)
+  if (!isValidCode(code)) {
+    return { status: 'error', message: INVALID_CODE_MESSAGE }
+  }
+
+  const result = await deleteProduct(database, code)
+  revalidatePath('/produtos')
+  return result
 }

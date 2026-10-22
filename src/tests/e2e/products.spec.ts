@@ -62,7 +62,7 @@ test('finds a saved product by name and opens it from the list', async ({
 
   await expect(page).toHaveURL(/\?q=/)
   await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name }).click()
+  await page.getByRole('button', { name: new RegExp(`^${name}`) }).click()
 
   await expect(page.getByText('Produto já cadastrado')).toBeVisible()
   await expect(page.getByLabel('Nome')).toHaveValue(name)

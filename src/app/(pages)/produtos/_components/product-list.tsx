@@ -2,16 +2,24 @@ import { ImageOff } from 'lucide-react'
 
 import type { Product } from '@/domain/product'
 
+import { DeleteProductButton } from './delete-product-button'
+
 type ProductListProps = {
   products: Product[]
   busy: boolean
   onOpen: (code: string) => void
+  onDeleted: (product: Product) => void
 }
 
-export const ProductList = ({ products, busy, onOpen }: ProductListProps) => (
+export const ProductList = ({
+  products,
+  busy,
+  onOpen,
+  onDeleted
+}: ProductListProps) => (
   <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
     {products.map((product) => (
-      <li key={product.code}>
+      <li key={product.code} className="flex items-center gap-1 pr-2">
         <button
           type="button"
           // Not disabled, so the clicked row keeps the focus while the lookup runs
@@ -19,7 +27,7 @@ export const ProductList = ({ products, busy, onOpen }: ProductListProps) => (
           onClick={() => {
             if (!busy) onOpen(product.code)
           }}
-          className="flex w-full items-center gap-3 p-3 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset aria-disabled:cursor-wait aria-disabled:hover:bg-transparent"
+          className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset aria-disabled:cursor-wait aria-disabled:hover:bg-transparent"
         >
           <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
             {product.photo ? (
@@ -44,6 +52,11 @@ export const ProductList = ({ products, busy, onOpen }: ProductListProps) => (
             {product.code}
           </span>
         </button>
+        <DeleteProductButton
+          product={product}
+          disabled={busy}
+          onDeleted={onDeleted}
+        />
       </li>
     ))}
   </ul>
