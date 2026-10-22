@@ -1,10 +1,10 @@
 'use client'
 
 import { cn } from 'cn'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 
 type NavLinkProps = {
@@ -20,7 +20,7 @@ export const NavLink = ({ href, children }: NavLinkProps) => {
     pathname === href ? 'page' : pathname.startsWith(`${href}/`) || undefined
 
   return (
-    <Link
+    <GuardedLink
       href={href}
       aria-current={current}
       className={cn(
@@ -29,6 +29,6 @@ export const NavLink = ({ href, children }: NavLinkProps) => {
       )}
     >
       {children}
-    </Link>
+    </GuardedLink>
   )
 }

@@ -20,7 +20,7 @@ test('fills an offer page, saves it and downloads its pages as PNG', async ({
   await expect(page.getByText('Feijão carioca salvo')).toBeVisible()
 
   await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta' }).click()
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
   await expect(page).toHaveURL(/\/ofertas\/\d+$/)
 
   await page.getByLabel('Nome da oferta').fill(`Oferta ${code}`)
@@ -50,4 +50,34 @@ test('fills an offer page, saves it and downloads its pages as PNG', async ({
   expect({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) }).toEqual(
     POSTER_SIZE
   )
+})
+
+test('asks before leaving the offer editor with unsaved changes', async ({
+  page
+}) => {
+  await page.goto('/ofertas')
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
+  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  const editorUrl = page.url()
+
+  const name = page.getByLabel('Nome da oferta')
+  await name.fill('Oferta não salva')
+  await page
+    .getByRole('navigation', { name: 'Principal' })
+    .getByRole('link', { name: 'Produtos' })
+    .click()
+
+  const dialog = page.getByRole('alertdialog', { name: 'Sair sem salvar?' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Continuar editando' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page).toHaveURL(editorUrl)
+  await expect(name).toHaveValue('Oferta não salva')
+
+  await page
+    .getByRole('navigation', { name: 'Principal' })
+    .getByRole('link', { name: 'Ofertas' })
+    .click()
+  await dialog.getByRole('button', { name: 'Sair sem salvar' }).click()
+  await expect(page).toHaveURL(/\/ofertas$/)
 })

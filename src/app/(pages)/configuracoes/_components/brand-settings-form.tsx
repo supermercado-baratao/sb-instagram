@@ -37,6 +37,7 @@ import {
   SelectValue
 } from '@/app/components/ui/shadcn/select'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
+import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   type BrandContent,
   type BrandContentError,
@@ -104,12 +105,7 @@ export const BrandSettingsForm = ({
   const previewTemplate = content.templates[previewIndex]
   const currentLogo = uploadPreview ?? (removeLogo ? null : logoUrl)
 
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  useUnsavedChangesWarning(dirty)
 
   useEffect(
     () => () => {
