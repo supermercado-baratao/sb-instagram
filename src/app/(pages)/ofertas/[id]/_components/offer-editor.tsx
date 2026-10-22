@@ -9,11 +9,11 @@ import {
   Plus,
   Save
 } from 'lucide-react'
-import Link from 'next/link'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 
 import { Poster } from '@/app/components/blocks/poster'
+import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Field, FieldGroup, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
@@ -24,6 +24,7 @@ import {
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
+import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
   findPageWithoutPrice,
@@ -81,12 +82,7 @@ export const OfferEditor = ({
   const selectedPage = content.pages[selectedIndex]
   const selectedTemplate = getPageTemplate(templates, selectedPage.templateId)
 
-  useEffect(() => {
-    if (!dirty) return
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
-    window.addEventListener('beforeunload', warn)
-    return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  useUnsavedChangesWarning(dirty)
 
   const update = (changes: Partial<OfferContent>) => {
     setContent((current) => ({ ...current, ...changes }))
@@ -187,7 +183,7 @@ export const OfferEditor = ({
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <header className="flex flex-col gap-4">
-        <Link
+        <GuardedLink
           href="/ofertas"
           className={buttonVariants({
             variant: 'ghost',
@@ -197,7 +193,7 @@ export const OfferEditor = ({
         >
           <ArrowLeft data-icon="inline-start" aria-hidden />
           Ofertas
-        </Link>
+        </GuardedLink>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="text-2xl font-semibold tracking-tight wrap-break-word">

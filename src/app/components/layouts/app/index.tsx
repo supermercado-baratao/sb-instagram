@@ -1,6 +1,7 @@
-import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { NavigationGuardProvider } from '@/app/components/providers/navigation-guard'
+import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
 import { SETTINGS_PATH } from '@/app/helpers/brand-settings'
@@ -19,7 +20,7 @@ export const AppLayout = ({ brand, children }: AppLayoutProps) => {
   const logoUrl = getLogoUrl(brand)
 
   return (
-    <>
+    <NavigationGuardProvider>
       <a
         href={`#${CONTENT_ID}`}
         className={buttonVariants({
@@ -31,7 +32,7 @@ export const AppLayout = ({ brand, children }: AppLayoutProps) => {
       </a>
       <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-          <Link
+          <GuardedLink
             href="/ofertas"
             className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
@@ -45,7 +46,7 @@ export const AppLayout = ({ brand, children }: AppLayoutProps) => {
             ) : (
               <span className="truncate">{brand.name}</span>
             )}
-          </Link>
+          </GuardedLink>
           <nav aria-label="Principal">
             <ul className="flex gap-1">
               <li>
@@ -68,6 +69,6 @@ export const AppLayout = ({ brand, children }: AppLayoutProps) => {
       >
         {children}
       </div>
-    </>
+    </NavigationGuardProvider>
   )
 }
