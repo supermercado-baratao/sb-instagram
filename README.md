@@ -18,13 +18,19 @@ Ainda não fazem parte da primeira versão: login, leitura do código pela câme
 
 ### Rodando com Docker
 
-Com o [Docker](https://docs.docker.com/get-docker/) instalado, na raiz do repositório:
+Com o [Docker](https://docs.docker.com/get-docker/) instalado, na pasta do `compose.yaml`:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 Abra [http://localhost:3000](http://localhost:3000) no navegador. Para parar, use `docker compose down`.
+
+O `compose.yaml` usa a imagem publicada em `ghcr.io/supermercado-baratao/sb-instagram`, para `linux/amd64` e `linux/arm64`. Para montar a imagem a partir do código, na raiz do repositório, use o compose de desenvolvimento:
+
+```bash
+docker compose -f compose.dev.yaml up -d --build
+```
 
 Os dados da instância (banco e fotos enviadas) ficam no volume nomeado `data`, montado em `/data` dentro do container. Eles continuam lá depois de `docker compose down` ou de atualizar a imagem; só são apagados com `docker compose down --volumes`. O diretório de dados é definido pela variável de ambiente `DATA_DIR`.
 
@@ -150,6 +156,20 @@ Abaixo estão os destaques das convenções.
 - **Branches:** o trabalho de cada issue vai numa branch nova chamada `<scope>/<title>#<issue>`, em que `<scope>` é o prefixo do commit sem o emoji, por exemplo `feat/home-page#3`. Para um trabalho bem específico, acrescente um alvo opcional entre parênteses (uma página, componente ou outra área), por exemplo `fix(card)/focus-ring#7`. Nada de uma issue é commitado direto na `main`.
 - **Issues** são criadas a partir do template **Tarefa** (`.github/ISSUE_TEMPLATE/task.md`). Marque todos os itens concluídos da lista no corpo da issue antes de fechá-la.
 - **GitHub Actions** (`.github/workflows/ci.yml`) roda em todo pull request: commitlint, type-check, ESLint, Prettier, testes unitários, validação do catálogo e testes E2E.
+- **Versões:** a imagem Docker é publicada pelo workflow `.github/workflows/release.yml` quando uma tag `vX.Y.Z` é criada, com as tags `X.Y.Z`, `X.Y` e `latest`. Antes de publicar, o workflow sobe o container de cada arquitetura e gera um PNG do pôster. Em pull requests que mudam o `Dockerfile`, o `.dockerignore`, o `pnpm-lock.yaml` ou o próprio workflow, ele roda só o build e esse teste, sem publicar.
+
+### Criando uma versão
+
+1. Numa branch, atualize a versão do `package.json` com `pnpm version --no-git-tag-version X.Y.Z` e abra o pull request. A tag precisa ter a mesma versão do `package.json`, senão o workflow falha.
+2. Depois do merge, crie a tag na `main` e envie:
+
+   ```bash
+   git switch main && git pull
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+3. Acompanhe o workflow `release` no GitHub Actions. A versão segue o [Semantic Versioning](https://semver.org/lang/pt-BR/): `X` para mudanças incompatíveis, `Y` para funcionalidades novas e `Z` para correções.
 
 ### Configuração do assistente de IA
 
