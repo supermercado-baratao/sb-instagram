@@ -11,6 +11,7 @@ import {
   getPhotoFileName,
   isValidCode,
   normalizeCode,
+  normalizeSearchText,
   type Product,
   type ProductPage,
   PRODUCTS_PAGE_SIZE
@@ -26,6 +27,7 @@ import {
   offers,
   products
 } from '@/infra/database/schema'
+import { searchText } from '@/infra/database/search-text'
 import { photosDirectory } from '@/infra/photos-directory'
 
 type Database = BetterSQLite3Database
@@ -106,7 +108,7 @@ export const saveProduct = async (
 
 const escapeLike = (text: string) => text.replaceAll(/[\\%_]/g, String.raw`\$&`)
 
-const contains = (column: SQLiteColumn, text: string): SQL =>
+const contains = (column: SQL | SQLiteColumn, text: string): SQL =>
   sql`${column} LIKE ${`%${escapeLike(text)}%`} ESCAPE '\\'`
 
 export const listProducts = (
@@ -118,7 +120,7 @@ export const listProducts = (
     name === ''
       ? undefined
       : or(
-          contains(products.name, name),
+          contains(searchText(products.name), normalizeSearchText(name)),
           contains(products.code, normalizeCode(query))
         )
 
@@ -132,7 +134,7 @@ export const listProducts = (
     .select()
     .from(products)
     .where(where)
-    .orderBy(sql`${products.name} COLLATE NOCASE`, products.code)
+    .orderBy(searchText(products.name), products.code)
     .limit(PRODUCTS_PAGE_SIZE)
     .offset((current - 1) * PRODUCTS_PAGE_SIZE)
     .all()

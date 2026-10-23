@@ -6,12 +6,14 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { dataDirectory } from '@/infra/data-directory'
 import { databaseFile } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
+import { registerSearchText } from '@/infra/database/search-text'
 
 const openDatabase = () => {
   mkdirSync(dataDirectory, { recursive: true })
   const sqlite = new Database(databaseFile)
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
+  registerSearchText(sqlite)
   return drizzle({ client: sqlite, relations })
 }
 
