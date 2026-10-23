@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/supermercado-baratao/sb-instagram:latest
     ports:
       - '3000:3000'
     volumes:
