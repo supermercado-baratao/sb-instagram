@@ -8,6 +8,10 @@ import { POSTER_SIZE } from '@/domain/poster'
 test('fills an offer page, saves it and downloads its pages as PNG', async ({
   page
 }) => {
+  // On a cold `next dev` this test compiles most routes and launches the poster renderer's
+  // Chromium, which outlasts the default timeout on a loaded machine (#35)
+  test.slow()
+
   // A reused e2e server keeps its data between runs, so each run uses a code it never saw
   const code = `E2E-OFFER-${Date.now()}`
   const productCode = page.getByLabel('Código de barras ou código interno')
