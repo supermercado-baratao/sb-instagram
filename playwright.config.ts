@@ -8,6 +8,8 @@ const DATA_DIR = `${DIST_DIR}/data`
 export default defineConfig({
   testDir: './src/tests/e2e',
   fullyParallel: false,
+  // `next dev` compiles a route on its first visit, which outlasts the 5 s default on a loaded machine (#35)
+  expect: { timeout: 15_000 },
   webServer: {
     command: `node -e "require('node:fs').rmSync('${DATA_DIR}', { recursive: true, force: true })" && pnpm dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
