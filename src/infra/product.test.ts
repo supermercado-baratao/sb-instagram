@@ -23,6 +23,7 @@ import {
   offers,
   products
 } from '@/infra/database/schema'
+import { registerSearchText } from '@/infra/database/search-text'
 
 import {
   deleteProduct,
@@ -62,6 +63,7 @@ const setup = async () => {
 
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
+  registerSearchText(sqlite)
   const database = drizzle({ client: sqlite })
   migrate(database, { migrationsFolder })
 
@@ -191,6 +193,35 @@ describe('listProducts', () => {
     expect(names('PICANHA')).toEqual(['picanha bovina'])
     expect(names(' 01 ')).toEqual(['Fraldinha', 'picanha bovina'])
     expect(names('')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
+  })
+
+  test('searches and sorts the name ignoring accents and cedilla', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values([
+        product('1', 'Pão Francês'),
+        product('2', 'pão de queijo'),
+        product('3', 'Açúcar Cristal'),
+        product('4', 'Ágata Azeite'),
+        product('5', 'Batata')
+      ])
+      .run()
+
+    const names = (query: string) =>
+      listProducts(database, { query }).products.map(({ name }) => name)
+
+    expect(names('pao')).toEqual(['pão de queijo', 'Pão Francês'])
+    expect(names('PÃO DE')).toEqual(['pão de queijo'])
+    expect(names('acucar')).toEqual(['Açúcar Cristal'])
+    expect(names('ÇÚ')).toEqual(['Açúcar Cristal'])
+    expect(names('')).toEqual([
+      'Açúcar Cristal',
+      'Ágata Azeite',
+      'Batata',
+      'pão de queijo',
+      'Pão Francês'
+    ])
   })
 
   test('takes % and _ in the query literally', async () => {

@@ -43,6 +43,9 @@ export const PHOTO_MAX_MEGABYTES = 10
 
 export const PRODUCTS_PAGE_SIZE = 50
 
+export const normalizeSearchText = (text: string) =>
+  text.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase()
+
 export type ProductPage = {
   products: Product[]
   total: number
