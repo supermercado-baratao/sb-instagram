@@ -16,6 +16,14 @@ Ainda não fazem parte da primeira versão: login, leitura do código pela câme
 
 ## Começando
 
+### Instalando no mercado
+
+Os guias passo a passo, para quem não é desenvolvedor, ficam na pasta [`guias/`](./guias/):
+
+- [Instalação](./guias/instalacao.md): instalar o Docker, subir o app e abri-lo nas outras máquinas da rede.
+- [Atualização](./guias/atualizacao.md): instalar uma versão nova sem perder os dados.
+- [Backup e restauração](./guias/backup.md): guardar e recuperar uma cópia dos dados do mercado.
+
 ### Rodando com Docker
 
 Com o [Docker](https://docs.docker.com/get-docker/) instalado, na pasta do `compose.yaml`:
@@ -85,7 +93,7 @@ Abaixo estão os destaques das convenções.
 
 ### Idioma
 
-- **Português:** este README, o `CONTRIBUTING.md`, as issues (título e corpo), o template de issue e todos os textos exibidos no app.
+- **Português:** este README, o `CONTRIBUTING.md`, os guias para os mercados em `guias/`, as issues (título e corpo), o template de issue e todos os textos exibidos no app.
 - **Inglês:** código (nomes e comentários), mensagens de commit, nomes de branch, pull requests (título e corpo), `AGENTS.md`, `docs/` e o workflow de IA em `.claude/`.
 
 ### Ferramentas
