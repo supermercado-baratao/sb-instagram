@@ -164,7 +164,7 @@ Abaixo estão os destaques das convenções.
 - **Branches:** o trabalho de cada issue vai numa branch nova chamada `<scope>/<title>#<issue>`, em que `<scope>` é o prefixo do commit sem o emoji, por exemplo `feat/home-page#3`. Para um trabalho bem específico, acrescente um alvo opcional entre parênteses (uma página, componente ou outra área), por exemplo `fix(card)/focus-ring#7`. Nada de uma issue é commitado direto na `main`.
 - **Issues** são criadas a partir do template **Tarefa** (`.github/ISSUE_TEMPLATE/task.md`). Marque todos os itens concluídos da lista no corpo da issue antes de fechá-la.
 - **GitHub Actions** (`.github/workflows/ci.yml`) roda em todo pull request: commitlint, type-check, ESLint, Prettier, testes unitários, validação do catálogo e testes E2E.
-- **Versões:** a imagem Docker é publicada pelo workflow `.github/workflows/release.yml` quando uma tag `vX.Y.Z` é criada, com as tags `X.Y.Z`, `X.Y` e `latest`. Antes de publicar, o workflow sobe o container de cada arquitetura e gera um PNG do pôster. Em pull requests que mudam o `Dockerfile`, o `.dockerignore`, o `pnpm-lock.yaml` ou o próprio workflow, ele roda só o build e esse teste, sem publicar.
+- **Versões:** a imagem Docker é publicada pelo workflow `.github/workflows/release.yml` quando uma tag `vX.Y.Z` é criada, com as tags `X.Y.Z`, `X.Y` e `latest`. Antes de publicar, o workflow sobe o container de cada arquitetura e gera um PNG do pôster. Depois de publicar a imagem, ele cria o release da versão no GitHub, com o comando para baixar a imagem, os links para os guias e a lista dos pull requests da versão. Em pull requests que mudam o `Dockerfile`, o `.dockerignore`, o `pnpm-lock.yaml` ou o próprio workflow, ele roda só o build e esse teste, sem publicar.
 
 ### Criando uma versão
 
@@ -177,7 +177,7 @@ Abaixo estão os destaques das convenções.
    git push origin vX.Y.Z
    ```
 
-3. Acompanhe o workflow `release` no GitHub Actions. A versão segue o [Semantic Versioning](https://semver.org/lang/pt-BR/): `X` para mudanças incompatíveis, `Y` para funcionalidades novas e `Z` para correções.
+3. Acompanhe o workflow `release` no GitHub Actions. No fim, o release da versão aparece em [Releases](https://github.com/supermercado-baratao/sb-instagram/releases), sem passo manual. A versão segue o [Semantic Versioning](https://semver.org/lang/pt-BR/): `X` para mudanças incompatíveis, `Y` para funcionalidades novas e `Z` para correções.
 
 ### Configuração do assistente de IA
 

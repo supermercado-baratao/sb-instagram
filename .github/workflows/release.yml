@@ -119,7 +119,7 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/download-artifact@v8
@@ -158,3 +158,31 @@ jobs:
 
       - name: Inspect
         run: docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # A rerun of this job, or a release made by hand, already has one
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::notice::Release $GITHUB_REF_NAME already exists"
+            exit 0
+          fi
+          cat > "$RUNNER_TEMP/release-notes.md" << 'EOF'
+          ## Instalação
+
+          Imagem Docker para `linux/amd64` e `linux/arm64`:
+
+          ```bash
+          docker pull ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+          ```
+
+          Siga os guias para instalar e manter o app no mercado:
+
+          - [Instalação](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/guias/instalacao.md)
+          - [Atualização](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/guias/atualizacao.md)
+          - [Backup e restauração](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/guias/backup.md)
+
+          EOF
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md" --generate-notes
