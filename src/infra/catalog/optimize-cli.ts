@@ -1,15 +1,9 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import {
-  CATALOG_IMAGE_EXTENSION,
-  checkCatalogImage,
-  hasTransparentBackground,
-  TRANSPARENT_BACKGROUND_ERROR
-} from '@/domain/catalog'
+import { CATALOG_IMAGE_EXTENSION } from '@/domain/catalog'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import { readCatalogImage } from '@/infra/catalog/image'
-import { optimizeCatalogImage } from '@/infra/catalog/optimize'
+import { prepareCatalogImage } from '@/infra/catalog/optimize'
 
 const listImages = async (directory: string) => {
   const fileNames = await readdir(directory)
@@ -39,25 +33,16 @@ for (const file of files) {
   const original = await readFile(file)
 
   try {
-    const originalImage = await readCatalogImage(original)
-    if (checkCatalogImage(originalImage).length === 0) continue
+    const { image, errors } = await prepareCatalogImage(original)
 
-    // The margin added around the product makes the corners transparent, so a photo with a
-    // background would pass the check once framed: it has to be rejected before that
-    if (!hasTransparentBackground(originalImage)) {
-      console.error(`${name}: ${TRANSPARENT_BACKGROUND_ERROR}`)
-      failed = true
-      continue
+    if (image && image !== original) {
+      await writeFile(file, image)
+      console.log(
+        `${name}: ${formatBytes(original.length)} → ${formatBytes(image.length)}`
+      )
     }
 
-    const optimized = await optimizeCatalogImage(original)
-    await writeFile(file, optimized)
-    console.log(
-      `${name}: ${formatBytes(original.length)} → ${formatBytes(optimized.length)}`
-    )
-
-    const remainingErrors = checkCatalogImage(await readCatalogImage(optimized))
-    for (const message of remainingErrors) {
+    for (const message of errors) {
       console.error(`${name}: ${message}`)
       failed = true
     }
