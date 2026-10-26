@@ -1,6 +1,12 @@
 import sharp from 'sharp'
 
-import { getCatalogImageLayout } from '@/domain/catalog'
+import {
+  checkCatalogImage,
+  getCatalogImageLayout,
+  hasTransparentBackground,
+  TRANSPARENT_BACKGROUND_ERROR
+} from '@/domain/catalog'
+import { readCatalogImage } from '@/infra/catalog/image'
 
 const transparent = { r: 0, g: 0, b: 0, alpha: 0 }
 
@@ -27,4 +33,31 @@ export const optimizeCatalogImage = async (buffer: Buffer) => {
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer()
   )
+}
+
+export type PreparedCatalogImage = {
+  image: Buffer | undefined
+  errors: string[]
+}
+
+// An image that already passes is returned as is, so it isn't re-encoded every time
+export const prepareCatalogImage = async (
+  original: Buffer
+): Promise<PreparedCatalogImage> => {
+  const originalImage = await readCatalogImage(original)
+  if (checkCatalogImage(originalImage).length === 0) {
+    return { image: original, errors: [] }
+  }
+
+  // The margin added around the product makes the corners transparent, so a photo with a
+  // background would pass the check once framed: it has to be rejected before that
+  if (!hasTransparentBackground(originalImage)) {
+    return { image: undefined, errors: [TRANSPARENT_BACKGROUND_ERROR] }
+  }
+
+  const optimized = await optimizeCatalogImage(original)
+  return {
+    image: optimized,
+    errors: checkCatalogImage(await readCatalogImage(optimized))
+  }
 }

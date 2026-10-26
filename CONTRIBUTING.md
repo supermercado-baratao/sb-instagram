@@ -73,6 +73,15 @@ O arquivo é **substituído** pela versão otimizada, então guarde o original e
 
 Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook de `pre-commit` otimiza os PNGs do catálogo que estiverem no commit e só deixa o commit seguir se o resultado passar nas regras.
 
+## Contribuindo com os produtos do seu mercado
+
+Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo:
+
+1. Em **Produtos** (`/produtos`), clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas.
+2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo (sem foto, sem marca ou unidade, foto com fundo, foto pequena demais ou produto que já está no catálogo). Corrija no app o que quiser incluir e exporte de novo.
+3. Confira os nomes, as marcas e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
+4. Descompacte o ZIP dentro da pasta `catalog/` do seu fork, sem o `relatorio.txt`, e siga os passos abaixo. No commit, o hook de `pre-commit` otimiza e valida as imagens.
+
 ## Validando e enviando
 
 1. Faça um fork do repositório e adicione os arquivos na pasta certa.

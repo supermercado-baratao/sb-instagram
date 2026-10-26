@@ -9,6 +9,7 @@ import { Input } from '@/app/components/ui/shadcn/input'
 import type { Product, ProductPage } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from '../actions'
+import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'
 import { ProductForm } from './product-form'
 import { ProductList } from './product-list'
@@ -189,6 +190,7 @@ export const ProductEditor = ({
             para excluir.
           </p>
         </div>
+        <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
         <ProductSearch query={query} />
         <p aria-live="polite" className="text-sm text-muted-foreground">
           {getListSummary(productPage, query)}
