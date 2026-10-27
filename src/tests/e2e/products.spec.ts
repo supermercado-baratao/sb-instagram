@@ -68,3 +68,70 @@ test('finds a saved product by name and opens it from the list', async ({
   await expect(page.getByLabel('Nome')).toHaveValue(name)
   await expect(page.getByLabel('Nome')).toBeFocused()
 })
+
+test('registers a product from the create dialog', async ({ page }) => {
+  const code = `E2E-NEW-${Date.now()}`
+  const name = `Maminha ${code}`
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const codeField = dialog.getByLabel('Código de barras ou código interno')
+  await expect(codeField).toBeFocused()
+  await codeField.fill(code)
+  await codeField.press('Enter')
+
+  await expect(dialog.getByText('Código interno novo')).toBeVisible()
+  await expect(dialog.getByLabel('Nome')).toBeFocused()
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+  await expect(
+    page.getByLabel('Código de barras ou código interno')
+  ).toBeFocused()
+  await expect(
+    page.getByRole('button', { name: new RegExp(`^${name}`) })
+  ).toBeVisible()
+})
+
+test('asks before replacing a product registered again with other data', async ({
+  page
+}) => {
+  const code = `E2E-AGAIN-${Date.now()}`
+  const name = `Cupim ${code}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const codeField = dialog.getByLabel('Código de barras ou código interno')
+
+  const register = async (productName: string) => {
+    await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+    await codeField.fill(code)
+    await codeField.press('Enter')
+    await dialog.getByLabel('Nome').fill(productName)
+    await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  }
+
+  await page.goto('/produtos')
+  await register(name)
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await register(name)
+  await expect(dialog).toBeHidden()
+  await expect(
+    page.getByText(`${name} já estava cadastrado, e nenhum dado mudou.`)
+  ).toBeVisible()
+
+  await register(`${name} especial`)
+  const confirm = page.getByRole('alertdialog', {
+    name: 'Substituir os dados do produto?'
+  })
+  await expect(confirm.getByRole('listitem')).toHaveText([
+    `Nome:${name}passa a ser${name} especial`
+  ])
+  await confirm.getByRole('button', { name: 'Substituir' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(`${name} especial salvo`)).toBeVisible()
+})

@@ -16,6 +16,24 @@ export type Product = {
 
 export type ProductSource = 'instance' | 'catalog'
 
+export type ProductDetails = Pick<Product, 'name' | 'brand' | 'unit'>
+
+export type ProductChange = {
+  field: keyof ProductDetails
+  from: string | null
+  to: string | null
+}
+
+const DETAIL_FIELDS = ['name', 'brand', 'unit'] as const
+
+export const getProductChanges = (
+  current: ProductDetails,
+  next: ProductDetails
+): ProductChange[] =>
+  DETAIL_FIELDS.filter((field) => current[field] !== next[field]).map(
+    (field) => ({ field, from: current[field], to: next[field] })
+  )
+
 export type FoundProduct = {
   product: Product
   source: ProductSource

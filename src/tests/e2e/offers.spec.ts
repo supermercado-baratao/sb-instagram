@@ -56,6 +56,33 @@ test('fills an offer page, saves it and downloads its pages as PNG', async ({
   )
 })
 
+test('registers a missing product from an offer slot', async ({ page }) => {
+  const code = `E2E-SLOT-${Date.now()}`
+  const slotCode = page.getByLabel('Produto 1', { exact: true })
+
+  await page.goto('/ofertas')
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
+  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+
+  await slotCode.fill(code)
+  await slotCode.press('Enter')
+  await expect(page.getByText(`Código ${code} não cadastrado.`)).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Cadastrar produto (Produto 1)', exact: true })
+    .click()
+
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  await expect(
+    dialog.getByLabel('Código de barras ou código interno')
+  ).toHaveValue(code)
+  await expect(dialog.getByLabel('Nome')).toBeFocused()
+  await dialog.getByLabel('Nome').fill('Arroz agulhinha')
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByLabel('Preço de Arroz agulhinha (R$)')).toBeFocused()
+})
+
 test('asks before leaving the offer editor with unsaved changes', async ({
   page
 }) => {

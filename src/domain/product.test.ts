@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { isValidCode, normalizeSearchText } from './product'
+import { getProductChanges, isValidCode, normalizeSearchText } from './product'
 
 describe('isValidCode', () => {
   test.each(['7891000100103', '2001', 'PIC-01', 'cod_7.5'])(
@@ -26,5 +26,30 @@ describe('normalizeSearchText', () => {
     ['Feijão 1 kg', 'feijao 1 kg']
   ])('turns %s into %s', (text, normalized) => {
     expect(normalizeSearchText(text)).toBe(normalized)
+  })
+})
+
+describe('getProductChanges', () => {
+  const current = { name: 'Arroz agulhinha', brand: 'Camil', unit: '5 kg' }
+
+  test('finds no change in the same details', () => {
+    expect(getProductChanges(current, { ...current })).toEqual([])
+  })
+
+  test('lists each changed field with its old and new value', () => {
+    expect(
+      getProductChanges(current, {
+        name: 'Arroz agulhinha tipo 1',
+        brand: null,
+        unit: '5 kg'
+      })
+    ).toEqual([
+      {
+        field: 'name',
+        from: 'Arroz agulhinha',
+        to: 'Arroz agulhinha tipo 1'
+      },
+      { field: 'brand', from: 'Camil', to: null }
+    ])
   })
 })
