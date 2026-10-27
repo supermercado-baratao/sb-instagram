@@ -4,7 +4,7 @@ import { isOfferContent } from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
 import { database } from '@/infra/database/client'
 import { saveOffer } from '@/infra/offer'
-import { findProductByCode, saveProduct } from '@/infra/product'
+import { findProductByCode, saveProduct, searchProducts } from '@/infra/product'
 
 export type SlotLookupResult =
   | { status: 'found'; product: Product }
@@ -37,6 +37,10 @@ export const lookupSlotProduct = async (
       : found.product
   return { status: 'found', product }
 }
+
+// Only the instance: the catalog is looked up by code, through lookupSlotProduct
+export const searchSlotProducts = async (query: string): Promise<Product[]> =>
+  searchProducts(database, query)
 
 export const saveOfferAction = async (
   id: number,

@@ -1,7 +1,7 @@
 import { copyFile, mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 
-import { asc, count, eq, or, type SQL, sql } from 'drizzle-orm'
+import { and, asc, count, eq, or, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
@@ -13,6 +13,7 @@ import {
   normalizeCode,
   normalizeSearchText,
   type Product,
+  PRODUCT_SUGGESTION_LIMIT,
   type ProductPage,
   PRODUCTS_PAGE_SIZE
 } from '@/domain/product'
@@ -140,6 +141,26 @@ export const listProducts = (
     .all()
 
   return { products: rows, total, page: current, pageCount }
+}
+
+export const searchProducts = (
+  database: Database,
+  query: string,
+  { limit = PRODUCT_SUGGESTION_LIMIT }: { limit?: number } = {}
+): Product[] => {
+  const words = normalizeSearchText(query).split(/\s+/).filter(Boolean)
+  if (words.length === 0) return []
+
+  // Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany")
+  const fields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || ${products.code})`
+
+  return database
+    .select()
+    .from(products)
+    .where(and(...words.map((word) => contains(fields, word))))
+    .orderBy(searchText(products.name), products.code)
+    .limit(limit)
+    .all()
 }
 
 export const findOffersUsingProduct = (database: Database, code: string) =>

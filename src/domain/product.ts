@@ -61,6 +61,8 @@ export const PHOTO_MAX_MEGABYTES = 10
 
 export const PRODUCTS_PAGE_SIZE = 50
 
+export const PRODUCT_SUGGESTION_LIMIT = 8
+
 export const normalizeSearchText = (text: string) =>
   text.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase()
 

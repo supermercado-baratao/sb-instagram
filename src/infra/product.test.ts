@@ -29,7 +29,8 @@ import {
   deleteProduct,
   findProductByCode,
   listProducts,
-  saveProduct
+  saveProduct,
+  searchProducts
 } from './product'
 
 const EAN = '7891000100103'
@@ -268,6 +269,54 @@ describe('listProducts', () => {
       page: 1,
       pageCount: 1
     })
+  })
+})
+
+describe('searchProducts', () => {
+  test('matches every word in the name, brand, unit or code ignoring accents', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values([
+        {
+          ...product('7891', 'Sabonete Erva-Doce'),
+          brand: 'Albany',
+          unit: '85 g'
+        },
+        { ...product('7892', 'Sabonete Aveia'), brand: 'Lux', unit: '85 g' },
+        { ...product('ab-1', 'Pão Francês'), brand: null, unit: null }
+      ])
+      .run()
+
+    const codes = (query: string) =>
+      searchProducts(database, query).map(({ code }) => code)
+
+    expect(codes('sabonete')).toEqual(['7892', '7891'])
+    expect(codes('SABONETE  albany')).toEqual(['7891'])
+    expect(codes('85 G')).toEqual(['7892', '7891'])
+    expect(codes('7892')).toEqual(['7892'])
+    expect(codes('AB-1')).toEqual(['ab-1'])
+    expect(codes('pao frances')).toEqual(['ab-1'])
+    expect(codes('pao albany')).toEqual([])
+    expect(codes('  ')).toEqual([])
+  })
+
+  test('takes % and _ literally and stops at the limit', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values(
+        Array.from({ length: 3 }, (_, index) =>
+          product(String(index), `Produto ${index}`)
+        )
+      )
+      .run()
+
+    expect(searchProducts(database, '%')).toEqual([])
+    expect(searchProducts(database, '_')).toEqual([])
+    expect(
+      searchProducts(database, 'produto', { limit: 2 }).map(({ code }) => code)
+    ).toEqual(['0', '1'])
   })
 })
 
