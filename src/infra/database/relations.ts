@@ -15,9 +15,15 @@ export const relations = defineRelations(schema, (r) => ({
   },
   offerPageItems: {
     product: r.one.products({
-      from: r.offerPageItems.productCode,
-      to: r.products.code,
+      from: r.offerPageItems.productId,
+      to: r.products.id,
       optional: false
+    })
+  },
+  products: {
+    codes: r.many.productCodes({
+      from: r.products.id,
+      to: r.productCodes.productId
     })
   }
 }))

@@ -17,12 +17,13 @@ import {
   getCatalogExportImagePath,
   type SkippedProduct
 } from '@/domain/catalog-export'
-import type { Product } from '@/domain/product'
+import { getCodeType, type Product } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
 import { prepareCatalogImage } from '@/infra/catalog/optimize'
 import { products } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
 import { photosDirectory } from '@/infra/photos-directory'
+import { attachCodes, firstProductCode } from '@/infra/product'
 
 type Database = BetterSQLite3Database
 
@@ -72,7 +73,10 @@ const preparePhoto = async (
   const original = product.photo && (await readPhoto(photos, product.photo))
   if (!original) return { reason: 'A foto não foi encontrada' }
 
-  if (product.codeType === 'internal' && noEanHashes.has(hash(original))) {
+  const isInternal = product.codes.every(
+    (code) => getCodeType(code) === 'internal'
+  )
+  if (isInternal && noEanHashes.has(hash(original))) {
     return { reason: 'A foto é uma imagem do catálogo' }
   }
 
@@ -102,16 +106,19 @@ export const buildCatalogExport = async (
   }
   const noEanHashes = await hashNoEanImages(noEan, catalogNames)
 
-  const rows = database
-    .select()
-    .from(products)
-    .orderBy(searchText(products.name), products.code)
-    .all()
+  const rows = attachCodes(
+    database,
+    database
+      .select()
+      .from(products)
+      .orderBy(searchText(products.name), firstProductCode)
+      .all()
+  )
 
   const files: Record<string, Uint8Array> = {}
   const skipped: SkippedProduct[] = []
-  const skip = ({ code, name }: Product, reason: string) => {
-    skipped.push({ code, name, reason })
+  const skip = ({ codes, name }: Product, reason: string) => {
+    skipped.push({ codes, name, reason })
   }
 
   // One photo at a time, so a large instance doesn't hold every decoded image in memory at once

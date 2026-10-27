@@ -60,7 +60,7 @@ export const DeleteProductButton = ({
 
   const confirm = () =>
     startDelete(async () => {
-      const result = await deleteProductAction(product.code)
+      const result = await deleteProductAction(product.id)
       if (result.status === 'deleted') {
         getFinalFocus()?.focus()
         onDeleted(product)
@@ -85,8 +85,8 @@ export const DeleteProductButton = ({
     >
       <AlertDialogTrigger
         render={<Button variant="ghost" size="icon" />}
-        // Not every product is unique by name, but every code is
-        aria-label={`Excluir ${product.name} (${product.code})`}
+        // Not every product is unique by name, so the codes tell them apart
+        aria-label={`Excluir ${product.name} (${product.codes.join(', ')})`}
         disabled={disabled}
       >
         <Trash2 aria-hidden />

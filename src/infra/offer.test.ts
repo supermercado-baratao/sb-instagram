@@ -8,7 +8,7 @@ import { createOfferContent, type OfferContent } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
-import { offerPageItems, products } from '@/infra/database/schema'
+import { offerPageItems, productCodes, products } from '@/infra/database/schema'
 
 import {
   createOffer,
@@ -20,8 +20,8 @@ import {
 } from './offer'
 
 const product: Product = {
-  code: '7891000100103',
-  codeType: 'ean',
+  id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
+  codes: ['7891000100103'],
   name: 'Leite Condensado',
   brand: 'Moça',
   unit: '395 g',
@@ -33,7 +33,12 @@ const setup = () => {
   sqlite.pragma('foreign_keys = ON')
   const database = drizzle({ client: sqlite, relations })
   migrate(database, { migrationsFolder })
-  database.insert(products).values(product).run()
+  const { codes, ...row } = product
+  database.insert(products).values(row).run()
+  database
+    .insert(productCodes)
+    .values(codes.map((code) => ({ productId: product.id, code })))
+    .run()
   return database
 }
 

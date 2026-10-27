@@ -1,3 +1,4 @@
+import { getPhotoUrl } from '@/app/helpers/product-photo'
 import {
   formatValidUntil,
   type OfferContent,
@@ -8,12 +9,10 @@ import {
   type Offer,
   type OfferProduct
 } from '@/domain/poster'
+import { getCodeType } from '@/domain/product'
 
 // Keeps the date line readable on the poster while the offer has no validity yet
 export const VALIDITY_PLACEHOLDER = '__/__/____'
-
-export const getPhotoUrl = (code: string) =>
-  `/fotos/${encodeURIComponent(code)}`
 
 // An empty slot becomes a blank product, which the poster fills with its placeholders. A product
 // without a brand hides the line instead, since the "MARCA" placeholder would print on its card
@@ -21,12 +20,12 @@ export const getPosterProducts = (slots: OfferSlot[]): OfferProduct[] =>
   slots.map((slot) =>
     slot
       ? {
-          code: slot.product.code,
-          codeType: slot.product.codeType,
+          code: slot.product.codes[0] ?? '',
+          codeType: getCodeType(slot.product.codes[0] ?? ''),
           name: slot.product.name,
           brand: slot.product.brand ?? HIDDEN_FIELD_MARKER,
           unit: slot.product.unit ?? '',
-          image: slot.product.photo ? getPhotoUrl(slot.product.code) : null,
+          image: slot.product.photo ? getPhotoUrl(slot.product.id) : null,
           priceInCents: slot.priceInCents
         }
       : {

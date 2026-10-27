@@ -24,56 +24,50 @@ import { Input } from '@/app/components/ui/shadcn/input'
 import {
   getCodeType,
   PHOTO_MAX_MEGABYTES,
-  type Product
+  type Product,
+  type ProductDetails
 } from '@/domain/product'
 
 import { saveProductForm } from './actions'
 import { CatalogImagePicker } from './catalog-image-picker'
-import { ExtraCodesField } from './extra-codes-field'
+import { CodesField } from './codes-field'
 import {
   ReplaceProductDialog,
   type ReplaceRequest
 } from './replace-product-dialog'
 
-const NO_EXTRA_CODES: string[] = []
-
 type ProductFormProps = {
-  code: string
-  product: Product | undefined
-  extraCodes?: string[]
-  hasPhoto: boolean
-  photoVersion: number
+  // Left out for a new product
+  productId?: string
+  codes: string[]
+  product?: ProductDetails
+  photoUrl?: string
   noEanImages: string[]
   onSaved: (product: Product, outcome: 'saved' | 'unchanged') => void
   askBeforeReplacing?: boolean
-  // Replaces the read-only code, so the dialog can take the code in the form itself
+  // Takes the first code in the dialog, which looks it up, so the codes field lists the others
   codeField?: ReactNode
+  // The value of codeField, which decides like the other codes whether the picker shows
+  typedCode?: string
   focusName?: boolean
   className?: string
 }
 
 export const ProductForm = ({
-  code,
+  productId,
+  codes: initialCodes,
   product,
-  extraCodes = NO_EXTRA_CODES,
-  hasPhoto,
-  photoVersion,
+  photoUrl,
   noEanImages,
   onSaved,
   askBeforeReplacing = false,
   codeField,
+  typedCode = '',
   focusName = true,
   className
 }: ProductFormProps) => {
   const [uploadPreview, setUploadPreview] = useState<string>()
-  const [codes, setCodes] = useState(extraCodes)
-  // The dialog finds the product after the form mounts, and keeps what was typed in the rest of it
-  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
-  const [loadedCodes, setLoadedCodes] = useState(extraCodes)
-  if (loadedCodes !== extraCodes) {
-    setLoadedCodes(extraCodes)
-    setCodes(extraCodes)
-  }
+  const [codes, setCodes] = useState(initialCodes)
   const [catalogImage, setCatalogImage] = useState('')
   const [error, setError] = useState<string>()
   const [photoError, setPhotoError] = useState<string>()
@@ -85,7 +79,11 @@ export const ProductForm = ({
   const photoInput = useRef<HTMLInputElement>(null)
   // The dialog can open over the form on /produtos, so ids must not repeat
   const id = useId()
-  const isInternal = code !== '' && getCodeType(code) === 'internal'
+  const allCodes = typedCode === '' ? codes : [typedCode, ...codes]
+  // The catalog has its own images for EANs, so the no-EAN ones are only for the other products
+  const showPicker =
+    allCodes.length > 0 &&
+    allCodes.every((code) => getCodeType(code) === 'internal')
 
   useEffect(() => {
     if (focusName) nameInput.current?.focus()
@@ -98,13 +96,10 @@ export const ProductForm = ({
     [uploadPreview]
   )
 
-  const savedPhoto = hasPhoto
-    ? `/fotos/${encodeURIComponent(code)}?v=${photoVersion}`
-    : undefined
-  const catalogPreview = catalogImage
-    ? `/catalogo/sem-ean/${catalogImage}`
-    : undefined
-  const preview = uploadPreview ?? catalogPreview ?? savedPhoto
+  // An EAN added after picking hides the picker, and the server ignores the picked image
+  const catalogPreview =
+    showPicker && catalogImage ? `/catalogo/sem-ean/${catalogImage}` : undefined
+  const preview = uploadPreview ?? catalogPreview ?? photoUrl
 
   const choosePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0]
@@ -156,6 +151,15 @@ export const ProductForm = ({
     send(formData)
   }
 
+  const codesField = (
+    <CodesField
+      codes={codes}
+      onChange={setCodes}
+      others={codeField !== undefined}
+      codeFieldValue={typedCode}
+    />
+  )
+
   return (
     <>
       <form
@@ -163,7 +167,7 @@ export const ProductForm = ({
         aria-labelledby={`${id}-title`}
         className={cn('flex flex-col gap-6', className)}
       >
-        {!codeField && <input type="hidden" name="code" value={code} />}
+        {productId && <input type="hidden" name="id" value={productId} />}
         {askBeforeReplacing && (
           <input type="hidden" name="replace" value="ask" />
         )}
@@ -178,7 +182,11 @@ export const ProductForm = ({
                 // eslint-disable-next-line @next/next/no-img-element -- the photo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy
                 <img
                   src={preview}
-                  alt={code ? `Foto do produto ${code}` : 'Foto do produto'}
+                  alt={
+                    product?.name
+                      ? `Foto do produto ${product.name}`
+                      : 'Foto do produto'
+                  }
                   className="size-full object-contain"
                 />
               ) : (
@@ -212,17 +220,7 @@ export const ProductForm = ({
           </div>
 
           <FieldGroup>
-            {codeField ?? (
-              <Field>
-                <FieldLabel htmlFor={`${id}-code`}>Código</FieldLabel>
-                <Input
-                  id={`${id}-code`}
-                  value={code}
-                  readOnly
-                  className="font-mono"
-                />
-              </Field>
-            )}
+            {codeField ?? codesField}
             <Field>
               <FieldLabel htmlFor={`${id}-name`}>Nome</FieldLabel>
               <Input
@@ -255,15 +253,11 @@ export const ProductForm = ({
                 />
               </Field>
             </div>
-            <ExtraCodesField
-              productCode={code}
-              codes={codes}
-              onChange={setCodes}
-            />
+            {codeField && codesField}
           </FieldGroup>
         </div>
 
-        {isInternal && (
+        {showPicker && (
           <CatalogImagePicker
             images={noEanImages}
             value={catalogImage}
