@@ -83,6 +83,43 @@ test('registers a missing product from an offer slot', async ({ page }) => {
   await expect(page.getByLabel('Preço de Arroz agulhinha (R$)')).toBeFocused()
 })
 
+test('places a product searched by name in an offer slot', async ({ page }) => {
+  const stamp = Date.now()
+  const code = `E2E-NAME-${stamp}`
+  const name = `Sabão em pó ${stamp}`
+  const productCode = page.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await page.getByLabel('Nome').fill(name)
+  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await page.goto('/ofertas')
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
+  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+
+  const slotCode = page.getByLabel('Produto 1', { exact: true })
+  await slotCode.fill(`SABAO EM PO ${stamp}`)
+  await expect(
+    page.getByRole('option', { name: new RegExp(name) })
+  ).toBeVisible()
+  await slotCode.press('ArrowDown')
+  await slotCode.press('Enter')
+
+  await expect(page.getByLabel(`Preço de ${name} (R$)`)).toBeFocused()
+
+  // With suggestions open but none highlighted, Enter still looks up the exact code, like a scan
+  const secondSlot = page.getByLabel('Produto 2', { exact: true })
+  await secondSlot.fill(code)
+  await expect(
+    page.getByRole('option', { name: new RegExp(name) })
+  ).toBeVisible()
+  await secondSlot.press('Enter')
+  await expect(page.getByLabel(`Preço de ${name} (R$)`).nth(1)).toBeFocused()
+})
+
 test('asks before leaving the offer editor with unsaved changes', async ({
   page
 }) => {
