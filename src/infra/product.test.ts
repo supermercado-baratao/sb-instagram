@@ -21,12 +21,15 @@ import {
   offerPageItems,
   offerPages,
   offers,
+  productCodes,
   products
 } from '@/infra/database/schema'
 import { registerSearchText } from '@/infra/database/search-text'
 
 import {
+  CodeConflictError,
   deleteProduct,
+  findCodeConflicts,
   findProductByCode,
   listProducts,
   saveProduct,
@@ -71,6 +74,21 @@ const setup = async () => {
   return { database, catalog, photos }
 }
 
+const product = (code: string, name: string): Product => ({
+  ...savedProduct,
+  code,
+  codeType: 'internal',
+  name
+})
+
+const listCodes = (database: Awaited<ReturnType<typeof setup>>['database']) =>
+  database
+    .select()
+    .from(productCodes)
+    .orderBy(productCodes.code)
+    .all()
+    .map(({ code }) => code)
+
 describe('findProductByCode', () => {
   test('prefers the product saved in the instance over the catalog', async () => {
     const { database, catalog } = await setup()
@@ -78,7 +96,26 @@ describe('findProductByCode', () => {
 
     expect(await findProductByCode(database, EAN, { catalog })).toEqual({
       product: savedProduct,
-      source: 'instance'
+      source: 'instance',
+      extraCodes: []
+    })
+  })
+
+  test('finds a product by one of its extra codes', async () => {
+    const { database, catalog } = await setup()
+    database.insert(products).values(savedProduct).run()
+    database
+      .insert(productCodes)
+      .values([
+        { code: '7891000053508', productCode: EAN },
+        { code: '2001', productCode: EAN }
+      ])
+      .run()
+
+    expect(await findProductByCode(database, ' 2001', { catalog })).toEqual({
+      product: savedProduct,
+      source: 'instance',
+      extraCodes: ['2001', '7891000053508']
     })
   })
 
@@ -88,7 +125,8 @@ describe('findProductByCode', () => {
     expect(await findProductByCode(database, ` ${EAN}\n`, { catalog })).toEqual(
       {
         product: { code: EAN, codeType: 'ean', ...catalogProduct, photo: null },
-        source: 'catalog'
+        source: 'catalog',
+        extraCodes: []
       }
     )
   })
@@ -137,7 +175,8 @@ describe('saveProduct', () => {
         ...catalogProduct,
         photo: `${EAN}.png`
       },
-      source: 'instance'
+      source: 'instance',
+      extraCodes: []
     })
   })
 
@@ -167,13 +206,92 @@ describe('saveProduct', () => {
       { ...savedProduct, code: '1234', codeType: 'internal', name: 'Picanha' }
     ])
   })
+
+  test('replaces the extra codes only when they are given', async () => {
+    const { database, catalog, photos } = await setup()
+    const found = { product: savedProduct, source: 'instance' } as const
+
+    await saveProduct(database, found, {
+      catalog,
+      photos,
+      extraCodes: [' 2001', '2002', '2001', EAN, '']
+    })
+    expect(listCodes(database)).toEqual(['2001', '2002'])
+
+    await saveProduct(database, found, { catalog, photos })
+    expect(listCodes(database)).toEqual(['2001', '2002'])
+
+    await saveProduct(database, found, {
+      catalog,
+      photos,
+      extraCodes: ['2003']
+    })
+    expect(listCodes(database)).toEqual(['2003'])
+  })
+
+  test('refuses a code that belongs to another product', async () => {
+    const { database, catalog, photos } = await setup()
+    database
+      .insert(products)
+      .values([savedProduct, product('1234', 'Picanha')])
+      .run()
+    database
+      .insert(productCodes)
+      .values({ code: '2001', productCode: '1234' })
+      .run()
+    const found = { product: savedProduct, source: 'instance' } as const
+
+    for (const extraCodes of [['1234'], ['2001']]) {
+      await expect(
+        saveProduct(database, found, { catalog, photos, extraCodes })
+      ).rejects.toThrow(CodeConflictError)
+    }
+    await expect(
+      saveProduct(
+        database,
+        { product: product('2001', 'Alcatra'), source: 'instance' },
+        { catalog, photos }
+      )
+    ).rejects.toThrow(CodeConflictError)
+    expect(database.select().from(products).all()).toHaveLength(2)
+    expect(listCodes(database)).toEqual(['2001'])
+  })
+
+  test('rejects an extra code that could name a file outside the photos folder', async () => {
+    const { database, catalog, photos } = await setup()
+
+    await expect(
+      saveProduct(
+        database,
+        { product: savedProduct, source: 'instance' },
+        { catalog, photos, extraCodes: ['../logo'] }
+      )
+    ).rejects.toThrow()
+  })
 })
 
-const product = (code: string, name: string): Product => ({
-  ...savedProduct,
-  code,
-  codeType: 'internal',
-  name
+describe('findCodeConflicts', () => {
+  test('names the product that already has each code', async () => {
+    const { database } = await setup()
+    database
+      .insert(products)
+      .values([savedProduct, product('1234', 'Picanha')])
+      .run()
+    database
+      .insert(productCodes)
+      .values([
+        { code: '2001', productCode: '1234' },
+        { code: '2002', productCode: EAN }
+      ])
+      .run()
+
+    expect(
+      findCodeConflicts(database, EAN, ['1234', '2001', '2002', EAN, '3000'])
+    ).toEqual([
+      { code: '1234', product: { code: '1234', name: 'Picanha' } },
+      { code: '2001', product: { code: '1234', name: 'Picanha' } }
+    ])
+  })
 })
 
 describe('listProducts', () => {
@@ -383,6 +501,25 @@ describe('deleteProduct', () => {
       status: 'deleted'
     })
     expect(database.select().from(products).all()).toEqual([])
+  })
+
+  test('deletes the extra codes with the product', async () => {
+    const { database, photos } = await setup()
+    database
+      .insert(products)
+      .values([savedProduct, product('1234', 'Picanha')])
+      .run()
+    database
+      .insert(productCodes)
+      .values([
+        { code: '2001', productCode: EAN },
+        { code: '2002', productCode: '1234' }
+      ])
+      .run()
+
+    await deleteProduct(database, EAN, { photos })
+
+    expect(listCodes(database)).toEqual(['2002'])
   })
 
   test('refuses a product used in offers and names each offer once', async () => {

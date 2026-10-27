@@ -57,9 +57,12 @@ const goToName = (event: KeyboardEvent<HTMLInputElement>) => {
 
 const getDescription = (lookup: ProductLookup | undefined) => {
   if (!lookup) return 'Bipe ou digite o código e preencha os dados do produto.'
-  return lookup.status === 'found' && lookup.source === 'instance'
+  if (lookup.status !== 'found' || lookup.source !== 'instance') {
+    return getLookupMessage(lookup)
+  }
+  return lookup.matchedCode === lookup.product.code
     ? `Este código já está cadastrado como ${lookup.product.name}. Ao salvar, o app mostra o que muda antes de substituir.`
-    : getLookupMessage(lookup)
+    : `O código ${lookup.matchedCode} é um dos outros códigos de ${lookup.product.name}, que tem o código ${lookup.product.code}. Ao salvar, o app mostra o que muda antes de substituir.`
 }
 
 const CreateProductContent = ({

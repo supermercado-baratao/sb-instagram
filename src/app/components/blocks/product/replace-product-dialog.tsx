@@ -12,13 +12,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/app/components/ui/shadcn/alert-dialog'
-import type { Product, ProductChange } from '@/domain/product'
+import type { ExtraCodeChanges, Product, ProductChange } from '@/domain/product'
 
 import type { PhotoChange } from './actions'
 
 export type ReplaceRequest = {
   current: Product
   changes: ProductChange[]
+  codeChanges: ExtraCodeChanges
   photoChange: PhotoChange
 }
 
@@ -40,6 +41,12 @@ const PHOTO_CHANGE_LABELS: Record<NonNullable<PhotoChange>, string> = {
   added: 'O produto não tinha foto e passa a ter a nova.',
   replaced: 'A foto atual é trocada pela nova.'
 }
+
+const Codes = ({ codes }: { codes: string[] }) => (
+  <span className="font-mono font-medium text-foreground">
+    {codes.join(', ')}
+  </span>
+)
 
 const Value = ({ value }: { value: string | null }) =>
   value ? (
@@ -80,6 +87,18 @@ export const ReplaceProductDialog = ({
                 <Value value={to} />
               </li>
             ))}
+            {request.codeChanges.added.length > 0 && (
+              <li>
+                <span className="text-foreground">Outros códigos:</span> passa a
+                ter <Codes codes={request.codeChanges.added} />
+              </li>
+            )}
+            {request.codeChanges.removed.length > 0 && (
+              <li>
+                <span className="text-foreground">Outros códigos:</span> deixa
+                de ter <Codes codes={request.codeChanges.removed} />
+              </li>
+            )}
             {request.photoChange && (
               <li>
                 <span className="text-foreground">Foto:</span>{' '}

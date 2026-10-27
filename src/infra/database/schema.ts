@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   check,
   foreignKey,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -24,6 +25,27 @@ export const products = sqliteTable(
   // A non-integer SQLite primary key accepts NULL unless the column is NOT NULL, and drizzle-kit
   // drops NOT NULL from a column-level text().primaryKey() (https://sqlite.org/lang_createtable.html#the_primary_key)
   (table) => [primaryKey({ columns: [table.code] })]
+)
+
+// Codes a product is also found by, e.g. the variations a single photo groups. The main code stays
+// the key for offers and the photo file name. SQLite can't keep a code unique across this table
+// and products, so saveProduct checks it (findCodeConflicts)
+export const productCodes = sqliteTable(
+  'product_codes',
+  {
+    code: text().notNull(),
+    productCode: text().notNull()
+  },
+  (table) => [
+    primaryKey({ columns: [table.code] }),
+    foreignKey({
+      columns: [table.productCode],
+      foreignColumns: [products.code]
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    index('product_codes_product_code_index').on(table.productCode)
+  ]
 )
 
 export const offers = sqliteTable('offers', {

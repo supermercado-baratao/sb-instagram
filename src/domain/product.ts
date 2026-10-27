@@ -37,6 +37,18 @@ export const getProductChanges = (
 export type FoundProduct = {
   product: Product
   source: ProductSource
+  // Other codes that find the same product, e.g. variations a single photo groups (#49)
+  extraCodes: string[]
+}
+
+export type CodeConflict = {
+  code: string
+  product: Pick<Product, 'code' | 'name'>
+}
+
+export type ExtraCodeChanges = {
+  added: string[]
+  removed: string[]
 }
 
 // USB scanners and copy-paste may bring surrounding or inner spaces, which a code never has
@@ -50,6 +62,22 @@ export const getCodeType = (code: string): CodeType =>
 const CODE_PATTERN = /^[\w.-]+$/
 
 export const isValidCode = (code: string) => CODE_PATTERN.test(code)
+
+export const normalizeExtraCodes = (codes: string[], mainCode: string) => [
+  ...new Set(
+    codes
+      .map((code) => normalizeCode(code))
+      .filter((code) => code !== '' && code !== mainCode)
+  )
+]
+
+export const getExtraCodeChanges = (
+  current: string[],
+  next: string[]
+): ExtraCodeChanges => ({
+  added: next.filter((code) => !current.includes(code)),
+  removed: current.filter((code) => !next.includes(code))
+})
 
 export const getPhotoFileName = (code: string) =>
   `${code}${CATALOG_IMAGE_EXTENSION}`
