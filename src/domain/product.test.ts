@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
-import { getProductChanges, isValidCode, normalizeSearchText } from './product'
+import {
+  getExtraCodeChanges,
+  getProductChanges,
+  isValidCode,
+  normalizeExtraCodes,
+  normalizeSearchText
+} from './product'
 
 describe('isValidCode', () => {
   test.each(['7891000100103', '2001', 'PIC-01', 'cod_7.5'])(
@@ -51,5 +57,22 @@ describe('getProductChanges', () => {
       },
       { field: 'brand', from: 'Camil', to: null }
     ])
+  })
+})
+
+describe('normalizeExtraCodes', () => {
+  test('drops blanks, repeats and the main code', () => {
+    expect(
+      normalizeExtraCodes([' 2001', '', '2002', '20 01', '1234'], '1234')
+    ).toEqual(['2001', '2002'])
+  })
+})
+
+describe('getExtraCodeChanges', () => {
+  test('lists the added and removed codes', () => {
+    expect(getExtraCodeChanges(['2001', '2002'], ['2002', '2003'])).toEqual({
+      added: ['2003'],
+      removed: ['2001']
+    })
   })
 })

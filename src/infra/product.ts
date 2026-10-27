@@ -6,11 +6,13 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import {
+  type CodeConflict,
   type FoundProduct,
   getCodeType,
   getPhotoFileName,
   isValidCode,
   normalizeCode,
+  normalizeExtraCodes,
   normalizeSearchText,
   type Product,
   PRODUCT_SUGGESTION_LIMIT,
@@ -26,6 +28,7 @@ import {
   offerPageItems,
   offerPages,
   offers,
+  productCodes,
   products
 } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
@@ -33,9 +36,63 @@ import { photosDirectory } from '@/infra/photos-directory'
 
 type Database = BetterSQLite3Database
 
+type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
+
 type ProductDirectories = {
   catalog?: string
   photos?: string
+}
+
+const findInstanceProduct = (
+  database: Database | Transaction,
+  code: string
+): Product | undefined =>
+  database.select().from(products).where(eq(products.code, code)).get() ??
+  database
+    .select({
+      code: products.code,
+      codeType: products.codeType,
+      name: products.name,
+      brand: products.brand,
+      unit: products.unit,
+      photo: products.photo
+    })
+    .from(productCodes)
+    .innerJoin(products, eq(products.code, productCodes.productCode))
+    .where(eq(productCodes.code, code))
+    .get()
+
+export const listExtraCodes = (
+  database: Database | Transaction,
+  productCode: string
+) =>
+  database
+    .select({ code: productCodes.code })
+    .from(productCodes)
+    .where(eq(productCodes.productCode, productCode))
+    .orderBy(productCodes.code)
+    .all()
+    .map(({ code }) => code)
+
+// A code belongs to a single product, as its main code or an extra one
+export const findCodeConflicts = (
+  database: Database | Transaction,
+  productCode: string,
+  codes: string[]
+): CodeConflict[] =>
+  codes.flatMap((code) => {
+    const owner = findInstanceProduct(database, normalizeCode(code))
+    return owner && owner.code !== productCode
+      ? [{ code, product: { code: owner.code, name: owner.name } }]
+      : []
+  })
+
+export class CodeConflictError extends Error {
+  constructor(readonly conflicts: CodeConflict[]) {
+    super(
+      `Codes already in use: ${conflicts.map(({ code }) => code).join(', ')}`
+    )
+  }
 }
 
 export const findProductByCode = async (
@@ -46,12 +103,14 @@ export const findProductByCode = async (
   const code = normalizeCode(rawCode)
   if (code === '') return undefined
 
-  const saved = database
-    .select()
-    .from(products)
-    .where(eq(products.code, code))
-    .get()
-  if (saved) return { product: saved, source: 'instance' }
+  const saved = findInstanceProduct(database, code)
+  if (saved) {
+    return {
+      product: saved,
+      source: 'instance',
+      extraCodes: listExtraCodes(database, saved.code)
+    }
+  }
 
   // Internal codes differ from store to store, so the catalog only knows products by EAN
   if (getCodeType(code) !== 'ean') return undefined
@@ -61,7 +120,8 @@ export const findProductByCode = async (
 
   return {
     product: { code, codeType: 'ean', ...catalogProduct, photo: null },
-    source: 'catalog'
+    source: 'catalog',
+    extraCodes: []
   }
 }
 
@@ -82,12 +142,25 @@ const copyCatalogPhoto = async (
   }
 }
 
+type SaveProductOptions = ProductDirectories & {
+  // Replaces the product's extra codes; left out, they stay as they are
+  extraCodes?: string[]
+}
+
 export const saveProduct = async (
   database: Database,
-  { product, source }: FoundProduct,
-  { catalog = eanDirectory, photos = photosDirectory }: ProductDirectories = {}
+  { product, source }: Omit<FoundProduct, 'extraCodes'>,
+  {
+    catalog = eanDirectory,
+    photos = photosDirectory,
+    extraCodes
+  }: SaveProductOptions = {}
 ): Promise<Product> => {
   const code = normalizeCode(product.code)
+  const codes = extraCodes && normalizeExtraCodes(extraCodes, code)
+  const invalid = codes?.find((extra) => !isValidCode(extra))
+  if (invalid) throw new Error(`Invalid product code: ${invalid}`)
+
   const saved: Product = {
     ...product,
     code,
@@ -98,11 +171,31 @@ export const saveProduct = async (
         : product.photo
   }
 
-  database
-    .insert(products)
-    .values(saved)
-    .onConflictDoUpdate({ target: products.code, set: saved })
-    .run()
+  database.transaction((transaction) => {
+    const conflicts = findCodeConflicts(transaction, code, [
+      code,
+      ...(codes ?? [])
+    ])
+    if (conflicts.length > 0) throw new CodeConflictError(conflicts)
+
+    transaction
+      .insert(products)
+      .values(saved)
+      .onConflictDoUpdate({ target: products.code, set: saved })
+      .run()
+
+    if (!codes) return
+    transaction
+      .delete(productCodes)
+      .where(eq(productCodes.productCode, code))
+      .run()
+    if (codes.length > 0) {
+      transaction
+        .insert(productCodes)
+        .values(codes.map((extra) => ({ code: extra, productCode: code })))
+        .run()
+    }
+  })
 
   return saved
 }

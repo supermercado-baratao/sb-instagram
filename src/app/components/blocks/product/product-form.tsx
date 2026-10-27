@@ -29,14 +29,18 @@ import {
 
 import { saveProductForm } from './actions'
 import { CatalogImagePicker } from './catalog-image-picker'
+import { ExtraCodesField } from './extra-codes-field'
 import {
   ReplaceProductDialog,
   type ReplaceRequest
 } from './replace-product-dialog'
 
+const NO_EXTRA_CODES: string[] = []
+
 type ProductFormProps = {
   code: string
   product: Product | undefined
+  extraCodes?: string[]
   hasPhoto: boolean
   photoVersion: number
   noEanImages: string[]
@@ -51,6 +55,7 @@ type ProductFormProps = {
 export const ProductForm = ({
   code,
   product,
+  extraCodes = NO_EXTRA_CODES,
   hasPhoto,
   photoVersion,
   noEanImages,
@@ -61,6 +66,14 @@ export const ProductForm = ({
   className
 }: ProductFormProps) => {
   const [uploadPreview, setUploadPreview] = useState<string>()
+  const [codes, setCodes] = useState(extraCodes)
+  // The dialog finds the product after the form mounts, and keeps what was typed in the rest of it
+  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  const [loadedCodes, setLoadedCodes] = useState(extraCodes)
+  if (loadedCodes !== extraCodes) {
+    setLoadedCodes(extraCodes)
+    setCodes(extraCodes)
+  }
   const [catalogImage, setCatalogImage] = useState('')
   const [error, setError] = useState<string>()
   const [photoError, setPhotoError] = useState<string>()
@@ -242,6 +255,11 @@ export const ProductForm = ({
                 />
               </Field>
             </div>
+            <ExtraCodesField
+              productCode={code}
+              codes={codes}
+              onChange={setCodes}
+            />
           </FieldGroup>
         </div>
 
