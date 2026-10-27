@@ -39,7 +39,13 @@ export const findOffer = (
       with: {
         pages: {
           orderBy: { position: 'asc' },
-          with: { items: { with: { product: true } } }
+          with: {
+            items: {
+              with: {
+                product: { with: { codes: { orderBy: { code: 'asc' } } } }
+              }
+            }
+          }
         }
       }
     })
@@ -55,7 +61,12 @@ export const findOffer = (
     pages: offer.pages.map((page) => ({
       templateId: page.templateId,
       layout: isPosterLayout(page.layout) ? page.layout : DEFAULT_POSTER_LAYOUT,
-      slots: placeSlots(page.items)
+      slots: placeSlots(
+        page.items.map(({ product: { codes, ...product }, ...item }) => ({
+          ...item,
+          product: { ...product, codes: codes.map(({ code }) => code) }
+        }))
+      )
     }))
   }
 }
@@ -90,7 +101,7 @@ const insertPages = (
             {
               pageId,
               position: slotPosition,
-              productCode: slot.product.code,
+              productId: slot.product.id,
               priceInCents: slot.priceInCents
             }
           ]

@@ -13,8 +13,8 @@ import {
 const EAN = '7891000100103'
 
 const eanProduct: Product = {
-  code: EAN,
-  codeType: 'ean',
+  id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
+  codes: [EAN],
   name: 'Leite Condensado',
   brand: 'Moça',
   unit: '395 g',
@@ -22,8 +22,8 @@ const eanProduct: Product = {
 }
 
 const internalProduct: Product = {
-  code: '2001',
-  codeType: 'internal',
+  id: '1c7a4d2f-6e3b-4a9c-8d2e-3f4a5b6c7d8e',
+  codes: ['2001'],
   name: 'Pão Francês',
   brand: null,
   unit: null,
@@ -130,9 +130,13 @@ describe('formatCatalogExportReport', () => {
   test('lists each skipped product with its reason', () => {
     expect(
       formatCatalogExportReport([
-        { code: EAN, name: 'Leite Condensado', reason: 'Falta a marca' }
+        {
+          codes: [EAN, '2001'],
+          name: 'Leite Condensado',
+          reason: 'Falta a marca'
+        }
       ])
-    ).toContain(`${EAN} · Leite Condensado: Falta a marca`)
+    ).toContain(`${EAN}, 2001 · Leite Condensado: Falta a marca`)
   })
 
   test('says when no product was left out', () => {

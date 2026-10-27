@@ -19,15 +19,12 @@ import {
 } from '@/app/components/ui/shadcn/dialog'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
+import { getCatalogPhotoUrl } from '@/app/helpers/product-photo'
 import { getCodeType, normalizeCode, type Product } from '@/domain/product'
 
-import { lookupProduct } from './actions'
+import { lookupProduct, type LookupResult } from './actions'
 import { ProductForm } from './product-form'
-import {
-  getLookupMessage,
-  getProductFormProps,
-  type ProductLookup
-} from './product-lookup'
+import { getLookupMessage } from './product-lookup'
 
 type SaveOutcome = 'saved' | 'unchanged'
 
@@ -47,6 +44,8 @@ type CreateProductContentProps = Pick<
   codeInput: RefObject<HTMLInputElement | null>
 }
 
+type DialogLookup = Exclude<LookupResult, { status: 'error' }>
+
 // A scanner sends Enter after the code, which would submit the form before the lookup
 const goToName = (event: KeyboardEvent<HTMLInputElement>) => {
   if (event.key !== 'Enter') return
@@ -55,14 +54,22 @@ const goToName = (event: KeyboardEvent<HTMLInputElement>) => {
   if (name instanceof HTMLInputElement) name.focus()
 }
 
-const getDescription = (lookup: ProductLookup | undefined) => {
+const getLookedUpCode = (lookup: DialogLookup | undefined) => {
+  if (!lookup) return ''
+  return lookup.status === 'catalog' ? lookup.product.code : lookup.code
+}
+
+const getDescription = (lookup: DialogLookup | undefined) => {
   if (!lookup) return 'Bipe ou digite o código e preencha os dados do produto.'
-  if (lookup.status !== 'found' || lookup.source !== 'instance') {
-    return getLookupMessage(lookup)
-  }
-  return lookup.matchedCode === lookup.product.code
-    ? `Este código já está cadastrado como ${lookup.product.name}. Ao salvar, o app mostra o que muda antes de substituir.`
-    : `O código ${lookup.matchedCode} é um dos outros códigos de ${lookup.product.name}, que tem o código ${lookup.product.code}. Ao salvar, o app mostra o que muda antes de substituir.`
+  if (lookup.status !== 'found') return getLookupMessage({ ...lookup, id: 0 })
+
+  // A code may be in several products, so a new one is registered unless every code matches (#55)
+  const [first] = lookup.products
+  const where =
+    lookup.products.length === 1
+      ? `Este código já está em ${first.name}.`
+      : `Este código já está em ${lookup.products.length} produtos.`
+  return `${where} Com outros códigos junto, o app cadastra um produto novo; com os mesmos códigos de um produto, mostra o que muda antes de substituir.`
 }
 
 const CreateProductContent = ({
@@ -72,14 +79,9 @@ const CreateProductContent = ({
   codeInput
 }: CreateProductContentProps) => {
   const [code, setCode] = useState(missingCode ?? '')
-  const [lookup, setLookup] = useState<ProductLookup | undefined>(() =>
+  const [lookup, setLookup] = useState<DialogLookup | undefined>(() =>
     missingCode
-      ? {
-          status: 'new',
-          code: missingCode,
-          codeType: getCodeType(missingCode),
-          id: 0
-        }
+      ? { status: 'new', code: missingCode, codeType: getCodeType(missingCode) }
       : undefined
   )
   // Only a catalog product refills the form: a new code keeps what was typed, and a code the
@@ -89,12 +91,9 @@ const CreateProductContent = ({
   const [searching, startSearch] = useTransition()
   const id = useId()
   const errorId = `${id}-error`
-  const lookedUpCode = lookup ? getProductFormProps(lookup).code : ''
-  // A product the store already has stays out of the form, which only prefills from the catalog
+  const lookedUpCode = getLookedUpCode(lookup)
   const catalogProduct =
-    lookup?.status === 'found' && lookup.source === 'catalog'
-      ? lookup.product
-      : undefined
+    lookup?.status === 'catalog' ? lookup.product : undefined
 
   const search = () => {
     const value = normalizeCode(code)
@@ -109,13 +108,9 @@ const CreateProductContent = ({
         return
       }
       setError(undefined)
-      setLookup({ ...result, id: Date.now() })
-      if (result.status === 'new') {
-        setCode(result.code)
-        return
-      }
-      setCode(result.product.code)
-      if (result.source === 'catalog') setFilledCount((count) => count + 1)
+      setLookup(result)
+      setCode(getLookedUpCode(result))
+      if (result.status === 'catalog') setFilledCount((count) => count + 1)
     })
   }
 
@@ -129,14 +124,15 @@ const CreateProductContent = ({
       </DialogHeader>
       <ProductForm
         key={filledCount}
-        {...(lookup
-          ? getProductFormProps(lookup)
-          : { code: '', hasPhoto: false, photoVersion: 0 })}
+        codes={[]}
         product={catalogProduct}
+        photoUrl={catalogProduct && getCatalogPhotoUrl(catalogProduct.code)}
         noEanImages={noEanImages}
         onSaved={onSaved}
         askBeforeReplacing
         focusName={filledCount > 0 || missingCode !== undefined}
+        // The looked-up code, so the picker doesn't come and go on every keystroke
+        typedCode={lookedUpCode}
         codeField={
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel htmlFor={`${id}-code`}>

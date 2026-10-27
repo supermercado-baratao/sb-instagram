@@ -1,29 +1,37 @@
-import { copyFile, mkdir, rm } from 'node:fs/promises'
-import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 
-import { and, asc, count, eq, or, type SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  inArray,
+  or,
+  type SQL,
+  sql
+} from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import {
-  type CodeConflict,
-  type FoundProduct,
+  type CatalogMatch,
   getCodeType,
   getPhotoFileName,
+  isSameCodeSet,
   isValidCode,
+  isValidProductId,
   normalizeCode,
-  normalizeExtraCodes,
+  normalizeCodes,
   normalizeSearchText,
   type Product,
   PRODUCT_SUGGESTION_LIMIT,
+  type ProductDetails,
   type ProductPage,
   PRODUCTS_PAGE_SIZE
 } from '@/domain/product'
-import { eanDirectory } from '@/infra/catalog/directory'
-import {
-  getCatalogImageFile,
-  readCatalogProduct
-} from '@/infra/catalog/product'
+import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
+import { readCatalogProduct } from '@/infra/catalog/product'
 import {
   offerPageItems,
   offerPages,
@@ -32,6 +40,13 @@ import {
   products
 } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
+import {
+  copyEanImage,
+  copyNoEanImage,
+  removePhoto,
+  renamePhoto,
+  savePhoto
+} from '@/infra/photo'
 import { photosDirectory } from '@/infra/photos-directory'
 
 type Database = BetterSQLite3Database
@@ -41,161 +56,240 @@ type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 type ProductDirectories = {
   catalog?: string
   photos?: string
+  noEan?: string
 }
 
-const findInstanceProduct = (
-  database: Database | Transaction,
-  code: string
-): Product | undefined =>
-  database.select().from(products).where(eq(products.code, code)).get() ??
-  database
-    .select({
-      code: products.code,
-      codeType: products.codeType,
-      name: products.name,
-      brand: products.brand,
-      unit: products.unit,
-      photo: products.photo
-    })
-    .from(productCodes)
-    .innerJoin(products, eq(products.code, productCodes.productCode))
-    .where(eq(productCodes.code, code))
-    .get()
+type ProductRow = typeof products.$inferSelect
 
-export const listExtraCodes = (
+// Breaks ties between products with the same name the same way on every query
+export const firstProductCode = sql`(SELECT min(${productCodes.code}) FROM ${productCodes} WHERE ${productCodes.productId} = ${products.id})`
+
+export const attachCodes = (
   database: Database | Transaction,
-  productCode: string
-) =>
-  database
-    .select({ code: productCodes.code })
+  rows: ProductRow[]
+): Product[] => {
+  if (rows.length === 0) return []
+
+  const ids = rows.map(({ id }) => id)
+  const codeRows = database
+    .select()
     .from(productCodes)
-    .where(eq(productCodes.productCode, productCode))
+    .where(inArray(productCodes.productId, ids))
     .orderBy(productCodes.code)
     .all()
-    .map(({ code }) => code)
-
-// A code belongs to a single product, as its main code or an extra one
-export const findCodeConflicts = (
-  database: Database | Transaction,
-  productCode: string,
-  codes: string[]
-): CodeConflict[] =>
-  codes.flatMap((code) => {
-    const owner = findInstanceProduct(database, normalizeCode(code))
-    return owner && owner.code !== productCode
-      ? [{ code, product: { code: owner.code, name: owner.name } }]
-      : []
-  })
-
-export class CodeConflictError extends Error {
-  constructor(readonly conflicts: CodeConflict[]) {
-    super(
-      `Codes already in use: ${conflicts.map(({ code }) => code).join(', ')}`
-    )
-  }
+  const codes = Map.groupBy(codeRows, ({ productId }) => productId)
+  return rows.map((row) => ({
+    ...row,
+    codes: codes.get(row.id)?.map(({ code }) => code) ?? []
+  }))
 }
 
-export const findProductByCode = async (
+export const findProductById = (
+  database: Database | Transaction,
+  id: string
+): Product | undefined => {
+  const row = database.select().from(products).where(eq(products.id, id)).get()
+  return row && attachCodes(database, [row])[0]
+}
+
+const findInstanceProducts = (
+  database: Database | Transaction,
+  code: string
+): Product[] => {
+  const hasCode = and(
+    eq(productCodes.productId, products.id),
+    eq(productCodes.code, code)
+  )
+  const rows = database
+    .select()
+    .from(products)
+    .where(exists(database.select().from(productCodes).where(hasCode)))
+    .orderBy(searchText(products.name), firstProductCode)
+    .all()
+
+  // A single product comes before the groups that also have its code, smaller groups first
+  return attachCodes(database, rows).toSorted(
+    (a, b) => a.codes.length - b.codes.length
+  )
+}
+
+export const findProductWithCodes = (
+  database: Database | Transaction,
+  codes: string[]
+) => {
+  const [first] = normalizeCodes(codes)
+  if (first === undefined) return
+  return findInstanceProducts(database, first).find((product) =>
+    isSameCodeSet(product.codes, codes)
+  )
+}
+
+export type CodeLookup =
+  | { source: 'instance'; products: Product[] }
+  | { source: 'catalog'; product: CatalogMatch }
+
+export const findProductsByCode = async (
   database: Database,
   rawCode: string,
   { catalog = eanDirectory }: ProductDirectories = {}
-): Promise<FoundProduct | undefined> => {
+): Promise<CodeLookup | undefined> => {
   const code = normalizeCode(rawCode)
   if (code === '') return undefined
 
-  const saved = findInstanceProduct(database, code)
-  if (saved) {
-    return {
-      product: saved,
-      source: 'instance',
-      extraCodes: listExtraCodes(database, saved.code)
-    }
-  }
+  const saved = findInstanceProducts(database, code)
+  if (saved.length > 0) return { source: 'instance', products: saved }
 
   // Internal codes differ from store to store, so the catalog only knows products by EAN
   if (getCodeType(code) !== 'ean') return undefined
 
   const catalogProduct = await readCatalogProduct(code, catalog)
-  if (!catalogProduct) return undefined
+  return (
+    catalogProduct && {
+      source: 'catalog',
+      product: { code, ...catalogProduct }
+    }
+  )
+}
 
-  return {
-    product: { code, codeType: 'ean', ...catalogProduct, photo: null },
-    source: 'catalog',
-    extraCodes: []
+export class DuplicateCodesError extends Error {
+  constructor(readonly product: Product) {
+    super(`Codes already used by product ${product.id}`)
   }
 }
 
-// The photo is copied rather than referenced, so a later catalog update never changes a product
-// the store already uses
-const copyCatalogPhoto = async (
-  code: string,
-  catalog: string,
-  photos: string
+export class MissingProductError extends Error {
+  constructor(readonly id: string) {
+    super(`Product not found: ${id}`)
+  }
+}
+
+export class PhotoSourceError extends Error {}
+
+export type PhotoSource =
+  | { kind: 'upload'; image: Buffer }
+  | { kind: 'no-ean'; name: string }
+  | { kind: 'ean'; ean: string }
+
+export type ProductInput = ProductDetails & {
+  // Left out for a new product
+  id?: string
+  codes: string[]
+  // Left out, the current photo stays, renamed if the codes change its file name
+  photo?: PhotoSource
+}
+
+const writePhotoSource = async (
+  source: PhotoSource,
+  fileName: string,
+  {
+    catalog = eanDirectory,
+    photos = photosDirectory,
+    noEan = noEanDirectory
+  }: ProductDirectories
 ) => {
-  const photo = getPhotoFileName(code)
-  await mkdir(photos, { recursive: true })
   try {
-    await copyFile(getCatalogImageFile(code, catalog), path.join(photos, photo))
-    return photo
-  } catch {
-    return null
+    switch (source.kind) {
+      case 'upload': {
+        await savePhoto(fileName, source.image, { photos })
+        return fileName
+      }
+      case 'no-ean': {
+        await copyNoEanImage(source.name, fileName, { photos, noEan })
+        return fileName
+      }
+      case 'ean': {
+        const copied = await copyEanImage(source.ean, fileName, {
+          photos,
+          ean: catalog
+        })
+        return copied ? fileName : null
+      }
+    }
+  } catch (error) {
+    throw new PhotoSourceError('Could not write the product photo', {
+      cause: error
+    })
   }
 }
 
-type SaveProductOptions = ProductDirectories & {
-  // Replaces the product's extra codes; left out, they stay as they are
-  extraCodes?: string[]
+const checkDuplicateCodes = (
+  database: Database | Transaction,
+  id: string,
+  codes: string[]
+) => {
+  const duplicate = findProductWithCodes(database, codes)
+  if (duplicate && duplicate.id !== id) throw new DuplicateCodesError(duplicate)
 }
 
 export const saveProduct = async (
   database: Database,
-  { product, source }: Omit<FoundProduct, 'extraCodes'>,
-  {
-    catalog = eanDirectory,
-    photos = photosDirectory,
-    extraCodes
-  }: SaveProductOptions = {}
+  input: ProductInput,
+  directories: ProductDirectories = {}
 ): Promise<Product> => {
-  const code = normalizeCode(product.code)
-  const codes = extraCodes && normalizeExtraCodes(extraCodes, code)
-  const invalid = codes?.find((extra) => !isValidCode(extra))
-  if (invalid) throw new Error(`Invalid product code: ${invalid}`)
+  const codes = normalizeCodes(input.codes)
+  if (codes.length === 0) throw new Error('A product needs at least one code')
+  const invalid = codes.find((code) => !isValidCode(code))
+  if (invalid !== undefined) throw new Error(`Invalid product code: ${invalid}`)
+
+  const current =
+    input.id === undefined ? undefined : findProductById(database, input.id)
+  if (!current && input.id !== undefined)
+    throw new MissingProductError(input.id)
+
+  const id = current?.id ?? randomUUID()
+  // Checked before any photo is written, so a refused save leaves nothing behind
+  checkDuplicateCodes(database, id, codes)
+
+  const { photos = photosDirectory } = directories
+  const fileName = getPhotoFileName({ id, codes })
+  let photo = current?.photo ?? null
+  if (input.photo) {
+    photo = await writePhotoSource(input.photo, fileName, directories)
+  } else if (photo !== null && photo !== fileName) {
+    try {
+      await renamePhoto(photo, fileName, { photos })
+      photo = fileName
+    } catch {
+      // The file is already gone, so the product is left without a photo instead of a broken one
+      photo = null
+    }
+  }
 
   const saved: Product = {
-    ...product,
-    code,
-    codeType: getCodeType(code),
-    photo:
-      source === 'catalog'
-        ? await copyCatalogPhoto(code, catalog, photos)
-        : product.photo
+    id,
+    codes,
+    name: input.name,
+    brand: input.brand,
+    unit: input.unit,
+    photo
   }
 
   database.transaction((transaction) => {
-    const conflicts = findCodeConflicts(transaction, code, [
-      code,
-      ...(codes ?? [])
-    ])
-    if (conflicts.length > 0) throw new CodeConflictError(conflicts)
+    checkDuplicateCodes(transaction, id, codes)
 
+    const row = {
+      id,
+      name: saved.name,
+      brand: saved.brand,
+      unit: saved.unit,
+      photo
+    }
     transaction
       .insert(products)
-      .values(saved)
-      .onConflictDoUpdate({ target: products.code, set: saved })
+      .values(row)
+      .onConflictDoUpdate({ target: products.id, set: row })
       .run()
-
-    if (!codes) return
+    transaction.delete(productCodes).where(eq(productCodes.productId, id)).run()
     transaction
-      .delete(productCodes)
-      .where(eq(productCodes.productCode, code))
+      .insert(productCodes)
+      .values(codes.map((code) => ({ productId: id, code })))
       .run()
-    if (codes.length > 0) {
-      transaction
-        .insert(productCodes)
-        .values(codes.map((extra) => ({ code: extra, productCode: code })))
-        .run()
-    }
   })
+
+  // A new photo under a new file name leaves the old file behind
+  if (current?.photo && input.photo && current.photo !== fileName) {
+    await removePhoto(current.photo, { photos })
+  }
 
   return saved
 }
@@ -204,6 +298,8 @@ const escapeLike = (text: string) => text.replaceAll(/[\\%_]/g, String.raw`\$&`)
 
 const contains = (column: SQL | SQLiteColumn, text: string): SQL =>
   sql`${column} LIKE ${`%${escapeLike(text)}%`} ESCAPE '\\'`
+
+const productCodeList = sql`(SELECT group_concat(${productCodes.code}, ' ') FROM ${productCodes} WHERE ${productCodes.productId} = ${products.id})`
 
 export const listProducts = (
   database: Database,
@@ -215,7 +311,7 @@ export const listProducts = (
       ? undefined
       : or(
           contains(searchText(products.name), normalizeSearchText(name)),
-          contains(products.code, normalizeCode(query))
+          contains(productCodeList, normalizeCode(query))
         )
 
   const total =
@@ -228,12 +324,17 @@ export const listProducts = (
     .select()
     .from(products)
     .where(where)
-    .orderBy(searchText(products.name), products.code)
+    .orderBy(searchText(products.name), firstProductCode)
     .limit(PRODUCTS_PAGE_SIZE)
     .offset((current - 1) * PRODUCTS_PAGE_SIZE)
     .all()
 
-  return { products: rows, total, page: current, pageCount }
+  return {
+    products: attachCodes(database, rows),
+    total,
+    page: current,
+    pageCount
+  }
 }
 
 export const searchProducts = (
@@ -245,24 +346,25 @@ export const searchProducts = (
   if (words.length === 0) return []
 
   // Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany")
-  const fields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || ${products.code})`
+  const fields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || coalesce(${productCodeList}, ''))`
 
-  return database
+  const rows = database
     .select()
     .from(products)
     .where(and(...words.map((word) => contains(fields, word))))
-    .orderBy(searchText(products.name), products.code)
+    .orderBy(searchText(products.name), firstProductCode)
     .limit(limit)
     .all()
+  return attachCodes(database, rows)
 }
 
-export const findOffersUsingProduct = (database: Database, code: string) =>
+export const findOffersUsingProduct = (database: Database, id: string) =>
   database
     .selectDistinct({ id: offers.id, name: offers.name })
     .from(offerPageItems)
     .innerJoin(offerPages, eq(offerPages.id, offerPageItems.pageId))
     .innerJoin(offers, eq(offers.id, offerPages.offerId))
-    .where(eq(offerPageItems.productCode, normalizeCode(code)))
+    .where(eq(offerPageItems.productId, id))
     .orderBy(asc(offers.name), asc(offers.id))
     .all()
     .map(({ name }) => name)
@@ -273,16 +375,54 @@ export type DeleteProductResult =
 // Offers are left untouched: whoever deletes the product takes it out of them first (#28)
 export const deleteProduct = async (
   database: Database,
-  rawCode: string,
+  id: string,
   { photos = photosDirectory }: ProductDirectories = {}
 ): Promise<DeleteProductResult> => {
-  const code = normalizeCode(rawCode)
-  if (!isValidCode(code)) throw new Error(`Invalid product code: ${code}`)
+  if (!isValidProductId(id)) throw new Error(`Invalid product id: ${id}`)
 
-  const offerNames = findOffersUsingProduct(database, code)
+  const offerNames = findOffersUsingProduct(database, id)
   if (offerNames.length > 0) return { status: 'in-use', offers: offerNames }
 
-  database.delete(products).where(eq(products.code, code)).run()
-  await rm(path.join(photos, getPhotoFileName(code)), { force: true })
+  const product = findProductById(database, id)
+  database.delete(products).where(eq(products.id, id)).run()
+  if (product?.photo) await removePhoto(product.photo, { photos })
   return { status: 'deleted' }
+}
+
+// Products saved before #55 keep the photo under their old main code. A group must move to its id,
+// or a product later saved with only that code would write over the group's photo
+export const renameOutdatedPhotos = async (
+  database: Database,
+  { photos = photosDirectory }: ProductDirectories = {}
+) => {
+  const rows = database
+    .select()
+    .from(products)
+    .where(sql`${products.photo} IS NOT NULL`)
+    .all()
+  const outdated = attachCodes(database, rows).flatMap(
+    ({ photo, ...product }) =>
+      photo !== null && photo !== getPhotoFileName(product)
+        ? [{ ...product, photo }]
+        : []
+  )
+
+  // Groups move to their ids first, freeing the code names a single product may need
+  const groupsFirst = outdated.toSorted(
+    (a, b) => b.codes.length - a.codes.length
+  )
+  for (const product of groupsFirst) {
+    const fileName = getPhotoFileName(product)
+    try {
+      await renamePhoto(product.photo, fileName, { photos })
+    } catch {
+      // A photo missing from the disk is served as no photo either way
+      continue
+    }
+    database
+      .update(products)
+      .set({ photo: fileName })
+      .where(eq(products.id, product.id))
+      .run()
+  }
 }

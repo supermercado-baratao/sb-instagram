@@ -1,29 +1,53 @@
-import type { LookupResult } from './actions'
+import { getCatalogPhotoUrl, getPhotoUrl } from '@/app/helpers/product-photo'
+import type { CatalogMatch, CodeType, Product } from '@/domain/product'
 
-export type ProductLookup = Exclude<LookupResult, { status: 'error' }> & {
+export type ProductTarget =
+  | { status: 'instance'; product: Product }
+  | { status: 'catalog'; product: CatalogMatch }
+  | { status: 'new'; code: string; codeType: CodeType }
+
+export type ProductLookup = ProductTarget & {
   id: number
 }
 
 export const getLookupMessage = (lookup: ProductLookup) => {
-  if (lookup.status === 'new') {
-    return lookup.codeType === 'ean'
-      ? 'Produto novo. Preencha os dados para cadastrar.'
-      : 'Código interno novo. Preencha os dados e escolha uma imagem do catálogo ou envie uma foto.'
+  switch (lookup.status) {
+    case 'new': {
+      return lookup.codeType === 'ean'
+        ? 'Produto novo. Preencha os dados para cadastrar.'
+        : 'Código interno novo. Preencha os dados e escolha uma imagem do catálogo ou envie uma foto.'
+    }
+    case 'catalog': {
+      return 'Produto encontrado no catálogo da comunidade. Confira os dados e salve para usar.'
+    }
+    case 'instance': {
+      return lookup.product.codes.length > 1
+        ? `Produto já cadastrado, com ${lookup.product.codes.length} códigos. Altere o que precisar e salve.`
+        : 'Produto já cadastrado. Altere o que precisar e salve.'
+    }
   }
-  if (lookup.matchedCode !== lookup.product.code) {
-    return `O código ${lookup.matchedCode} é um dos outros códigos deste produto. Altere o que precisar e salve.`
-  }
-  return lookup.source === 'instance'
-    ? 'Produto já cadastrado. Altere o que precisar e salve.'
-    : 'Produto encontrado no catálogo da comunidade. Confira os dados e salve para usar.'
 }
 
-export const getProductFormProps = (lookup: ProductLookup) => ({
-  code: lookup.status === 'new' ? lookup.code : lookup.product.code,
-  product: lookup.status === 'found' ? lookup.product : undefined,
-  extraCodes: lookup.status === 'found' ? lookup.extraCodes : undefined,
-  hasPhoto:
-    lookup.status === 'found' &&
-    (lookup.source === 'catalog' || lookup.product.photo !== null),
-  photoVersion: lookup.id
-})
+export const getProductFormProps = (lookup: ProductLookup) => {
+  switch (lookup.status) {
+    case 'new': {
+      return { codes: [lookup.code] }
+    }
+    case 'catalog': {
+      return {
+        codes: [lookup.product.code],
+        product: lookup.product,
+        photoUrl: getCatalogPhotoUrl(lookup.product.code)
+      }
+    }
+    case 'instance': {
+      const { product } = lookup
+      return {
+        productId: product.id,
+        codes: product.codes,
+        product,
+        photoUrl: product.photo ? getPhotoUrl(product.id, lookup.id) : undefined
+      }
+    }
+  }
+}

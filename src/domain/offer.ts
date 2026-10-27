@@ -4,7 +4,7 @@ import {
   PAGE_PRODUCT_COUNT,
   type PosterLayout
 } from '@/domain/poster'
-import { CODE_TYPES, isValidCode, type Product } from '@/domain/product'
+import { isValidCode, isValidProductId, type Product } from '@/domain/product'
 
 export type OfferItem = {
   product: Product
@@ -127,9 +127,10 @@ const isOptionalText = (value: unknown) =>
 
 const isProduct = (value: unknown): value is Product =>
   isRecord(value) &&
-  typeof value.code === 'string' &&
-  isValidCode(value.code) &&
-  CODE_TYPES.includes(value.codeType as Product['codeType']) &&
+  typeof value.id === 'string' &&
+  isValidProductId(value.id) &&
+  Array.isArray(value.codes) &&
+  value.codes.every((code) => typeof code === 'string' && isValidCode(code)) &&
   typeof value.name === 'string' &&
   isOptionalText(value.brand) &&
   isOptionalText(value.unit) &&

@@ -36,10 +36,9 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
   await expect(page.getByText('Produto já cadastrado')).toBeVisible()
   await expect(page.getByLabel('Nome')).toHaveValue('Picanha bovina')
   await expect(page.getByLabel('Unidade')).toHaveValue('1 kg')
-  await expect(page.getByAltText(`Foto do produto ${code}`)).toHaveJSProperty(
-    'naturalWidth',
-    1
-  )
+  await expect(
+    page.getByAltText('Foto do produto Picanha bovina')
+  ).toHaveJSProperty('naturalWidth', 1)
 })
 
 test('finds a saved product by name and opens it from the list', async ({
@@ -134,4 +133,69 @@ test('asks before replacing a product registered again with other data', async (
 
   await expect(dialog).toBeHidden()
   await expect(page.getByText(`${name} especial salvo`)).toBeVisible()
+})
+
+test('chooses between a single product and a group with the same code', async ({
+  page
+}) => {
+  test.slow()
+  const stamp = Date.now()
+  const lavender = `E2E-LAV-${stamp}`
+  const fennel = `E2E-FEN-${stamp}`
+  const single = `Sabonete lavanda ${stamp}`
+  const group = `Sabonete fragrâncias ${stamp}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const dialogCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(lavender)
+  await dialogCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(single)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(`${single} salvo`)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(lavender)
+  await dialogCode.press('Enter')
+  await expect(
+    dialog.getByText(`Este código já está em ${single}.`)
+  ).toBeVisible()
+  await dialog.getByLabel('Nome').fill(group)
+  await dialog.getByLabel('Adicionar código').fill(fennel)
+  await dialog.getByLabel('Adicionar código').press('Enter')
+  await expect(
+    dialog.getByRole('list', { name: 'Outros códigos' })
+  ).toContainText(fennel)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(`${group} salvo`)).toBeVisible()
+
+  const codeField = page.getByLabel('Código de barras ou código interno')
+  await codeField.fill(lavender)
+  await codeField.press('Enter')
+  const choice = page.getByRole('dialog', { name: 'Escolha o produto' })
+  await expect(choice.getByRole('button')).toHaveText([
+    new RegExp(`^${single}`),
+    new RegExp(`^${group}`),
+    'Fechar'
+  ])
+  await choice.getByRole('button', { name: new RegExp(`^${group}`) }).click()
+
+  await expect(page.getByLabel('Nome')).toHaveValue(group)
+  await expect(page.getByLabel('Nome')).toBeFocused()
+  await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
+    new RegExp(`${fennel}.*${lavender}`)
+  )
+
+  await page.goto('/ofertas')
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
+  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  const slotCode = page.getByLabel('Produto 1', { exact: true })
+  await slotCode.fill(lavender)
+  await slotCode.press('Enter')
+  await choice.getByRole('button', { name: new RegExp(`^${single}`) }).click()
+
+  await expect(page.getByLabel(`Preço de ${single} (R$)`)).toBeFocused()
 })

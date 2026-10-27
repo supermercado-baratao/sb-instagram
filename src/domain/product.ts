@@ -5,16 +5,16 @@ export const CODE_TYPES = ['ean', 'internal'] as const
 
 export type CodeType = (typeof CODE_TYPES)[number]
 
+// A product has no main code: a single photo may group variations sold under different codes
+// (#49), and one code may be in several products, e.g. a single fragrance and the group (#55)
 export type Product = {
-  code: string
-  codeType: CodeType
+  id: string
+  codes: string[]
   name: string
   brand: string | null
   unit: string | null
   photo: string | null
 }
-
-export type ProductSource = 'instance' | 'catalog'
 
 export type ProductDetails = Pick<Product, 'name' | 'brand' | 'unit'>
 
@@ -34,22 +34,8 @@ export const getProductChanges = (
     (field) => ({ field, from: current[field], to: next[field] })
   )
 
-export type FoundProduct = {
-  product: Product
-  source: ProductSource
-  // Other codes that find the same product, e.g. variations a single photo groups (#49)
-  extraCodes: string[]
-}
-
-export type CodeConflict = {
-  code: string
-  product: Pick<Product, 'code' | 'name'>
-}
-
-export type ExtraCodeChanges = {
-  added: string[]
-  removed: string[]
-}
+// A community catalog product the store hasn't saved yet, found by its EAN
+export type CatalogMatch = ProductDetails & { code: string }
 
 // USB scanners and copy-paste may bring surrounding or inner spaces, which a code never has
 export const normalizeCode = (code: string) => code.replaceAll(/\s/g, '')
@@ -63,24 +49,33 @@ const CODE_PATTERN = /^[\w.-]+$/
 
 export const isValidCode = (code: string) => CODE_PATTERN.test(code)
 
-export const normalizeExtraCodes = (codes: string[], mainCode: string) => [
-  ...new Set(
-    codes
-      .map((code) => normalizeCode(code))
-      .filter((code) => code !== '' && code !== mainCode)
+// Sorted, so two products with the same codes in any order compare equal
+export const normalizeCodes = (codes: string[]) =>
+  [
+    ...new Set(codes.map((code) => normalizeCode(code)).filter(Boolean))
+  ].toSorted((a, b) => a.localeCompare(b))
+
+export const isSameCodeSet = (a: string[], b: string[]) => {
+  const left = normalizeCodes(a)
+  const right = normalizeCodes(b)
+  return (
+    left.length === right.length &&
+    left.every((code, index) => code === right[index])
   )
-]
+}
 
-export const getExtraCodeChanges = (
-  current: string[],
-  next: string[]
-): ExtraCodeChanges => ({
-  added: next.filter((code) => !current.includes(code)),
-  removed: current.filter((code) => !next.includes(code))
-})
+const PRODUCT_ID_PATTERN =
+  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/
 
-export const getPhotoFileName = (code: string) =>
-  `${code}${CATALOG_IMAGE_EXTENSION}`
+export const isValidProductId = (id: string) => PRODUCT_ID_PATTERN.test(id)
+
+// A product with one code keeps its photo under that code, so the photos folder stays readable.
+// A group has no code of its own and uses its id, which never matches a code a store uses
+export const getPhotoFileName = ({
+  id,
+  codes
+}: Pick<Product, 'id' | 'codes'>) =>
+  `${codes.length === 1 ? codes[0] : id}${CATALOG_IMAGE_EXTENSION}`
 
 export const PHOTO_MAX_SIDE = CATALOG_IMAGE_RULES.maxSide
 

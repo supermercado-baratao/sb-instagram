@@ -21,8 +21,8 @@ const emptySlots = Array.from({ length: PAGE_PRODUCT_COUNT }, () => null)
 
 const item: OfferItem = {
   product: {
-    code: '1234',
-    codeType: 'internal',
+    id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
+    codes: ['1234'],
     name: 'Picanha bovina',
     brand: null,
     unit: 'Kg',
@@ -194,7 +194,19 @@ describe('isOfferContent', () => {
         pages: [
           setSlot(content.pages[0], 0, {
             ...item,
-            product: { ...item.product, code: '../x' }
+            product: { ...item.product, codes: ['../x'] }
+          })
+        ]
+      }
+    ],
+    [
+      'a product id that is not a UUID',
+      {
+        ...content,
+        pages: [
+          setSlot(content.pages[0], 0, {
+            ...item,
+            product: { ...item.product, id: '1234' }
           })
         ]
       }

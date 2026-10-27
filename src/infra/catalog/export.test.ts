@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -13,7 +14,7 @@ import { checkCatalogImage } from '@/domain/catalog'
 import type { Product } from '@/domain/product'
 import { readCatalogImage } from '@/infra/catalog/image'
 import { migrationsFolder } from '@/infra/database/file'
-import { products } from '@/infra/database/schema'
+import { productCodes, products } from '@/infra/database/schema'
 import { registerSearchText } from '@/infra/database/search-text'
 
 import { buildCatalogExport } from './export'
@@ -68,14 +69,19 @@ const setup = async () => {
   migrate(database, { migrationsFolder })
 
   const addProduct = async (
-    product: Omit<Product, 'photo'>,
+    { codes, ...product }: Omit<Product, 'id' | 'photo'>,
     photo?: Buffer
   ) => {
-    const fileName = photo ? `${product.code}.png` : null
+    const id = randomUUID()
+    const fileName = photo ? `${id}.png` : null
     if (photo && fileName) await writeFile(path.join(photos, fileName), photo)
     database
       .insert(products)
-      .values({ ...product, photo: fileName })
+      .values({ ...product, id, photo: fileName })
+      .run()
+    database
+      .insert(productCodes)
+      .values(codes.map((code) => ({ productId: id, code })))
       .run()
   }
 
@@ -89,8 +95,7 @@ test('exports the products that fit the catalog in its folders', async () => {
   const photo = await createImage({ side: 1600, background: 'transparent' })
   await addProduct(
     {
-      code: EAN,
-      codeType: 'ean',
+      codes: [EAN],
       name: 'Leite Condensado',
       brand: 'Moça',
       unit: '395 g'
@@ -99,8 +104,7 @@ test('exports the products that fit the catalog in its folders', async () => {
   )
   await addProduct(
     {
-      code: '2001',
-      codeType: 'internal',
+      codes: ['2001'],
       name: 'Pão Francês',
       brand: null,
       unit: null
@@ -140,8 +144,7 @@ test('reports the products left out and why', async () => {
 
   await addProduct(
     {
-      code: '1',
-      codeType: 'internal',
+      codes: ['1'],
       name: 'Alface',
       brand: null,
       unit: null
@@ -150,8 +153,7 @@ test('reports the products left out and why', async () => {
   )
   await addProduct(
     {
-      code: '2',
-      codeType: 'internal',
+      codes: ['2'],
       name: 'Banana',
       brand: null,
       unit: null
@@ -160,8 +162,7 @@ test('reports the products left out and why', async () => {
   )
   await addProduct(
     {
-      code: '3',
-      codeType: 'internal',
+      codes: ['3'],
       name: 'Coxão Mole',
       brand: null,
       unit: null
@@ -170,8 +171,7 @@ test('reports the products left out and why', async () => {
   )
   await addProduct(
     {
-      code: '4',
-      codeType: 'internal',
+      codes: ['4'],
       name: 'Laranja',
       brand: null,
       unit: null
@@ -180,25 +180,31 @@ test('reports the products left out and why', async () => {
   )
   await addProduct(
     {
-      code: '5',
-      codeType: 'internal',
+      codes: ['5'],
       name: 'laranja',
       brand: null,
       unit: null
     },
     transparent
   )
+  await addProduct(
+    {
+      codes: [EAN, '7891000100110'],
+      name: 'Sabonete',
+      brand: 'Albany',
+      unit: '85 g'
+    },
+    transparent
+  )
   await addProduct({
-    code: '6',
-    codeType: 'internal',
+    codes: ['6'],
     name: 'Pepino',
     brand: null,
     unit: null
   })
   await addProduct(
     {
-      code: CATALOG_EAN,
-      codeType: 'ean',
+      codes: [CATALOG_EAN],
       name: 'Café',
       brand: 'Pilão',
       unit: '500 g'
@@ -222,5 +228,8 @@ test('reports the products left out and why', async () => {
     '5 · laranja: Outro produto já foi exportado como laranja.png'
   )
   expect(report).toContain('6 · Pepino: Sem foto')
+  expect(report).toContain(
+    `${EAN}, 7891000100110 · Sabonete: O produto tem mais de um código`
+  )
   expect(report).toContain(`${CATALOG_EAN} · Café: O EAN já está no catálogo`)
 })

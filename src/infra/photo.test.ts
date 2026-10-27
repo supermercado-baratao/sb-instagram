@@ -7,6 +7,7 @@ import sharp from 'sharp'
 import { describe, expect, onTestFinished, test } from 'vitest'
 
 import {
+  copyEanImage,
   copyNoEanImage,
   findPhotoFile,
   getNoEanImageFile,
@@ -37,32 +38,29 @@ const createJpeg = (width: number, height: number) =>
     .toBuffer()
 
 describe('savePhoto', () => {
-  test('shrinks a large photo into a PNG named after the code', async () => {
+  test('shrinks a large photo into a PNG with the given name', async () => {
     const { photos } = await setup()
 
-    const photo = await savePhoto('1234', await createJpeg(1600, 1200), {
-      photos
-    })
+    await savePhoto('1234.png', await createJpeg(1600, 1200), { photos })
 
-    expect(photo).toBe('1234.png')
-    const metadata = await sharp(path.join(photos, photo)).metadata()
+    const metadata = await sharp(path.join(photos, '1234.png')).metadata()
     expect(metadata).toMatchObject({ format: 'png', width: 800, height: 600 })
   })
 
   test('never enlarges a small photo', async () => {
     const { photos } = await setup()
 
-    await savePhoto('1234', await createJpeg(300, 200), { photos })
+    await savePhoto('1234.png', await createJpeg(300, 200), { photos })
 
     const metadata = await sharp(path.join(photos, '1234.png')).metadata()
     expect(metadata).toMatchObject({ width: 300, height: 200 })
   })
 
-  test('refuses a code that could leave the photos folder', async () => {
+  test('refuses a name that could leave the photos folder', async () => {
     const { photos } = await setup()
 
     await expect(
-      savePhoto('../1234', await createJpeg(300, 200), { photos })
+      savePhoto('../1234.png', await createJpeg(300, 200), { photos })
     ).rejects.toThrow()
   })
 })
@@ -91,42 +89,47 @@ describe('getNoEanImageFile', () => {
 })
 
 describe('copyNoEanImage', () => {
-  test('copies the chosen image renamed to the internal code', async () => {
+  test('copies the chosen image under the given name', async () => {
     const { photos, noEan } = await setup()
     await writeFile(path.join(noEan, 'alcatra.png'), 'image')
 
-    const photo = await copyNoEanImage('alcatra', '2001', { photos, noEan })
+    await copyNoEanImage('alcatra', '2001.png', { photos, noEan })
 
-    expect(photo).toBe('2001.png')
-    expect(await readFile(path.join(photos, photo), 'utf8')).toBe('image')
+    expect(await readFile(path.join(photos, '2001.png'), 'utf8')).toBe('image')
+  })
+})
+
+describe('copyEanImage', () => {
+  test('copies the catalog image and says when there is none', async () => {
+    const { photos, ean } = await setup()
+    await writeFile(path.join(ean, `${EAN}.png`), 'image')
+
+    expect(await copyEanImage(EAN, `${EAN}.png`, { photos, ean })).toBe(true)
+    expect(await readFile(path.join(photos, `${EAN}.png`), 'utf8')).toBe(
+      'image'
+    )
+    expect(await copyEanImage('7891000053508', 'x.png', { photos, ean })).toBe(
+      false
+    )
+    expect(await copyEanImage('../ean', 'x.png', { photos, ean })).toBe(false)
   })
 })
 
 describe('findPhotoFile', () => {
-  test('prefers the store photo over the catalog image', async () => {
-    const { photos, ean } = await setup()
+  test('finds a photo of the store', async () => {
+    const { photos } = await setup()
     await mkdir(photos)
     await writeFile(path.join(photos, `${EAN}.png`), '')
-    await writeFile(path.join(ean, `${EAN}.png`), '')
 
-    expect(await findPhotoFile(EAN, { photos, ean })).toBe(
+    expect(await findPhotoFile(`${EAN}.png`, { photos })).toBe(
       path.join(photos, `${EAN}.png`)
     )
   })
 
-  test('falls back to the catalog image', async () => {
-    const { photos, ean } = await setup()
-    await writeFile(path.join(ean, `${EAN}.png`), '')
+  test('returns nothing for a missing or invalid name', async () => {
+    const { photos } = await setup()
 
-    expect(await findPhotoFile(EAN, { photos, ean })).toBe(
-      path.join(ean, `${EAN}.png`)
-    )
-  })
-
-  test('returns nothing for an unknown or invalid code', async () => {
-    const { photos, ean } = await setup()
-
-    expect(await findPhotoFile(EAN, { photos, ean })).toBe(undefined)
-    expect(await findPhotoFile('../secret', { photos, ean })).toBe(undefined)
+    expect(await findPhotoFile(`${EAN}.png`, { photos })).toBe(undefined)
+    expect(await findPhotoFile('../secret.png', { photos })).toBe(undefined)
   })
 })

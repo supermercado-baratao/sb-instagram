@@ -6,6 +6,10 @@ import { flushSync } from 'react-dom'
 
 import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
 import {
+  type ProductChoice,
+  ProductChoiceDialog
+} from '@/app/components/blocks/product/product-choice-dialog'
+import {
   Autocomplete,
   AutocompleteContent,
   AutocompleteInput,
@@ -15,7 +19,7 @@ import {
 } from '@/app/components/ui/custom/autocomplete'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
-import { getPhotoUrl } from '@/app/helpers/offer-poster'
+import { getPhotoUrl } from '@/app/helpers/product-photo'
 import type { OfferSlot } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 
@@ -50,6 +54,8 @@ export const SlotField = ({
   const [searching, startSearch] = useTransition()
   // Holds the code the dialog starts from, if any, while it is open
   const [creating, setCreating] = useState<{ missingCode?: string }>()
+  const [choice, setChoice] = useState<ProductChoice>()
+  const [choosing, setChoosing] = useState(false)
   const codeInput = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Product[]>([])
@@ -101,26 +107,42 @@ export const SlotField = ({
     }, SUGGESTION_DELAY_MS)
   }
 
+  const getPriceInput = () =>
+    document.querySelector<HTMLElement>(`#${CSS.escape(priceId)}`)
+
   const dialog = (
-    <CreateProductDialog
-      open={creating !== undefined}
-      onOpenChange={(open) => {
-        if (!open) setCreating(undefined)
-      }}
-      missingCode={creating?.missingCode}
-      noEanImages={noEanImages}
-      onSaved={(product, outcome) => {
-        // The dialog moves the focus to the price once it closes
-        setFocusPrice(false)
-        placeProduct(product)
-        if (outcome === 'unchanged') {
-          onNotice(`${product.name} já estava cadastrado, e nenhum dado mudou.`)
-        }
-      }}
-      getFocusAfterSave={() =>
-        document.querySelector<HTMLElement>(`#${CSS.escape(priceId)}`)
-      }
-    />
+    <>
+      <ProductChoiceDialog
+        open={choosing}
+        choice={choice}
+        onOpenChange={setChoosing}
+        onChoose={(product) => {
+          // The dialog moves the focus to the price once it closes
+          setFocusPrice(false)
+          placeProduct(product)
+        }}
+        getFocusAfterChoice={() => getPriceInput() ?? codeInput.current}
+      />
+      <CreateProductDialog
+        open={creating !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setCreating(undefined)
+        }}
+        missingCode={creating?.missingCode}
+        noEanImages={noEanImages}
+        onSaved={(product, outcome) => {
+          // The dialog moves the focus to the price once it closes
+          setFocusPrice(false)
+          placeProduct(product)
+          if (outcome === 'unchanged') {
+            onNotice(
+              `${product.name} já estava cadastrado, e nenhum dado mudou.`
+            )
+          }
+        }}
+        getFocusAfterSave={getPriceInput}
+      />
+    </>
   )
 
   const search = (event: FormEvent<HTMLFormElement>) => {
@@ -134,6 +156,14 @@ export const SlotField = ({
         // A scan fills the slot and the price is the next thing to type
         setFocusPrice(true)
         placeProduct(result.product)
+        return
+      }
+      if (result.status === 'choose') {
+        setError(undefined)
+        // Closing without a choice must not leave the code for the next scan to append to
+        setQuery('')
+        setChoice({ code: result.code, products: result.products })
+        setChoosing(true)
         return
       }
       setError(
@@ -174,7 +204,7 @@ export const SlotField = ({
                     suggest(text)
                     return
                   }
-                  const product = suggestions.find(({ code }) => code === text)
+                  const product = suggestions.find(({ id }) => id === text)
                   if (!product) return
                   // Like a scan, the price is the next thing to type
                   setFocusPrice(true)
@@ -190,7 +220,7 @@ export const SlotField = ({
                   stopSuggestions()
                   setSuggestionsOpen(false)
                 }}
-                itemToStringValue={(product: Product) => product.code}
+                itemToStringValue={(product: Product) => product.id}
                 filter={null}
               >
                 <AutocompleteInput
@@ -215,7 +245,7 @@ export const SlotField = ({
                   </AutocompleteStatus>
                   <AutocompleteList>
                     {(product: Product) => (
-                      <AutocompleteItem key={product.code} value={product}>
+                      <AutocompleteItem key={product.id} value={product}>
                         <ProductSuggestion product={product} />
                       </AutocompleteItem>
                     )}
@@ -292,7 +322,7 @@ export const SlotField = ({
             {product.photo ? (
               // eslint-disable-next-line @next/next/no-img-element -- the photo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy
               <img
-                src={getPhotoUrl(product.code)}
+                src={getPhotoUrl(product.id)}
                 alt=""
                 className="size-full object-contain"
               />
@@ -324,7 +354,7 @@ export const SlotField = ({
         </div>
         <PriceField
           // A new product in the slot starts its own price
-          key={product.code}
+          key={product.id}
           id={priceId}
           productName={product.name}
           priceInCents={priceInCents}
@@ -345,7 +375,7 @@ const ProductSuggestion = ({ product }: { product: Product }) => {
         {product.photo ? (
           // eslint-disable-next-line @next/next/no-img-element -- same reason as the slot's photo
           <img
-            src={getPhotoUrl(product.code)}
+            src={getPhotoUrl(product.id)}
             alt=""
             className="size-full object-contain"
           />
@@ -357,7 +387,7 @@ const ProductSuggestion = ({ product }: { product: Product }) => {
         <span className="font-medium wrap-break-word">{product.name}</span>
         <span className="text-xs text-muted-foreground">
           {details && `${details} · `}
-          <span className="font-mono">{product.code}</span>
+          <span className="font-mono">{product.codes.join(', ')}</span>
         </span>
       </span>
     </>

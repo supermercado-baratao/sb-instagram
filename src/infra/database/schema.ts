@@ -10,41 +10,37 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
-import { CODE_TYPES } from '@/domain/product'
-
 export const products = sqliteTable(
   'products',
   {
-    code: text().notNull(),
-    codeType: text({ enum: CODE_TYPES }).notNull(),
+    // A random UUID (crypto.randomUUID), since a product has no main code to be keyed by (#55)
+    id: text().notNull(),
     name: text().notNull(),
     brand: text(),
     unit: text(),
+    // File name inside photos/, derived by getPhotoFileName and renamed when the codes change
     photo: text()
   },
   // A non-integer SQLite primary key accepts NULL unless the column is NOT NULL, and drizzle-kit
   // drops NOT NULL from a column-level text().primaryKey() (https://sqlite.org/lang_createtable.html#the_primary_key)
-  (table) => [primaryKey({ columns: [table.code] })]
+  (table) => [primaryKey({ columns: [table.id] })]
 )
 
-// Codes a product is also found by, e.g. the variations a single photo groups. The main code stays
-// the key for offers and the photo file name. SQLite can't keep a code unique across this table
-// and products, so saveProduct checks it (findCodeConflicts)
+// A code may be in several products (e.g. a single fragrance and the group of all of them), so
+// no two products may have the same set of codes instead, which saveProduct checks (#55)
 export const productCodes = sqliteTable(
   'product_codes',
   {
-    code: text().notNull(),
-    productCode: text().notNull()
+    productId: text().notNull(),
+    code: text().notNull()
   },
   (table) => [
-    primaryKey({ columns: [table.code] }),
+    primaryKey({ columns: [table.productId, table.code] }),
     foreignKey({
-      columns: [table.productCode],
-      foreignColumns: [products.code]
-    })
-      .onDelete('cascade')
-      .onUpdate('cascade'),
-    index('product_codes_product_code_index').on(table.productCode)
+      columns: [table.productId],
+      foreignColumns: [products.id]
+    }).onDelete('cascade'),
+    index('product_codes_code_index').on(table.code)
   ]
 )
 
@@ -89,7 +85,7 @@ export const offerPageItems = sqliteTable(
   {
     pageId: integer().notNull(),
     position: integer().notNull(),
-    productCode: text().notNull(),
+    productId: text().notNull(),
     priceInCents: integer().notNull()
   },
   (table) => [
@@ -99,8 +95,8 @@ export const offerPageItems = sqliteTable(
       foreignColumns: [offerPages.id]
     }).onDelete('cascade'),
     foreignKey({
-      columns: [table.productCode],
-      foreignColumns: [products.code]
+      columns: [table.productId],
+      foreignColumns: [products.id]
     })
   ]
 )

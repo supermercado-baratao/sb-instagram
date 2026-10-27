@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto'
 import {
   access,
   mkdir,
@@ -27,11 +28,14 @@ import {
 import { registerSearchText } from '@/infra/database/search-text'
 
 import {
-  CodeConflictError,
   deleteProduct,
-  findCodeConflicts,
-  findProductByCode,
+  DuplicateCodesError,
+  findProductById,
+  findProductsByCode,
+  findProductWithCodes,
   listProducts,
+  MissingProductError,
+  renameOutdatedPhotos,
   saveProduct,
   searchProducts
 } from './product'
@@ -43,15 +47,6 @@ const catalogProduct = {
   unit: '395 g'
 }
 
-const savedProduct: Product = {
-  code: EAN,
-  codeType: 'ean',
-  name: 'Leite Condensado Light',
-  brand: 'Moça',
-  unit: '395 g',
-  photo: null
-}
-
 const setup = async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'product-'))
   onTestFinished(() => rm(directory, { recursive: true, force: true }))
@@ -59,11 +54,12 @@ const setup = async () => {
   const catalog = path.join(directory, 'catalog')
   const photos = path.join(directory, 'photos')
   await mkdir(catalog)
+  await mkdir(photos)
   await writeFile(
     path.join(catalog, `${EAN}.json`),
     JSON.stringify(catalogProduct)
   )
-  await writeFile(path.join(catalog, `${EAN}.png`), 'image')
+  await writeFile(path.join(catalog, `${EAN}.png`), 'catalog image')
 
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
@@ -71,64 +67,81 @@ const setup = async () => {
   const database = drizzle({ client: sqlite })
   migrate(database, { migrationsFolder })
 
-  return { database, catalog, photos }
+  const addProduct = (
+    codes: string[],
+    name: string,
+    details: Partial<Omit<Product, 'id' | 'codes' | 'name'>> = {}
+  ): Product => {
+    const product: Product = {
+      id: randomUUID(),
+      codes: codes.toSorted((a, b) => a.localeCompare(b)),
+      name,
+      brand: null,
+      unit: null,
+      photo: null,
+      ...details
+    }
+    database
+      .insert(products)
+      .values({
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        unit: product.unit,
+        photo: product.photo
+      })
+      .run()
+    database
+      .insert(productCodes)
+      .values(codes.map((code) => ({ productId: product.id, code })))
+      .run()
+    return product
+  }
+
+  const readPhoto = (fileName: string) =>
+    readFile(path.join(photos, fileName), 'utf8')
+
+  return { database, catalog, photos, addProduct, readPhoto }
 }
 
-const product = (code: string, name: string): Product => ({
-  ...savedProduct,
-  code,
-  codeType: 'internal',
-  name
-})
+const exists = async (file: string) => {
+  try {
+    await access(file)
+    return true
+  } catch {
+    return false
+  }
+}
 
-const listCodes = (database: Awaited<ReturnType<typeof setup>>['database']) =>
-  database
-    .select()
-    .from(productCodes)
-    .orderBy(productCodes.code)
-    .all()
-    .map(({ code }) => code)
+describe('findProductsByCode', () => {
+  test('finds a product of the instance by any of its codes', async () => {
+    const { database, catalog, addProduct } = await setup()
+    const product = addProduct(['2001', EAN], 'Sabonete')
 
-describe('findProductByCode', () => {
-  test('prefers the product saved in the instance over the catalog', async () => {
-    const { database, catalog } = await setup()
-    database.insert(products).values(savedProduct).run()
-
-    expect(await findProductByCode(database, EAN, { catalog })).toEqual({
-      product: savedProduct,
+    expect(await findProductsByCode(database, ' 2001', { catalog })).toEqual({
       source: 'instance',
-      extraCodes: []
+      products: [product]
     })
   })
 
-  test('finds a product by one of its extra codes', async () => {
-    const { database, catalog } = await setup()
-    database.insert(products).values(savedProduct).run()
-    database
-      .insert(productCodes)
-      .values([
-        { code: '7891000053508', productCode: EAN },
-        { code: '2001', productCode: EAN }
-      ])
-      .run()
+  test('puts the single product before the groups with its code, smaller first', async () => {
+    const { database, catalog, addProduct } = await setup()
+    const all = addProduct(['2001', '2002', '2003'], 'Sabonete todas')
+    const single = addProduct(['2001'], 'Sabonete lavanda')
+    const pair = addProduct(['2001', '2002'], 'Sabonete lavanda e erva-doce')
+    addProduct(['2002'], 'Sabonete erva-doce')
 
-    expect(await findProductByCode(database, ' 2001', { catalog })).toEqual({
-      product: savedProduct,
-      source: 'instance',
-      extraCodes: ['2001', '7891000053508']
-    })
+    const found = await findProductsByCode(database, '2001', { catalog })
+
+    expect(found).toEqual({ source: 'instance', products: [single, pair, all] })
   })
 
   test('falls back to the catalog for an EAN the instance does not know', async () => {
     const { database, catalog } = await setup()
 
-    expect(await findProductByCode(database, ` ${EAN}\n`, { catalog })).toEqual(
-      {
-        product: { code: EAN, codeType: 'ean', ...catalogProduct, photo: null },
-        source: 'catalog',
-        extraCodes: []
-      }
-    )
+    expect(
+      await findProductsByCode(database, ` ${EAN}\n`, { catalog })
+    ).toEqual({ source: 'catalog', product: { code: EAN, ...catalogProduct } })
   })
 
   test('does not look up an internal code in the catalog', async () => {
@@ -138,7 +151,7 @@ describe('findProductByCode', () => {
       JSON.stringify(catalogProduct)
     )
 
-    expect(await findProductByCode(database, '1234', { catalog })).toBe(
+    expect(await findProductsByCode(database, '1234', { catalog })).toBe(
       undefined
     )
   })
@@ -147,185 +160,247 @@ describe('findProductByCode', () => {
     const { database, catalog } = await setup()
     await writeFile(path.join(catalog, `${EAN}.json`), '{"name":"Leite"}')
 
-    expect(await findProductByCode(database, EAN, { catalog })).toBe(undefined)
+    expect(await findProductsByCode(database, EAN, { catalog })).toBe(undefined)
   })
 
   test('returns nothing for an empty code', async () => {
     const { database, catalog } = await setup()
 
-    expect(await findProductByCode(database, '  ', { catalog })).toBe(undefined)
+    expect(await findProductsByCode(database, '  ', { catalog })).toBe(
+      undefined
+    )
+  })
+})
+
+describe('findProductWithCodes', () => {
+  test('finds the product with exactly the same codes in any order', async () => {
+    const { database, addProduct } = await setup()
+    addProduct(['2001'], 'Sabonete lavanda')
+    const pair = addProduct(['2001', '2002'], 'Sabonete lavanda e erva-doce')
+    addProduct(['2001', '2002', '2003'], 'Sabonete todas')
+
+    expect(findProductWithCodes(database, ['2002', ' 2001'])).toEqual(pair)
+    expect(findProductWithCodes(database, ['2002'])).toBe(undefined)
+    expect(findProductWithCodes(database, [])).toBe(undefined)
   })
 })
 
 describe('saveProduct', () => {
-  test('saves a catalog product with a copy of its photo', async () => {
-    const { database, catalog, photos } = await setup()
-    const found = await findProductByCode(database, EAN, { catalog })
+  test('saves a new catalog product with a copy of its image', async () => {
+    const { database, catalog, photos, readPhoto } = await setup()
 
-    const saved = await saveProduct(database, found!, { catalog, photos })
-
-    expect(saved.photo).toBe(`${EAN}.png`)
-    expect(await readFile(path.join(photos, `${EAN}.png`), 'utf8')).toBe(
-      'image'
+    const saved = await saveProduct(
+      database,
+      { codes: [EAN], ...catalogProduct, photo: { kind: 'ean', ean: EAN } },
+      { catalog, photos }
     )
-    expect(await findProductByCode(database, EAN, { catalog })).toEqual({
-      product: {
-        code: EAN,
-        codeType: 'ean',
+
+    expect(saved).toMatchObject({ codes: [EAN], photo: `${EAN}.png` })
+    expect(await readPhoto(`${EAN}.png`)).toBe('catalog image')
+    expect(findProductById(database, saved.id)).toEqual(saved)
+  })
+
+  test('saves a product without photo when the catalog has no image', async () => {
+    const { database, catalog, photos } = await setup()
+
+    const saved = await saveProduct(
+      database,
+      {
+        codes: ['7891000053508'],
         ...catalogProduct,
-        photo: `${EAN}.png`
-      },
-      source: 'instance',
-      extraCodes: []
-    })
-  })
-
-  test('updates a product already saved and derives the code type', async () => {
-    const { database, catalog, photos } = await setup()
-    database.insert(products).values(savedProduct).run()
-
-    await saveProduct(
-      database,
-      {
-        product: { ...savedProduct, code: '1234', codeType: 'ean' },
-        source: 'instance'
-      },
-      { catalog, photos }
-    )
-    await saveProduct(
-      database,
-      {
-        product: { ...savedProduct, code: '1234', name: 'Picanha' },
-        source: 'instance'
+        photo: { kind: 'ean', ean: '7891000053508' }
       },
       { catalog, photos }
     )
 
-    expect(database.select().from(products).all()).toEqual([
-      savedProduct,
-      { ...savedProduct, code: '1234', codeType: 'internal', name: 'Picanha' }
-    ])
+    expect(saved.photo).toBe(null)
   })
 
-  test('replaces the extra codes only when they are given', async () => {
-    const { database, catalog, photos } = await setup()
-    const found = { product: savedProduct, source: 'instance' } as const
+  test('updates a product by id and replaces its codes', async () => {
+    const { database, catalog, photos, addProduct } = await setup()
+    const product = addProduct(['2001'], 'Picanha')
 
-    await saveProduct(database, found, {
-      catalog,
-      photos,
-      extraCodes: [' 2001', '2002', '2001', EAN, '']
+    await saveProduct(
+      database,
+      {
+        id: product.id,
+        codes: ['2002', ' 2003', '2002'],
+        name: 'Picanha bovina',
+        brand: null,
+        unit: 'Kg'
+      },
+      { catalog, photos }
+    )
+
+    expect(findProductById(database, product.id)).toEqual({
+      ...product,
+      codes: ['2002', '2003'],
+      name: 'Picanha bovina',
+      unit: 'Kg'
     })
-    expect(listCodes(database)).toEqual(['2001', '2002'])
-
-    await saveProduct(database, found, { catalog, photos })
-    expect(listCodes(database)).toEqual(['2001', '2002'])
-
-    await saveProduct(database, found, {
-      catalog,
-      photos,
-      extraCodes: ['2003']
-    })
-    expect(listCodes(database)).toEqual(['2003'])
+    expect(database.select().from(products).all()).toHaveLength(1)
   })
 
-  test('refuses a code that belongs to another product', async () => {
-    const { database, catalog, photos } = await setup()
-    database
-      .insert(products)
-      .values([savedProduct, product('1234', 'Picanha')])
-      .run()
-    database
-      .insert(productCodes)
-      .values({ code: '2001', productCode: '1234' })
-      .run()
-    const found = { product: savedProduct, source: 'instance' } as const
+  test('takes a code another product has, but never the same codes', async () => {
+    const { database, catalog, photos, addProduct } = await setup()
+    const single = addProduct(['2001'], 'Sabonete lavanda')
+    const details = { name: 'Sabonete', brand: null, unit: null }
 
-    for (const extraCodes of [['1234'], ['2001']]) {
-      await expect(
-        saveProduct(database, found, { catalog, photos, extraCodes })
-      ).rejects.toThrow(CodeConflictError)
-    }
+    const group = await saveProduct(
+      database,
+      { codes: ['2001', '2002'], ...details },
+      { catalog, photos }
+    )
+    expect(group.codes).toEqual(['2001', '2002'])
+
     await expect(
       saveProduct(
         database,
-        { product: product('2001', 'Alcatra'), source: 'instance' },
+        { codes: ['2002', '2001'], ...details },
         { catalog, photos }
       )
-    ).rejects.toThrow(CodeConflictError)
-    expect(database.select().from(products).all()).toHaveLength(2)
-    expect(listCodes(database)).toEqual(['2001'])
-  })
-
-  test('rejects an extra code that could name a file outside the photos folder', async () => {
-    const { database, catalog, photos } = await setup()
-
+    ).rejects.toThrow(DuplicateCodesError)
     await expect(
       saveProduct(
         database,
-        { product: savedProduct, source: 'instance' },
-        { catalog, photos, extraCodes: ['../logo'] }
+        { id: group.id, codes: ['2001'], ...details },
+        { catalog, photos }
+      )
+    ).rejects.toThrow(DuplicateCodesError)
+    expect(findProductById(database, single.id)).toEqual(single)
+    expect(findProductById(database, group.id)).toEqual(group)
+  })
+
+  test('rejects a product without codes or with a code that could leave the photos folder', async () => {
+    const { database, catalog, photos } = await setup()
+    const details = { name: 'Picanha', brand: null, unit: null }
+
+    await expect(
+      saveProduct(database, { codes: [' '], ...details }, { catalog, photos })
+    ).rejects.toThrow()
+    await expect(
+      saveProduct(
+        database,
+        { codes: ['../logo'], ...details },
+        { catalog, photos }
       )
     ).rejects.toThrow()
   })
-})
 
-describe('findCodeConflicts', () => {
-  test('names the product that already has each code', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values([savedProduct, product('1234', 'Picanha')])
-      .run()
-    database
-      .insert(productCodes)
-      .values([
-        { code: '2001', productCode: '1234' },
-        { code: '2002', productCode: EAN }
-      ])
-      .run()
+  test('refuses an id that is not saved', async () => {
+    const { database, catalog, photos } = await setup()
 
-    expect(
-      findCodeConflicts(database, EAN, ['1234', '2001', '2002', EAN, '3000'])
-    ).toEqual([
-      { code: '1234', product: { code: '1234', name: 'Picanha' } },
-      { code: '2001', product: { code: '1234', name: 'Picanha' } }
-    ])
+    await expect(
+      saveProduct(
+        database,
+        {
+          id: randomUUID(),
+          codes: ['2001'],
+          name: 'Picanha',
+          brand: null,
+          unit: null
+        },
+        { catalog, photos }
+      )
+    ).rejects.toThrow(MissingProductError)
+  })
+
+  test('renames the photo when the product becomes a group and back', async () => {
+    const { database, catalog, photos, addProduct, readPhoto } = await setup()
+    const product = addProduct(['2001'], 'Sabonete', { photo: '2001.png' })
+    await writeFile(path.join(photos, '2001.png'), 'photo')
+    const details = { name: 'Sabonete', brand: null, unit: null }
+
+    const group = await saveProduct(
+      database,
+      { id: product.id, codes: ['2001', '2002'], ...details },
+      { catalog, photos }
+    )
+    expect(group.photo).toBe(`${product.id}.png`)
+    expect(await readPhoto(`${product.id}.png`)).toBe('photo')
+    expect(await exists(path.join(photos, '2001.png'))).toBe(false)
+
+    const single = await saveProduct(
+      database,
+      { id: product.id, codes: ['2002'], ...details },
+      { catalog, photos }
+    )
+    expect(single.photo).toBe('2002.png')
+    expect(await readPhoto('2002.png')).toBe('photo')
+  })
+
+  test('removes the old file when a new photo gets another name', async () => {
+    const { database, catalog, photos, addProduct } = await setup()
+    const product = addProduct(['2001'], 'Alcatra', { photo: '2001.png' })
+    await writeFile(path.join(photos, '2001.png'), 'photo')
+
+    const saved = await saveProduct(
+      database,
+      {
+        id: product.id,
+        codes: ['2002'],
+        name: 'Alcatra',
+        brand: null,
+        unit: null,
+        photo: { kind: 'ean', ean: EAN }
+      },
+      { catalog, photos }
+    )
+
+    expect(saved.photo).toBe('2002.png')
+    expect(await exists(path.join(photos, '2001.png'))).toBe(false)
+  })
+
+  test('drops a photo missing from the disk instead of keeping a broken one', async () => {
+    const { database, catalog, photos, addProduct } = await setup()
+    const product = addProduct(['2001'], 'Alcatra', { photo: '2001.png' })
+
+    const saved = await saveProduct(
+      database,
+      {
+        id: product.id,
+        codes: ['2002'],
+        name: 'Alcatra',
+        brand: null,
+        unit: null
+      },
+      { catalog, photos }
+    )
+
+    expect(saved.photo).toBe(null)
   })
 })
 
 describe('listProducts', () => {
-  test('searches the name ignoring case and the code by any part', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values([
-        product('1001', 'picanha bovina'),
-        product('2002', 'Alcatra'),
-        product('3010', 'Fraldinha')
-      ])
-      .run()
+  test('searches the name ignoring case and any code by any part', async () => {
+    const { database, addProduct } = await setup()
+    addProduct(['1001'], 'picanha bovina')
+    addProduct(['2002', '4010'], 'Alcatra')
+    addProduct(['3010'], 'Fraldinha')
 
     const names = (query: string) =>
       listProducts(database, { query }).products.map(({ name }) => name)
 
     expect(names('PICANHA')).toEqual(['picanha bovina'])
-    expect(names(' 01 ')).toEqual(['Fraldinha', 'picanha bovina'])
+    expect(names(' 01 ')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
+    expect(names('4010')).toEqual(['Alcatra'])
     expect(names('')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
   })
 
+  test('returns each product with its codes', async () => {
+    const { database, addProduct } = await setup()
+    const product = addProduct(['2002', '2001'], 'Sabonete')
+
+    expect(listProducts(database).products).toEqual([product])
+  })
+
   test('searches and sorts the name ignoring accents and cedilla', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values([
-        product('1', 'Pão Francês'),
-        product('2', 'pão de queijo'),
-        product('3', 'Açúcar Cristal'),
-        product('4', 'Ágata Azeite'),
-        product('5', 'Batata')
-      ])
-      .run()
+    const { database, addProduct } = await setup()
+    addProduct(['1'], 'Pão Francês')
+    addProduct(['2'], 'pão de queijo')
+    addProduct(['3'], 'Açúcar Cristal')
+    addProduct(['4'], 'Ágata Azeite')
+    addProduct(['5'], 'Batata')
 
     const names = (query: string) =>
       listProducts(database, { query }).products.map(({ name }) => name)
@@ -344,35 +419,28 @@ describe('listProducts', () => {
   })
 
   test('takes % and _ in the query literally', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values([product('1', 'Desconto 50%'), product('2', 'Arroz 5 kg')])
-      .run()
+    const { database, addProduct } = await setup()
+    addProduct(['1'], 'Desconto 50%')
+    addProduct(['2'], 'Arroz 5 kg')
 
     expect(
-      listProducts(database, { query: '50%' }).products.map(({ code }) => code)
-    ).toEqual(['1'])
+      listProducts(database, { query: '50%' }).products.map(({ name }) => name)
+    ).toEqual(['Desconto 50%'])
     expect(listProducts(database, { query: '_' }).total).toBe(0)
   })
 
   test('pages the products and keeps the page within range', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values(
-        Array.from({ length: PRODUCTS_PAGE_SIZE + 1 }, (_, index) =>
-          product(String(index), `Produto ${String(index).padStart(3, '0')}`)
-        )
-      )
-      .run()
+    const { database, addProduct } = await setup()
+    for (let index = 0; index <= PRODUCTS_PAGE_SIZE; index++) {
+      addProduct([String(index)], `Produto ${String(index).padStart(3, '0')}`)
+    }
 
     const first = listProducts(database)
     expect(first).toMatchObject({ total: 51, page: 1, pageCount: 2 })
     expect(first.products).toHaveLength(PRODUCTS_PAGE_SIZE)
 
     const last = listProducts(database, { page: 2 })
-    expect(last.products.map(({ code }) => code)).toEqual(['50'])
+    expect(last.products.map(({ codes }) => codes)).toEqual([['50']])
     expect(listProducts(database, { page: 9 }).page).toBe(2)
     expect(listProducts(database, { page: NaN }).page).toBe(1)
     expect(listProducts(database, { page: -1 }).page).toBe(1)
@@ -391,64 +459,53 @@ describe('listProducts', () => {
 })
 
 describe('searchProducts', () => {
-  test('matches every word in the name, brand, unit or code ignoring accents', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values([
-        {
-          ...product('7891', 'Sabonete Erva-Doce'),
-          brand: 'Albany',
-          unit: '85 g'
-        },
-        { ...product('7892', 'Sabonete Aveia'), brand: 'Lux', unit: '85 g' },
-        { ...product('ab-1', 'Pão Francês'), brand: null, unit: null }
-      ])
-      .run()
+  test('matches every word in the name, brand, unit or codes ignoring accents', async () => {
+    const { database, addProduct } = await setup()
+    addProduct(['7891', '7893'], 'Sabonete Erva-Doce', {
+      brand: 'Albany',
+      unit: '85 g'
+    })
+    addProduct(['7892'], 'Sabonete Aveia', { brand: 'Lux', unit: '85 g' })
+    addProduct(['ab-1'], 'Pão Francês')
 
-    const codes = (query: string) =>
-      searchProducts(database, query).map(({ code }) => code)
+    const names = (query: string) =>
+      searchProducts(database, query).map(({ name }) => name)
 
-    expect(codes('sabonete')).toEqual(['7892', '7891'])
-    expect(codes('SABONETE  albany')).toEqual(['7891'])
-    expect(codes('85 G')).toEqual(['7892', '7891'])
-    expect(codes('7892')).toEqual(['7892'])
-    expect(codes('AB-1')).toEqual(['ab-1'])
-    expect(codes('pao frances')).toEqual(['ab-1'])
-    expect(codes('pao albany')).toEqual([])
-    expect(codes('  ')).toEqual([])
+    expect(names('sabonete')).toEqual(['Sabonete Aveia', 'Sabonete Erva-Doce'])
+    expect(names('SABONETE  albany')).toEqual(['Sabonete Erva-Doce'])
+    expect(names('85 G')).toEqual(['Sabonete Aveia', 'Sabonete Erva-Doce'])
+    expect(names('7893')).toEqual(['Sabonete Erva-Doce'])
+    expect(names('AB-1')).toEqual(['Pão Francês'])
+    expect(names('pao frances')).toEqual(['Pão Francês'])
+    expect(names('pao albany')).toEqual([])
+    expect(names('  ')).toEqual([])
   })
 
   test('takes % and _ literally and stops at the limit', async () => {
-    const { database } = await setup()
-    database
-      .insert(products)
-      .values(
-        Array.from({ length: 3 }, (_, index) =>
-          product(String(index), `Produto ${index}`)
-        )
-      )
-      .run()
+    const { database, addProduct } = await setup()
+    for (let index = 0; index < 3; index++) {
+      addProduct([String(index)], `Produto ${index}`)
+    }
 
     expect(searchProducts(database, '%')).toEqual([])
     expect(searchProducts(database, '_')).toEqual([])
     expect(
-      searchProducts(database, 'produto', { limit: 2 }).map(({ code }) => code)
-    ).toEqual(['0', '1'])
+      searchProducts(database, 'produto', { limit: 2 }).map(({ name }) => name)
+    ).toEqual(['Produto 0', 'Produto 1'])
   })
 })
 
 const addOffer = (
   database: Awaited<ReturnType<typeof setup>>['database'],
   name: string,
-  codes: string[]
+  productIds: string[]
 ) => {
   const offer = database
     .insert(offers)
     .values({ name, highlightTitle: '', highlightMessage: '' })
     .returning()
     .get()
-  for (const [position, code] of codes.entries()) {
+  for (const [position, productId] of productIds.entries()) {
     const page = database
       .insert(offerPages)
       .values({
@@ -461,97 +518,85 @@ const addOffer = (
       .get()
     database
       .insert(offerPageItems)
-      .values({
-        pageId: page.id,
-        position: 0,
-        productCode: code,
-        priceInCents: 100
-      })
+      .values({ pageId: page.id, position: 0, productId, priceInCents: 100 })
       .run()
   }
 }
 
 describe('deleteProduct', () => {
-  test('deletes the product and its photo', async () => {
-    const { database, photos } = await setup()
-    database
-      .insert(products)
-      .values([
-        { ...savedProduct, photo: `${EAN}.png` },
-        product('1234', 'Picanha')
-      ])
-      .run()
-    await mkdir(photos)
+  test('deletes the product, its codes and its photo', async () => {
+    const { database, photos, addProduct } = await setup()
+    const product = addProduct([EAN, '2001'], 'Leite', {
+      photo: `${EAN}.png`
+    })
+    const other = addProduct(['2001'], 'Picanha')
     await writeFile(path.join(photos, `${EAN}.png`), 'image')
 
-    expect(await deleteProduct(database, ` ${EAN}`, { photos })).toEqual({
+    expect(await deleteProduct(database, product.id, { photos })).toEqual({
       status: 'deleted'
     })
-    expect(database.select().from(products).all()).toEqual([
-      product('1234', 'Picanha')
+    expect(listProducts(database).products).toEqual([other])
+    expect(database.select().from(productCodes).all()).toEqual([
+      { productId: other.id, code: '2001' }
     ])
-    await expect(access(path.join(photos, `${EAN}.png`))).rejects.toThrow()
+    expect(await exists(path.join(photos, `${EAN}.png`))).toBe(false)
   })
 
   test('deletes a product without a photo', async () => {
-    const { database, photos } = await setup()
-    database.insert(products).values(product('1234', 'Picanha')).run()
+    const { database, photos, addProduct } = await setup()
+    const product = addProduct(['1234'], 'Picanha')
 
-    expect(await deleteProduct(database, '1234', { photos })).toEqual({
+    expect(await deleteProduct(database, product.id, { photos })).toEqual({
       status: 'deleted'
     })
     expect(database.select().from(products).all()).toEqual([])
   })
 
-  test('deletes the extra codes with the product', async () => {
-    const { database, photos } = await setup()
-    database
-      .insert(products)
-      .values([savedProduct, product('1234', 'Picanha')])
-      .run()
-    database
-      .insert(productCodes)
-      .values([
-        { code: '2001', productCode: EAN },
-        { code: '2002', productCode: '1234' }
-      ])
-      .run()
-
-    await deleteProduct(database, EAN, { photos })
-
-    expect(listCodes(database)).toEqual(['2002'])
-  })
-
   test('refuses a product used in offers and names each offer once', async () => {
-    const { database, photos } = await setup()
-    database
-      .insert(products)
-      .values([
-        { ...savedProduct, photo: `${EAN}.png` },
-        product('1234', 'Picanha')
-      ])
-      .run()
-    await mkdir(photos)
+    const { database, photos, addProduct, readPhoto } = await setup()
+    const product = addProduct([EAN], 'Leite', { photo: `${EAN}.png` })
+    const other = addProduct(['1234'], 'Picanha')
     await writeFile(path.join(photos, `${EAN}.png`), 'image')
-    addOffer(database, 'Semana', [EAN, EAN])
-    addOffer(database, 'Açougue', ['1234'])
-    addOffer(database, 'Fim de semana', ['1234', EAN])
+    addOffer(database, 'Semana', [product.id, product.id])
+    addOffer(database, 'Açougue', [other.id])
+    addOffer(database, 'Fim de semana', [other.id, product.id])
 
-    expect(await deleteProduct(database, EAN, { photos })).toEqual({
+    expect(await deleteProduct(database, product.id, { photos })).toEqual({
       status: 'in-use',
       offers: ['Fim de semana', 'Semana']
     })
     expect(database.select().from(products).all()).toHaveLength(2)
-    expect(await readFile(path.join(photos, `${EAN}.png`), 'utf8')).toBe(
-      'image'
-    )
+    expect(await readPhoto(`${EAN}.png`)).toBe('image')
   })
 
-  test('rejects a code that could name a file outside the photos folder', async () => {
+  test('rejects an id that is not a UUID', async () => {
     const { database, photos } = await setup()
 
     await expect(
       deleteProduct(database, '../logo', { photos })
     ).rejects.toThrow()
+  })
+})
+
+describe('renameOutdatedPhotos', () => {
+  test('moves the photo of a group saved before #55 to its id', async () => {
+    const { database, photos, addProduct, readPhoto } = await setup()
+    const group = addProduct(['2001', '2002'], 'Sabonete', {
+      photo: '2001.png'
+    })
+    const single = addProduct(['3001'], 'Picanha', { photo: '3001.png' })
+    const missing = addProduct(['4001', '4002'], 'Alcatra', {
+      photo: '4001.png'
+    })
+    await writeFile(path.join(photos, '2001.png'), 'group')
+    await writeFile(path.join(photos, '3001.png'), 'single')
+
+    await renameOutdatedPhotos(database, { photos })
+
+    expect(findProductById(database, group.id)?.photo).toBe(`${group.id}.png`)
+    expect(await readPhoto(`${group.id}.png`)).toBe('group')
+    expect(await exists(path.join(photos, '2001.png'))).toBe(false)
+    expect(findProductById(database, single.id)).toEqual(single)
+    expect(findProductById(database, missing.id)).toEqual(missing)
   })
 })

@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readdir } from 'node:fs/promises'
+import { access, copyFile, mkdir, readdir, rename, rm } from 'node:fs/promises'
 import path from 'node:path'
 
 import sharp from 'sharp'
@@ -7,8 +7,10 @@ import {
   CATALOG_IMAGE_EXTENSION,
   isCatalogDescriptionName
 } from '@/domain/catalog'
-import { getPhotoFileName, isValidCode, PHOTO_MAX_SIDE } from '@/domain/product'
+import { isValidEan } from '@/domain/ean'
+import { PHOTO_MAX_SIDE } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
+import { getCatalogImageFile } from '@/infra/catalog/product'
 import { photosDirectory } from '@/infra/photos-directory'
 
 type PhotoDirectories = {
@@ -17,8 +19,17 @@ type PhotoDirectories = {
   noEan?: string
 }
 
-const assertValidCode = (code: string) => {
-  if (!isValidCode(code)) throw new Error(`Invalid product code: ${code}`)
+// File names come from getPhotoFileName, built from a checked code or id, but a name read back
+// from the database must still never reach a file outside the photos folder
+const isPhotoFileName = (fileName: string) =>
+  path.basename(fileName) === fileName &&
+  fileName.endsWith(CATALOG_IMAGE_EXTENSION)
+
+const getPhotoPath = (photos: string, fileName: string) => {
+  if (!isPhotoFileName(fileName)) {
+    throw new Error(`Invalid photo file name: ${fileName}`)
+  }
+  return path.join(photos, fileName)
 }
 
 const exists = async (file: string) => {
@@ -31,12 +42,11 @@ const exists = async (file: string) => {
 }
 
 export const savePhoto = async (
-  code: string,
+  fileName: string,
   image: Buffer,
   { photos = photosDirectory }: PhotoDirectories = {}
 ) => {
-  assertValidCode(code)
-  const photo = getPhotoFileName(code)
+  const file = getPhotoPath(photos, fileName)
   await mkdir(photos, { recursive: true })
   await sharp(image)
     // Phone photos are often stored sideways with an EXIF orientation, which PNG drops
@@ -48,8 +58,7 @@ export const savePhoto = async (
       withoutEnlargement: true
     })
     .png()
-    .toFile(path.join(photos, photo))
-  return photo
+    .toFile(file)
 }
 
 export const listNoEanImages = async (directory = noEanDirectory) => {
@@ -68,28 +77,59 @@ export const getNoEanImageFile = (name: string, directory = noEanDirectory) =>
 
 export const copyNoEanImage = async (
   name: string,
-  code: string,
+  fileName: string,
   { photos = photosDirectory, noEan = noEanDirectory }: PhotoDirectories = {}
 ) => {
-  assertValidCode(code)
   const file = getNoEanImageFile(name, noEan)
   if (!file) throw new Error(`Invalid catalog image name: ${name}`)
 
-  const photo = getPhotoFileName(code)
+  const target = getPhotoPath(photos, fileName)
   await mkdir(photos, { recursive: true })
-  await copyFile(file, path.join(photos, photo))
-  return photo
+  await copyFile(file, target)
 }
 
-// The store's own photo wins, so replacing a catalog image never needs a catalog change
-export const findPhotoFile = async (
-  code: string,
-  { photos = photosDirectory, ean = eanDirectory }: PhotoDirectories = {}
-) => {
-  if (!isValidCode(code)) return
+export const getEanImageFile = (ean: string, directory = eanDirectory) =>
+  isValidEan(ean) ? getCatalogImageFile(ean, directory) : undefined
 
-  for (const directory of [photos, ean]) {
-    const file = path.join(directory, getPhotoFileName(code))
-    if (await exists(file)) return file
-  }
+// The photo is copied rather than referenced, so a later catalog update never changes a product
+// the store already uses
+export const copyEanImage = async (
+  ean: string,
+  fileName: string,
+  {
+    photos = photosDirectory,
+    ean: eanFolder = eanDirectory
+  }: PhotoDirectories = {}
+) => {
+  const file = getEanImageFile(ean, eanFolder)
+  if (!file || !(await exists(file))) return false
+
+  const target = getPhotoPath(photos, fileName)
+  await mkdir(photos, { recursive: true })
+  await copyFile(file, target)
+  return true
+}
+
+export const renamePhoto = async (
+  from: string,
+  to: string,
+  { photos = photosDirectory }: PhotoDirectories = {}
+) => {
+  await rename(getPhotoPath(photos, from), getPhotoPath(photos, to))
+}
+
+export const removePhoto = async (
+  fileName: string,
+  { photos = photosDirectory }: PhotoDirectories = {}
+) => {
+  await rm(getPhotoPath(photos, fileName), { force: true })
+}
+
+export const findPhotoFile = async (
+  fileName: string,
+  { photos = photosDirectory }: PhotoDirectories = {}
+) => {
+  if (!isPhotoFileName(fileName)) return
+  const file = path.join(photos, fileName)
+  return (await exists(file)) ? file : undefined
 }

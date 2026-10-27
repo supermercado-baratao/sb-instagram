@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
 import {
-  getExtraCodeChanges,
+  getPhotoFileName,
   getProductChanges,
+  isSameCodeSet,
   isValidCode,
-  normalizeExtraCodes,
+  isValidProductId,
+  normalizeCodes,
   normalizeSearchText
 } from './product'
 
@@ -60,19 +62,44 @@ describe('getProductChanges', () => {
   })
 })
 
-describe('normalizeExtraCodes', () => {
-  test('drops blanks, repeats and the main code', () => {
-    expect(
-      normalizeExtraCodes([' 2001', '', '2002', '20 01', '1234'], '1234')
-    ).toEqual(['2001', '2002'])
+describe('normalizeCodes', () => {
+  test('drops blanks and repeats and sorts the codes', () => {
+    expect(normalizeCodes([' 2002', '', '2001', '20 01'])).toEqual([
+      '2001',
+      '2002'
+    ])
   })
 })
 
-describe('getExtraCodeChanges', () => {
-  test('lists the added and removed codes', () => {
-    expect(getExtraCodeChanges(['2001', '2002'], ['2002', '2003'])).toEqual({
-      added: ['2003'],
-      removed: ['2001']
-    })
+describe('isSameCodeSet', () => {
+  test('compares the codes in any order', () => {
+    expect(isSameCodeSet(['2002', '2001'], ['2001', ' 2002'])).toBe(true)
+  })
+
+  test('tells a product from a group that also has its code', () => {
+    expect(isSameCodeSet(['2001'], ['2001', '2002'])).toBe(false)
+    expect(isSameCodeSet(['2001', '2002'], ['2001', '2003'])).toBe(false)
+  })
+})
+
+describe('isValidProductId', () => {
+  test('accepts a UUID and nothing else', () => {
+    expect(isValidProductId('0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d')).toBe(true)
+    expect(isValidProductId('7891000100103')).toBe(false)
+    expect(isValidProductId('../0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d')).toBe(
+      false
+    )
+  })
+})
+
+describe('getPhotoFileName', () => {
+  const id = '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d'
+
+  test('names the photo of a single code product after its code', () => {
+    expect(getPhotoFileName({ id, codes: ['2001'] })).toBe('2001.png')
+  })
+
+  test('names the photo of a group after its id', () => {
+    expect(getPhotoFileName({ id, codes: ['2001', '2002'] })).toBe(`${id}.png`)
   })
 })

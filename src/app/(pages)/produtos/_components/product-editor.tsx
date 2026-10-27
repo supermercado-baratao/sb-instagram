@@ -5,6 +5,10 @@ import { type FormEvent, useRef, useState, useTransition } from 'react'
 
 import { lookupProduct } from '@/app/components/blocks/product/actions'
 import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
+import {
+  type ProductChoice,
+  ProductChoiceDialog
+} from '@/app/components/blocks/product/product-choice-dialog'
 import { ProductForm } from '@/app/components/blocks/product/product-form'
 import {
   getLookupMessage,
@@ -43,6 +47,8 @@ export const ProductEditor = ({
   query
 }: ProductEditorProps) => {
   const [lookup, setLookup] = useState<ProductLookup>()
+  const [choice, setChoice] = useState<ProductChoice>()
+  const [choosing, setChoosing] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string>()
   const [saved, setSaved] = useState<{
@@ -52,22 +58,20 @@ export const ProductEditor = ({
   const [deleted, setDeleted] = useState<Product>()
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
+  const formArea = useRef<HTMLDivElement>(null)
 
-  const openProduct = (code: string, onFound?: () => void) => {
-    startSearch(async () => {
-      const result = await lookupProduct(code)
-      setSaved(undefined)
-      setDeleted(undefined)
-      if (result.status === 'error') {
-        setError(result.message)
-        setLookup(undefined)
-        // A scanner types the next code where the cursor is, so the wrong one must be replaced
-        codeInput.current?.select()
-        return
-      }
-      setError(undefined)
-      setLookup({ ...result, id: Date.now() })
-      onFound?.()
+  const clearMessages = () => {
+    setSaved(undefined)
+    setDeleted(undefined)
+    setError(undefined)
+  }
+
+  const openProduct = (product: Product) => {
+    clearMessages()
+    setLookup({
+      status: 'instance',
+      product,
+      id: Date.now()
     })
   }
 
@@ -75,7 +79,30 @@ export const ProductEditor = ({
     event.preventDefault()
     const form = event.currentTarget
     const code = String(new FormData(form).get('code') ?? '')
-    openProduct(code, () => form.reset())
+
+    startSearch(async () => {
+      const result = await lookupProduct(code)
+      clearMessages()
+      if (result.status === 'error') {
+        setError(result.message)
+        setLookup(undefined)
+        // A scanner types the next code where the cursor is, so the wrong one must be replaced
+        codeInput.current?.select()
+        return
+      }
+      form.reset()
+      if (result.status !== 'found') {
+        setLookup({ ...result, id: Date.now() })
+        return
+      }
+      if (result.products.length === 1) {
+        openProduct(result.products[0])
+        return
+      }
+      setLookup(undefined)
+      setChoice({ code: result.code, products: result.products })
+      setChoosing(true)
+    })
   }
 
   const handleSaved = (product: Product) => {
@@ -90,7 +117,7 @@ export const ProductEditor = ({
     setDeleted(undefined)
     setError(undefined)
     // Only a form open for the same product is outdated; any other keeps its unsaved edits
-    if (lookup && getProductFormProps(lookup).code === product.code) {
+    if (lookup?.status === 'instance' && lookup.product.id === product.id) {
       setLookup(undefined)
     }
   }
@@ -99,7 +126,7 @@ export const ProductEditor = ({
     setDeleted(product)
     setSaved(undefined)
     setError(undefined)
-    if (lookup?.status === 'found' && lookup.product.code === product.code) {
+    if (lookup?.status === 'instance' && lookup.product.id === product.id) {
       setLookup(undefined)
     }
   }
@@ -124,6 +151,16 @@ export const ProductEditor = ({
         noEanImages={noEanImages}
         onSaved={handleCreated}
         getFocusAfterSave={() => codeInput.current}
+      />
+      <ProductChoiceDialog
+        open={choosing}
+        choice={choice}
+        onOpenChange={setChoosing}
+        onChoose={openProduct}
+        getFocusAfterChoice={() =>
+          formArea.current?.querySelector<HTMLElement>('[name="name"]') ??
+          codeInput.current
+        }
       />
 
       <form onSubmit={search} className="flex items-end gap-2">
@@ -188,13 +225,15 @@ export const ProductEditor = ({
       </div>
 
       {lookup && (
-        <ProductForm
-          key={lookup.id}
-          {...getProductFormProps(lookup)}
-          noEanImages={noEanImages}
-          onSaved={handleSaved}
-          className="rounded-xl border border-border p-4 sm:p-6"
-        />
+        <div ref={formArea}>
+          <ProductForm
+            key={lookup.id}
+            {...getProductFormProps(lookup)}
+            noEanImages={noEanImages}
+            onSaved={handleSaved}
+            className="rounded-xl border border-border p-4 sm:p-6"
+          />
+        </div>
       )}
 
       <section

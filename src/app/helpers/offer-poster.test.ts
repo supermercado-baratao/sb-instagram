@@ -10,8 +10,8 @@ import { HIDDEN_FIELD_MARKER } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 const product: Product = {
-  code: '7891000100103',
-  codeType: 'ean',
+  id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
+  codes: ['7891000100103'],
   name: 'Leite integral',
   brand: 'Italac',
   unit: '1L',
@@ -26,7 +26,7 @@ describe('getPosterProducts', () => {
       name: 'Leite integral',
       brand: 'Italac',
       unit: '1L',
-      image: '/fotos/7891000100103',
+      image: '/fotos/0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
       priceInCents: 549
     })
   })

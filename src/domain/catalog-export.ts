@@ -4,7 +4,11 @@ import {
   type CatalogProduct,
   isCatalogDescriptionName
 } from '@/domain/catalog'
-import { normalizeSearchText, type Product } from '@/domain/product'
+import {
+  getCodeType,
+  normalizeSearchText,
+  type Product
+} from '@/domain/product'
 
 export type CatalogExportFolder = 'ean' | 'no-ean'
 
@@ -23,7 +27,7 @@ export type CatalogExportContext = {
   exportedNames: ReadonlySet<string>
 }
 
-export type SkippedProduct = Pick<Product, 'code' | 'name'> & {
+export type SkippedProduct = Pick<Product, 'codes' | 'name'> & {
   reason: string
 }
 
@@ -49,15 +53,25 @@ export const checkCatalogExport = (
 ): CatalogExportCheck => {
   if (product.photo === null) return { status: 'skipped', reason: 'Sem foto' }
 
-  if (product.codeType === 'ean') {
+  // The catalog format keeps one code per product until it takes groups (#51)
+  if (product.codes.length !== 1) {
+    return {
+      status: 'skipped',
+      reason:
+        'O produto tem mais de um código, e o catálogo ainda não aceita grupos'
+    }
+  }
+  const [code] = product.codes
+
+  if (getCodeType(code) === 'ean') {
     const missingFields = getMissingFieldsReason(product)
     if (missingFields) return { status: 'skipped', reason: missingFields }
 
-    if (catalogEans.has(product.code)) {
+    if (catalogEans.has(code)) {
       return { status: 'skipped', reason: 'O EAN já está no catálogo' }
     }
 
-    return { status: 'ok', target: { folder: 'ean', base: product.code } }
+    return { status: 'ok', target: { folder: 'ean', base: code } }
   }
 
   const base = toCatalogDescriptionName(product.name)
@@ -113,7 +127,7 @@ export const formatCatalogExportReport = (skipped: SkippedProduct[]) => {
   }
 
   const lines = skipped.map(
-    ({ code, name, reason }) => `${code} · ${name}: ${reason}`
+    ({ codes, name, reason }) => `${codes.join(', ')} · ${name}: ${reason}`
   )
   return [
     'Produtos que ficaram fora da exportação para o catálogo:',
