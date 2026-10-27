@@ -1,17 +1,23 @@
 'use client'
 
-import { CircleAlert, CircleCheck, Info, ScanBarcode } from 'lucide-react'
+import { CircleAlert, CircleCheck, Info, Plus, ScanBarcode } from 'lucide-react'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 
+import { lookupProduct } from '@/app/components/blocks/product/actions'
+import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
+import { ProductForm } from '@/app/components/blocks/product/product-form'
+import {
+  getLookupMessage,
+  getProductFormProps,
+  type ProductLookup
+} from '@/app/components/blocks/product/product-lookup'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import type { Product, ProductPage } from '@/domain/product'
 
-import { lookupProduct, type LookupResult } from '../actions'
 import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'
-import { ProductForm } from './product-form'
 import { ProductList } from './product-list'
 import { ProductPagination } from './product-pagination'
 import { ProductSearch } from './product-search'
@@ -20,19 +26,6 @@ type ProductEditorProps = {
   noEanImages: string[]
   productPage: ProductPage
   query: string
-}
-
-type Lookup = Exclude<LookupResult, { status: 'error' }> & { id: number }
-
-const getLookupMessage = (lookup: Lookup) => {
-  if (lookup.status === 'new') {
-    return lookup.codeType === 'ean'
-      ? 'Produto novo. Preencha os dados para cadastrar.'
-      : 'Código interno novo. Preencha os dados e escolha uma imagem do catálogo ou envie uma foto.'
-  }
-  return lookup.source === 'instance'
-    ? 'Produto já cadastrado. Altere o que precisar e salve.'
-    : 'Produto encontrado no catálogo da comunidade. Confira os dados e salve para usar.'
 }
 
 const getListSummary = ({ total }: ProductPage, query: string) => {
@@ -49,9 +42,13 @@ export const ProductEditor = ({
   productPage,
   query
 }: ProductEditorProps) => {
-  const [lookup, setLookup] = useState<Lookup>()
+  const [lookup, setLookup] = useState<ProductLookup>()
+  const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string>()
-  const [saved, setSaved] = useState<Product>()
+  const [saved, setSaved] = useState<{
+    product: Product
+    unchanged: boolean
+  }>()
   const [deleted, setDeleted] = useState<Product>()
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
@@ -82,10 +79,20 @@ export const ProductEditor = ({
   }
 
   const handleSaved = (product: Product) => {
-    setSaved(product)
+    setSaved({ product, unchanged: false })
     setDeleted(undefined)
     setLookup(undefined)
     codeInput.current?.focus()
+  }
+
+  const handleCreated = (product: Product, outcome: 'saved' | 'unchanged') => {
+    setSaved({ product, unchanged: outcome === 'unchanged' })
+    setDeleted(undefined)
+    setError(undefined)
+    // Only a form open for the same product is outdated; any other keeps its unsaved edits
+    if (lookup && getProductFormProps(lookup).code === product.code) {
+      setLookup(undefined)
+    }
   }
 
   const handleDeleted = (product: Product) => {
@@ -99,6 +106,26 @@ export const ProductEditor = ({
 
   return (
     <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Produtos</h1>
+          <p className="text-muted-foreground">
+            Bipe o código com o leitor ou digite e aperte Enter.
+          </p>
+        </div>
+        <Button onClick={() => setCreating(true)}>
+          <Plus data-icon="inline-start" />
+          Cadastrar produto
+        </Button>
+      </header>
+      <CreateProductDialog
+        open={creating}
+        onOpenChange={setCreating}
+        noEanImages={noEanImages}
+        onSaved={handleCreated}
+        getFocusAfterSave={() => codeInput.current}
+      />
+
       <form onSubmit={search} className="flex items-end gap-2">
         <Field className="flex-1" data-invalid={error ? true : undefined}>
           <FieldLabel htmlFor="code">
@@ -141,7 +168,9 @@ export const ProductEditor = ({
         {saved && (
           <p className="flex items-center gap-2 text-sm">
             <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            {saved.name} salvo. Bipe o próximo código.
+            {saved.unchanged
+              ? `${saved.product.name} já estava cadastrado, e nenhum dado mudou.`
+              : `${saved.product.name} salvo. Bipe o próximo código.`}
           </p>
         )}
         {deleted && (
@@ -161,15 +190,10 @@ export const ProductEditor = ({
       {lookup && (
         <ProductForm
           key={lookup.id}
-          code={lookup.status === 'new' ? lookup.code : lookup.product.code}
-          product={lookup.status === 'found' ? lookup.product : undefined}
-          hasPhoto={
-            lookup.status === 'found' &&
-            (lookup.source === 'catalog' || lookup.product.photo !== null)
-          }
-          photoVersion={lookup.id}
+          {...getProductFormProps(lookup)}
           noEanImages={noEanImages}
           onSaved={handleSaved}
+          className="rounded-xl border border-border p-4 sm:p-6"
         />
       )}
 

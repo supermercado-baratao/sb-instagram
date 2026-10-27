@@ -48,6 +48,7 @@ type OfferEditorProps = {
   offer: OfferContent
   brand: Brand
   templates: PosterTemplate[]
+  noEanImages: string[]
 }
 
 type Status = {
@@ -64,7 +65,8 @@ export const OfferEditor = ({
   id,
   offer,
   brand,
-  templates
+  templates,
+  noEanImages
 }: OfferEditorProps) => {
   const [content, setContent] = useState(offer)
   const [saved, setSaved] = useState(offer)
@@ -353,7 +355,9 @@ export const OfferEditor = ({
                   pageCount={content.pages.length}
                   page={selectedPage}
                   templates={templates}
+                  noEanImages={noEanImages}
                   onChange={(page) => updatePage(selectedIndex, page)}
+                  onNotice={(message) => show({ kind: 'info', message })}
                   onMove={moveSelectedPage}
                   onRemove={removeSelectedPage}
                 />

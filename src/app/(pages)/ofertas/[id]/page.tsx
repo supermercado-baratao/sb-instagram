@@ -6,6 +6,7 @@ import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { database } from '@/infra/database/client'
 import { findOffer } from '@/infra/offer'
+import { listNoEanImages } from '@/infra/photo'
 
 import { OfferEditor } from './_components/offer-editor'
 
@@ -25,6 +26,7 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
   const { brand, templates } = requireBrandSettings()
   const offer = await findOfferByParams(params)
   if (!offer) notFound()
+  const noEanImages = await listNoEanImages()
 
   const { id, ...content } = offer
   return (
@@ -34,6 +36,7 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
         offer={content}
         brand={getPosterBrand(brand)}
         templates={templates}
+        noEanImages={noEanImages}
       />
     </AppLayout>
   )

@@ -31,7 +31,9 @@ type PagePanelProps = {
   pageCount: number
   page: OfferPage
   templates: PosterTemplate[]
+  noEanImages: string[]
   onChange: (page: OfferPage) => void
+  onNotice: (message: string) => void
   onMove: (to: number) => void
   onRemove: () => void
 }
@@ -41,7 +43,9 @@ export const PagePanel = ({
   pageCount,
   page,
   templates,
+  noEanImages,
   onChange,
+  onNotice,
   onMove,
   onRemove
 }: PagePanelProps) => {
@@ -140,7 +144,9 @@ export const PagePanel = ({
               id={`${id}-slot-${position}`}
               position={position}
               slot={slot}
+              noEanImages={noEanImages}
               onChange={(next) => onChange(setSlot(page, position, next))}
+              onNotice={onNotice}
             />
           </li>
         ))}
