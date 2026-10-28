@@ -26,7 +26,8 @@ import {
   MissingProductError,
   type PhotoSource,
   PhotoSourceError,
-  saveProduct
+  saveProduct,
+  searchProducts
 } from '@/infra/product'
 
 export type LookupResult =
@@ -65,6 +66,11 @@ export const lookupProduct = async (rawCode: string): Promise<LookupResult> => {
     ? { status: 'found', code, products: found.products }
     : { status: 'catalog', code, product: found.product }
 }
+
+// Only the instance: the catalog is looked up by code, through lookupProduct
+export const searchInstanceProducts = async (
+  query: string
+): Promise<Product[]> => searchProducts(database, query)
 
 const readText = (formData: FormData, name: string) => {
   const value = formData.get(name)
@@ -186,6 +192,46 @@ export const saveProductForm = async (
     }
     if (photo && error instanceof PhotoSourceError) {
       return { status: 'error', message: PHOTO_ERROR_MESSAGES[photo.kind] }
+    }
+    throw error
+  }
+
+  revalidatePath('/produtos')
+  return { status: 'saved', product }
+}
+
+export const addCodeToProduct = async (
+  id: string,
+  rawCode: string
+): Promise<
+  { status: 'saved'; product: Product } | { status: 'error'; message: string }
+> => {
+  const code = normalizeCode(rawCode)
+  if (!isValidCode(code)) {
+    return { status: 'error', message: INVALID_CODE_MESSAGE }
+  }
+  const current = isValidProductId(id)
+    ? findProductById(database, id)
+    : undefined
+  if (!current) {
+    return { status: 'error', message: 'Este produto não existe mais.' }
+  }
+
+  let product: Product
+  try {
+    product = await saveProduct(database, {
+      id: current.id,
+      codes: [...current.codes, code],
+      name: current.name,
+      brand: current.brand,
+      unit: current.unit
+    })
+  } catch (error) {
+    if (error instanceof DuplicateCodesError) {
+      return { status: 'error', message: getDuplicateMessage(error.product) }
+    }
+    if (error instanceof MissingProductError) {
+      return { status: 'error', message: 'Este produto não existe mais.' }
     }
     throw error
   }

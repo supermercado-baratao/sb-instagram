@@ -1,6 +1,13 @@
 'use client'
 
-import { CircleAlert, CircleCheck, Info, Plus, ScanBarcode } from 'lucide-react'
+import {
+  CircleAlert,
+  CircleCheck,
+  Info,
+  Merge,
+  Plus,
+  ScanBarcode
+} from 'lucide-react'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 
 import { lookupProduct } from '@/app/components/blocks/product/actions'
@@ -22,6 +29,7 @@ import type { Product, ProductPage } from '@/domain/product'
 
 import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'
+import { MergeProductsDialog } from './merge-products-dialog'
 import { ProductList } from './product-list'
 import { ProductPagination } from './product-pagination'
 import { ProductSearch } from './product-search'
@@ -41,6 +49,13 @@ const getListSummary = ({ total }: ProductPage, query: string) => {
   return total === 1 ? '1 produto' : `${total} produtos`
 }
 
+const getSelectionSummary = (count: number) => {
+  if (count === 0) return ''
+  return count === 1
+    ? '1 produto selecionado. Selecione mais um para mesclar.'
+    : `${count} produtos selecionados`
+}
+
 export const ProductEditor = ({
   noEanImages,
   productPage,
@@ -56,6 +71,14 @@ export const ProductEditor = ({
     unchanged: boolean
   }>()
   const [deleted, setDeleted] = useState<Product>()
+  const [merged, setMerged] = useState<Product>()
+  // Kept across searches and pages, so products that never show up together can be merged
+  const [selected, setSelected] = useState<ReadonlyMap<string, Product>>(
+    new Map()
+  )
+  const [merging, setMerging] = useState<{ products: Product[]; key: number }>()
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const mergeButton = useRef<HTMLButtonElement>(null)
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
   const formArea = useRef<HTMLDivElement>(null)
@@ -63,8 +86,24 @@ export const ProductEditor = ({
   const clearMessages = () => {
     setSaved(undefined)
     setDeleted(undefined)
+    setMerged(undefined)
     setError(undefined)
   }
+
+  const select = (product: Product, checked: boolean) =>
+    setSelected((current) => {
+      const next = new Map(current)
+      if (checked) next.set(product.id, product)
+      else next.delete(product.id)
+      return next
+    })
+
+  const unselect = (ids: string[]) =>
+    setSelected((current) => {
+      const next = new Map(current)
+      for (const id of ids) next.delete(id)
+      return next
+    })
 
   const openProduct = (product: Product) => {
     clearMessages()
@@ -106,16 +145,15 @@ export const ProductEditor = ({
   }
 
   const handleSaved = (product: Product) => {
+    clearMessages()
     setSaved({ product, unchanged: false })
-    setDeleted(undefined)
     setLookup(undefined)
     codeInput.current?.focus()
   }
 
   const handleCreated = (product: Product, outcome: 'saved' | 'unchanged') => {
+    clearMessages()
     setSaved({ product, unchanged: outcome === 'unchanged' })
-    setDeleted(undefined)
-    setError(undefined)
     // Only a form open for the same product is outdated; any other keeps its unsaved edits
     if (lookup?.status === 'instance' && lookup.product.id === product.id) {
       setLookup(undefined)
@@ -123,10 +161,37 @@ export const ProductEditor = ({
   }
 
   const handleDeleted = (product: Product) => {
+    clearMessages()
     setDeleted(product)
-    setSaved(undefined)
-    setError(undefined)
+    unselect([product.id])
     if (lookup?.status === 'instance' && lookup.product.id === product.id) {
+      setLookup(undefined)
+    }
+  }
+
+  const getHeading = () =>
+    document.querySelector<HTMLElement>(`#${PRODUCTS_HEADING_ID}`)
+
+  const openMerge = () => {
+    setMerging({ products: selected.values().toArray(), key: Date.now() })
+    setMergeOpen(true)
+  }
+
+  // The selection bar goes away with the selection, taking the focused button with it
+  const clearSelection = () => {
+    setSelected(new Map())
+    getHeading()?.focus()
+  }
+
+  const handleMerged = (product: Product, mergedIds: string[]) => {
+    clearMessages()
+    setMerged(product)
+    setSelected(new Map())
+    // A form open for any of the merged products shows codes or a product that changed
+    if (
+      lookup?.status === 'instance' &&
+      [product.id, ...mergedIds].includes(lookup.product.id)
+    ) {
       setLookup(undefined)
     }
   }
@@ -216,6 +281,12 @@ export const ProductEditor = ({
             {deleted.name} excluído.
           </p>
         )}
+        {merged && (
+          <p className="flex items-center gap-2 text-sm">
+            <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            Produtos mesclados em {merged.name}.
+          </p>
+        )}
         {lookup && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="size-4 shrink-0" />
@@ -250,11 +321,48 @@ export const ProductEditor = ({
           </h2>
           <p className="text-sm text-muted-foreground">
             Clique num produto para alterar os dados ou a foto, ou na lixeira
-            para excluir.
+            para excluir. Para juntar produtos cadastrados separados por engano,
+            selecione-os e clique em Mesclar.
           </p>
         </div>
         <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
         <ProductSearch query={query} />
+        {/* Mounted before the first selection, so the first count is announced too */}
+        <p aria-live="polite" className="sr-only">
+          {getSelectionSummary(selected.size)}
+        </p>
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted px-3 py-2">
+            <p aria-hidden className="mr-auto text-sm">
+              {getSelectionSummary(selected.size)}
+            </p>
+            <Button
+              ref={mergeButton}
+              variant="outline"
+              size="sm"
+              disabled={searching || selected.size < 2}
+              focusableWhenDisabled
+              onClick={openMerge}
+            >
+              <Merge data-icon="inline-start" aria-hidden />
+              Mesclar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              Limpar seleção
+            </Button>
+          </div>
+        )}
+        {merging && (
+          <MergeProductsDialog
+            key={merging.key}
+            open={mergeOpen}
+            onOpenChange={setMergeOpen}
+            products={merging.products}
+            onMerged={handleMerged}
+            // After a merge the selection is cleared and the button is gone
+            getFinalFocus={() => mergeButton.current ?? getHeading()}
+          />
+        )}
         <p aria-live="polite" className="text-sm text-muted-foreground">
           {getListSummary(productPage, query)}
         </p>
@@ -262,6 +370,8 @@ export const ProductEditor = ({
           <ProductList
             products={productPage.products}
             busy={searching}
+            selectedIds={new Set(selected.keys())}
+            onSelect={select}
             onOpen={openProduct}
             onDeleted={handleDeleted}
           />

@@ -366,16 +366,19 @@ export const searchProducts = (
   return attachCodes(database, rows)
 }
 
-export const findOffersUsingProduct = (database: Database, id: string) =>
+const findOffersUsingProducts = (database: Database, ids: string[]) =>
   database
     .selectDistinct({ id: offers.id, name: offers.name })
     .from(offerPageItems)
     .innerJoin(offerPages, eq(offerPages.id, offerPageItems.pageId))
     .innerJoin(offers, eq(offers.id, offerPages.offerId))
-    .where(eq(offerPageItems.productId, id))
+    .where(inArray(offerPageItems.productId, ids))
     .orderBy(asc(offers.name), asc(offers.id))
     .all()
     .map(({ name }) => name)
+
+export const findOffersUsingProduct = (database: Database, id: string) =>
+  findOffersUsingProducts(database, [id])
 
 export type DeleteProductResult =
   { status: 'deleted' } | { status: 'in-use'; offers: string[] }
@@ -395,6 +398,134 @@ export const deleteProduct = async (
   database.delete(products).where(eq(products.id, id)).run()
   if (product?.photo) await removePhoto(product.photo, { photos })
   return { status: 'deleted' }
+}
+
+export type MergeInput = {
+  keepId: string
+  mergedIds: string[]
+}
+
+export type MergePreview = {
+  kept: Product
+  merged: Product[]
+  // Codes the kept product gains
+  codes: string[]
+  // Offers whose items move to the kept product
+  offers: string[]
+}
+
+const loadMerge = (
+  database: Database | Transaction,
+  { keepId, mergedIds }: MergeInput
+) => {
+  const ids = [keepId, ...mergedIds]
+  const invalid = ids.find((id) => !isValidProductId(id))
+  if (invalid !== undefined) throw new Error(`Invalid product id: ${invalid}`)
+  if (mergedIds.length === 0 || new Set(ids).size !== ids.length)
+    throw new Error('A merge needs two or more distinct products')
+
+  const found = ids.map((id) => {
+    const product = findProductById(database, id)
+    if (!product) throw new MissingProductError(id)
+    return product
+  })
+  const [kept, ...merged] = found as [Product, ...Product[]]
+  const codes = normalizeCodes(found.flatMap((product) => product.codes))
+
+  // The merged products are deleted, so only a product outside the merge can hold the same set
+  const duplicate = findProductWithCodes(database, codes)
+  if (duplicate && !ids.includes(duplicate.id))
+    throw new DuplicateCodesError(duplicate)
+
+  return { kept, merged, codes }
+}
+
+export const previewMerge = (
+  database: Database,
+  input: MergeInput
+): MergePreview => {
+  const { kept, merged, codes } = loadMerge(database, input)
+  return {
+    kept,
+    merged,
+    codes: codes.filter((code) => !kept.codes.includes(code)),
+    offers: findOffersUsingProducts(database, input.mergedIds)
+  }
+}
+
+// Joins products registered apart by mistake: the kept product takes every code and offer item,
+// and the others are deleted with their photos (#50)
+export const mergeProducts = async (
+  database: Database,
+  input: MergeInput,
+  { photos = photosDirectory }: ProductDirectories = {}
+): Promise<Product> => {
+  const { kept, merged, codes } = loadMerge(database, input)
+
+  const fileName = getPhotoFileName({ id: kept.id, codes })
+  let photo = kept.photo
+  if (photo !== null && photo !== fileName) {
+    try {
+      await renamePhoto(photo, fileName, { photos })
+      photo = fileName
+    } catch {
+      // The file is already gone, so the product is left without a photo instead of a broken one
+      photo = null
+    }
+  }
+
+  database.transaction((transaction) => {
+    loadMerge(transaction, input)
+
+    transaction
+      .update(products)
+      .set({ photo })
+      .where(eq(products.id, kept.id))
+      .run()
+    transaction
+      .insert(productCodes)
+      .values(codes.map((code) => ({ productId: kept.id, code })))
+      .onConflictDoNothing()
+      .run()
+    transaction
+      .update(offerPageItems)
+      .set({ productId: kept.id })
+      .where(inArray(offerPageItems.productId, input.mergedIds))
+      .run()
+
+    // A page that had two of the merged products would show the kept one twice
+    const items = transaction
+      .select()
+      .from(offerPageItems)
+      .where(eq(offerPageItems.productId, kept.id))
+      .orderBy(offerPageItems.pageId, offerPageItems.position)
+      .all()
+    const repeated = items.filter(
+      (item, index) => index > 0 && items[index - 1]?.pageId === item.pageId
+    )
+    for (const { pageId, position } of repeated) {
+      transaction
+        .delete(offerPageItems)
+        .where(
+          and(
+            eq(offerPageItems.pageId, pageId),
+            eq(offerPageItems.position, position)
+          )
+        )
+        .run()
+    }
+
+    transaction
+      .delete(products)
+      .where(inArray(products.id, input.mergedIds))
+      .run()
+  })
+
+  for (const product of merged) {
+    if (product.photo) await removePhoto(product.photo, { photos })
+  }
+
+  return { ...kept, codes, photo }
 }
 
 // Products saved before #55 keep the photo under their old main code. A group must move to its id,

@@ -23,6 +23,7 @@ import { getCatalogPhotoUrl } from '@/app/helpers/product-photo'
 import { getCodeType, normalizeCode, type Product } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from './actions'
+import { AddCodeToProduct } from './add-code-to-product'
 import { ProductForm } from './product-form'
 import { getLookupMessage } from './product-lookup'
 
@@ -119,6 +120,14 @@ const CreateProductContent = ({
           {getDescription(lookup)}
         </DialogDescription>
       </DialogHeader>
+      {lookup?.status === 'new' && (
+        <AddCodeToProduct
+          // A new code starts a new search
+          key={lookup.code}
+          code={lookup.code}
+          onAdded={(product) => onSaved(product, 'saved')}
+        />
+      )}
       <ProductForm
         key={filledCount}
         codes={

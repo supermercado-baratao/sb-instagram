@@ -34,7 +34,9 @@ import {
   findProductsByCode,
   findProductWithCodes,
   listProducts,
+  mergeProducts,
   MissingProductError,
+  previewMerge,
   renameOutdatedPhotos,
   saveProduct,
   searchProducts
@@ -597,6 +599,156 @@ describe('deleteProduct', () => {
     await expect(
       deleteProduct(database, '../logo', { photos })
     ).rejects.toThrow()
+  })
+})
+
+const readItems = (database: Awaited<ReturnType<typeof setup>>['database']) =>
+  database
+    .select({
+      pageId: offerPageItems.pageId,
+      position: offerPageItems.position,
+      productId: offerPageItems.productId
+    })
+    .from(offerPageItems)
+    .orderBy(offerPageItems.pageId, offerPageItems.position)
+    .all()
+
+describe('mergeProducts', () => {
+  test('moves every code to the kept product and deletes the others', async () => {
+    const { database, photos, addProduct } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda', { brand: 'Albany' })
+    const merged = addProduct(['2002', '2003'], 'Sabonete erva-doce')
+    const other = addProduct(['2002'], 'Sabonete erva-doce avulso')
+
+    const saved = await mergeProducts(
+      database,
+      { keepId: kept.id, mergedIds: [merged.id] },
+      { photos }
+    )
+
+    expect(saved).toEqual({ ...kept, codes: ['2001', '2002', '2003'] })
+    expect(listProducts(database).products).toEqual([other, saved])
+  })
+
+  test('refuses a set of codes that another product already has', async () => {
+    const { database, photos, addProduct } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda')
+    const merged = addProduct(['2002'], 'Sabonete erva-doce')
+    const group = addProduct(['2001', '2002'], 'Sabonete')
+    const input = { keepId: kept.id, mergedIds: [merged.id] }
+
+    expect(() => previewMerge(database, input)).toThrow(DuplicateCodesError)
+    await expect(mergeProducts(database, input, { photos })).rejects.toThrow(
+      DuplicateCodesError
+    )
+    expect(listProducts(database).products).toEqual([group, merged, kept])
+  })
+
+  test('accepts a merged group with the same set of codes', async () => {
+    const { database, photos, addProduct } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda')
+    const group = addProduct(['2001', '2002'], 'Sabonete')
+
+    const saved = await mergeProducts(
+      database,
+      { keepId: kept.id, mergedIds: [group.id] },
+      { photos }
+    )
+
+    expect(listProducts(database).products).toEqual([saved])
+    expect(saved.codes).toEqual(['2001', '2002'])
+  })
+
+  test('points the offer items to the kept product, once per page', async () => {
+    const { database, photos, addProduct } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda')
+    const merged = addProduct(['2002'], 'Sabonete erva-doce')
+    const other = addProduct(['3001'], 'Picanha')
+    addOffer(database, 'Semana', [merged.id, other.id])
+    const [first, second] = database.select().from(offerPages).all()
+    database
+      .insert(offerPageItems)
+      .values([
+        { pageId: first!.id, position: 1, productId: kept.id, priceInCents: 1 },
+        {
+          pageId: second!.id,
+          position: 1,
+          productId: merged.id,
+          priceInCents: 1
+        }
+      ])
+      .run()
+
+    await mergeProducts(
+      database,
+      { keepId: kept.id, mergedIds: [merged.id] },
+      { photos }
+    )
+
+    expect(readItems(database)).toEqual([
+      { pageId: first!.id, position: 0, productId: kept.id },
+      { pageId: second!.id, position: 0, productId: other.id },
+      { pageId: second!.id, position: 1, productId: kept.id }
+    ])
+  })
+
+  test('removes the merged photos and renames the kept one to its id', async () => {
+    const { database, photos, addProduct, readPhoto } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda', {
+      photo: '2001.png'
+    })
+    const merged = addProduct(['2002'], 'Sabonete erva-doce', {
+      photo: '2002.png'
+    })
+    await writeFile(path.join(photos, '2001.png'), 'kept')
+    await writeFile(path.join(photos, '2002.png'), 'merged')
+
+    const saved = await mergeProducts(
+      database,
+      { keepId: kept.id, mergedIds: [merged.id] },
+      { photos }
+    )
+
+    expect(saved.photo).toBe(`${kept.id}.png`)
+    expect(findProductById(database, kept.id)?.photo).toBe(`${kept.id}.png`)
+    expect(await readPhoto(`${kept.id}.png`)).toBe('kept')
+    expect(await exists(path.join(photos, '2001.png'))).toBe(false)
+    expect(await exists(path.join(photos, '2002.png'))).toBe(false)
+  })
+
+  test('refuses a missing product or a merge with itself', async () => {
+    const { database, photos, addProduct } = await setup()
+    const kept = addProduct(['2001'], 'Sabonete lavanda')
+
+    await expect(
+      mergeProducts(
+        database,
+        { keepId: kept.id, mergedIds: [randomUUID()] },
+        { photos }
+      )
+    ).rejects.toThrow(MissingProductError)
+    await expect(
+      mergeProducts(
+        database,
+        { keepId: kept.id, mergedIds: [kept.id] },
+        { photos }
+      )
+    ).rejects.toThrow()
+  })
+})
+
+describe('previewMerge', () => {
+  test('lists the codes the kept product gains and the offers that change', async () => {
+    const { database, addProduct } = await setup()
+    const kept = addProduct(['2001', '2002'], 'Sabonete')
+    const merged = addProduct(['2002', '2003'], 'Sabonete erva-doce')
+    const other = addProduct(['3001'], 'Picanha')
+    addOffer(database, 'Semana', [merged.id])
+    addOffer(database, 'Açougue', [other.id, kept.id])
+
+    expect(
+      previewMerge(database, { keepId: kept.id, mergedIds: [merged.id] })
+    ).toEqual({ kept, merged: [merged], codes: ['2003'], offers: ['Semana'] })
   })
 })
 

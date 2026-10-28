@@ -15,6 +15,7 @@ import {
   AlertDialogTrigger
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
+import { formatQuotedList } from '@/app/helpers/list-format'
 import type { Product } from '@/domain/product'
 
 import { deleteProductAction } from '../actions'
@@ -31,13 +32,8 @@ type DeleteProductButtonProps = {
 const getFinalFocus = () =>
   document.querySelector<HTMLElement>(`#${PRODUCTS_HEADING_ID}`)
 
-const formatList = new Intl.ListFormat('pt-BR', {
-  style: 'long',
-  type: 'conjunction'
-})
-
 const getInUseMessage = (offers: string[]) => {
-  const names = formatList.format(offers.map((name) => `“${name}”`))
+  const names = formatQuotedList(offers)
   return offers.length === 1
     ? `Este produto está na oferta ${names}. Tire-o dela antes de excluir.`
     : `Este produto está nas ofertas ${names}. Tire-o delas antes de excluir.`
