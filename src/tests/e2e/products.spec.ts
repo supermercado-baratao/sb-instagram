@@ -199,3 +199,91 @@ test('chooses between a single product and a group with the same code', async ({
 
   await expect(page.getByLabel(`Preço de ${single} (R$)`)).toBeFocused()
 })
+
+test('merges two products and finds the kept one by the merged code', async ({
+  page
+}) => {
+  test.slow()
+  const stamp = Date.now()
+  const lavender = `E2E-MLAV-${stamp}`
+  const fennel = `E2E-MFEN-${stamp}`
+  const kept = `Sabonete lavanda ${stamp}`
+  const merged = `Sabonete erva-doce ${stamp}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const dialogCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  for (const [code, name] of [
+    [lavender, kept],
+    [fennel, merged]
+  ]) {
+    await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+    await dialogCode.fill(code)
+    await dialogCode.press('Enter')
+    await dialog.getByLabel('Nome').fill(name)
+    await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+    await expect(page.getByText(`${name} salvo`)).toBeVisible()
+  }
+
+  const searchField = page.getByLabel('Pesquisar produtos')
+  await searchField.fill(String(stamp))
+  await searchField.press('Enter')
+  await expect(page.getByText('2 produtos', { exact: true })).toBeVisible()
+  await page.getByRole('checkbox', { name: `Selecionar ${kept}` }).click()
+  await page.getByRole('checkbox', { name: `Selecionar ${merged}` }).click()
+  await page.getByRole('button', { name: 'Mesclar' }).click()
+
+  const confirm = page.getByRole('alertdialog', { name: 'Mesclar 2 produtos?' })
+  await confirm.getByRole('radio', { name: new RegExp(kept) }).click()
+  await expect(
+    confirm.getByText(`Códigos que passam para ele: ${fennel}.`)
+  ).toBeVisible()
+  await confirm.getByRole('button', { name: 'Mesclar' }).click()
+  await expect(page.getByText(`Produtos mesclados em ${kept}.`)).toBeVisible()
+  await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
+
+  const codeField = page.getByLabel('Código de barras ou código interno')
+  await codeField.fill(fennel)
+  await codeField.press('Enter')
+  await expect(page.getByLabel('Nome')).toHaveValue(kept)
+  await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
+    new RegExp(`${fennel}.*${lavender}`)
+  )
+})
+
+test('adds a new code to an existing product from the create dialog', async ({
+  page
+}) => {
+  const stamp = Date.now()
+  const code = `E2E-ADD-${stamp}`
+  const variation = `E2E-VAR-${stamp}`
+  const name = `Amaciante ${stamp}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const dialogCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(code)
+  await dialogCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(variation)
+  await dialogCode.press('Enter')
+  await dialog
+    .getByRole('button', { name: 'Adicionar a um produto existente' })
+    .click()
+  await dialog
+    .getByLabel(`Adicionar o código ${variation} ao produto`)
+    .fill(name)
+  await page.getByRole('option', { name: new RegExp(name) }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  const codeField = page.getByLabel('Código de barras ou código interno')
+  await codeField.fill(variation)
+  await codeField.press('Enter')
+  await expect(page.getByLabel('Nome')).toHaveValue(name)
+})

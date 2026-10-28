@@ -9,21 +9,19 @@ import {
   type ProductChoice,
   ProductChoiceDialog
 } from '@/app/components/blocks/product/product-choice-dialog'
+import { ProductSuggestions } from '@/app/components/blocks/product/product-suggestions'
 import {
   Autocomplete,
-  AutocompleteContent,
-  AutocompleteInput,
-  AutocompleteItem,
-  AutocompleteList,
-  AutocompleteStatus
+  AutocompleteInput
 } from '@/app/components/ui/custom/autocomplete'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
+import { useProductSuggestions } from '@/app/hooks/use-product-suggestions'
 import type { OfferSlot } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 
-import { lookupSlotProduct, searchSlotProducts } from '../actions'
+import { lookupSlotProduct } from '../actions'
 import { PriceField } from './price-field'
 
 type SlotFieldProps = {
@@ -34,9 +32,6 @@ type SlotFieldProps = {
   onChange: (slot: OfferSlot) => void
   onNotice: (message: string) => void
 }
-
-// Long enough for a scanner to finish the code and press Enter before any suggestion is fetched
-const SUGGESTION_DELAY_MS = 250
 
 type LookupError =
   { kind: 'message'; message: string } | { kind: 'missing'; code: string }
@@ -57,54 +52,16 @@ export const SlotField = ({
   const [choice, setChoice] = useState<ProductChoice>()
   const [choosing, setChoosing] = useState(false)
   const codeInput = useRef<HTMLInputElement>(null)
-  const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<Product[]>([])
-  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
-  const [suggesting, startSuggest] = useTransition()
-  const suggestionTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // Discards a response that arrives after a newer query or a submit
-  const suggestionRequest = useRef(0)
+  const suggestions = useProductSuggestions()
   const label = `Produto ${position + 1}`
   const labelId = `${id}-label`
   const priceId = `${id}-price`
 
-  const stopSuggestions = () => {
-    clearTimeout(suggestionTimer.current)
-    suggestionRequest.current += 1
-  }
-
-  const closeSuggestions = () => {
-    stopSuggestions()
-    setSuggestions([])
-    setSuggestionsOpen(false)
-  }
-
   const placeProduct = (product: Product) => {
-    closeSuggestions()
-    setQuery('')
+    suggestions.close()
+    suggestions.setQuery('')
     setError(undefined)
     onChange({ product, priceInCents: 0 })
-  }
-
-  const suggest = (text: string) => {
-    setQuery(text)
-    stopSuggestions()
-    if (text.trim() === '') {
-      closeSuggestions()
-      return
-    }
-
-    const request = suggestionRequest.current
-    suggestionTimer.current = setTimeout(() => {
-      startSuggest(async () => {
-        const found = await searchSlotProducts(text)
-        if (request !== suggestionRequest.current) return
-        startSuggest(() => {
-          setSuggestions(found)
-          setSuggestionsOpen(true)
-        })
-      })
-    }, SUGGESTION_DELAY_MS)
   }
 
   const getPriceInput = () =>
@@ -148,7 +105,7 @@ export const SlotField = ({
   const search = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const code = codeInput.current?.value ?? ''
-    closeSuggestions()
+    suggestions.close()
 
     startSearch(async () => {
       const result = await lookupSlotProduct(code)
@@ -161,7 +118,7 @@ export const SlotField = ({
       if (result.status === 'choose') {
         setError(undefined)
         // Closing without a choice must not leave the code for the next scan to append to
-        setQuery('')
+        suggestions.setQuery('')
         setChoice({ code: result.code, products: result.products })
         setChoosing(true)
         return
@@ -178,14 +135,6 @@ export const SlotField = ({
 
   if (!slot) {
     const errorId = `${id}-error`
-    const suggestionStatus = suggesting
-      ? 'Buscando…'
-      : 'Nenhum produto encontrado.'
-    // A list without the focus says nothing by itself, so the count is read out
-    const suggestionCount =
-      suggesting || suggestions.length === 0
-        ? undefined
-        : `${suggestions.length} ${suggestions.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`
     return (
       <>
         <form
@@ -196,30 +145,24 @@ export const SlotField = ({
             <FieldLabel htmlFor={`${id}-code`}>{label}</FieldLabel>
             <div className="flex gap-2">
               <Autocomplete
-                items={suggestions}
-                value={query}
+                items={suggestions.suggestions}
+                value={suggestions.query}
                 onValueChange={(text, { reason }) => {
                   // Covers a click, Enter on the highlighted item and a drag onto it, which fires no click
                   if (reason !== 'item-press') {
-                    suggest(text)
+                    suggestions.suggest(text)
                     return
                   }
-                  const product = suggestions.find(({ id }) => id === text)
+                  const product = suggestions.suggestions.find(
+                    ({ id }) => id === text
+                  )
                   if (!product) return
                   // Like a scan, the price is the next thing to type
                   setFocusPrice(true)
                   placeProduct(product)
                 }}
-                open={suggestionsOpen}
-                onOpenChange={(open) => {
-                  if (open) {
-                    setSuggestionsOpen(suggestions.length > 0)
-                    return
-                  }
-                  // A pending fetch would reopen the list after the user left or dismissed it
-                  stopSuggestions()
-                  setSuggestionsOpen(false)
-                }}
+                open={suggestions.open}
+                onOpenChange={suggestions.onOpenChange}
                 itemToStringValue={(product: Product) => product.id}
                 filter={null}
               >
@@ -233,24 +176,10 @@ export const SlotField = ({
                   aria-describedby={error ? errorId : undefined}
                   className="font-mono placeholder:font-sans"
                 />
-                <AutocompleteContent aria-busy={suggesting || undefined}>
-                  <AutocompleteStatus>
-                    {suggestionCount === undefined ? (
-                      <p className="p-2 text-sm text-muted-foreground">
-                        {suggestionStatus}
-                      </p>
-                    ) : (
-                      <span className="sr-only">{suggestionCount}</span>
-                    )}
-                  </AutocompleteStatus>
-                  <AutocompleteList>
-                    {(product: Product) => (
-                      <AutocompleteItem key={product.id} value={product}>
-                        <ProductSuggestion product={product} />
-                      </AutocompleteItem>
-                    )}
-                  </AutocompleteList>
-                </AutocompleteContent>
+                <ProductSuggestions
+                  suggestions={suggestions.suggestions}
+                  suggesting={suggestions.suggesting}
+                />
               </Autocomplete>
               <Button
                 type="submit"
@@ -363,33 +292,6 @@ export const SlotField = ({
         />
       </div>
       {dialog}
-    </>
-  )
-}
-
-const ProductSuggestion = ({ product }: { product: Product }) => {
-  const details = [product.brand, product.unit].filter(Boolean).join(' · ')
-  return (
-    <>
-      <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted">
-        {product.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- same reason as the slot's photo
-          <img
-            src={getPhotoUrl(product.id)}
-            alt=""
-            className="size-full object-contain"
-          />
-        ) : (
-          <ImageOff className="size-4 text-muted-foreground" aria-hidden />
-        )}
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="font-medium wrap-break-word">{product.name}</span>
-        <span className="text-xs text-muted-foreground">
-          {details && `${details} · `}
-          <span className="font-mono">{product.codes.join(', ')}</span>
-        </span>
-      </span>
     </>
   )
 }

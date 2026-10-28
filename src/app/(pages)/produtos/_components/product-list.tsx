@@ -1,5 +1,6 @@
 import { ImageOff } from 'lucide-react'
 
+import { Checkbox } from '@/app/components/ui/shadcn/checkbox'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
 import type { Product } from '@/domain/product'
 
@@ -8,6 +9,8 @@ import { DeleteProductButton } from './delete-product-button'
 type ProductListProps = {
   products: Product[]
   busy: boolean
+  selectedIds: Set<string>
+  onSelect: (product: Product, selected: boolean) => void
   onOpen: (product: Product) => void
   onDeleted: (product: Product) => void
 }
@@ -15,12 +18,22 @@ type ProductListProps = {
 export const ProductList = ({
   products,
   busy,
+  selectedIds,
+  onSelect,
   onOpen,
   onDeleted
 }: ProductListProps) => (
   <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
     {products.map((product) => (
-      <li key={product.id} className="flex items-center gap-1 pr-2">
+      <li key={product.id} className="flex items-center gap-1 pr-2 pl-3">
+        <Checkbox
+          checked={selectedIds.has(product.id)}
+          onCheckedChange={(checked) => onSelect(product, checked)}
+          // Its invisible hit area would cover the edge of the button that opens the product
+          className="mr-2"
+          // Not every product is unique by name, so the codes tell them apart
+          aria-label={`Selecionar ${product.name} (${product.codes.join(', ')})`}
+        />
         <button
           type="button"
           onClick={() => onOpen(product)}
