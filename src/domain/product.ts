@@ -34,8 +34,12 @@ export const getProductChanges = (
     (field) => ({ field, from: current[field], to: next[field] })
   )
 
-// A community catalog product the store hasn't saved yet, found by its EAN
-export type CatalogMatch = ProductDetails & { code: string }
+// A community catalog product the store hasn't saved yet, found by any of its EANs
+export type CatalogMatch = ProductDetails & {
+  // Names the catalog files, so it locates the image
+  ean: string
+  codes: string[]
+}
 
 // USB scanners and copy-paste may bring surrounding or inner spaces, which a code never has
 export const normalizeCode = (code: string) => code.replaceAll(/\s/g, '')

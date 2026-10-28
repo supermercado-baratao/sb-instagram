@@ -44,6 +44,21 @@ O JSON tem exatamente três campos, todos texto e nenhum vazio:
 
 Os dois arquivos andam juntos: uma foto sem JSON (ou um JSON sem foto) é recusada.
 
+### Variações com uma foto só
+
+Quando uma foto mostra variações vendidas com códigos de barras diferentes (as fragrâncias de um sabonete, por exemplo), os arquivos levam um dos EANs como nome e o JSON lista os outros no campo opcional `codes`:
+
+```json
+{
+  "name": "Sabonete",
+  "brand": "Marca",
+  "unit": "85 g",
+  "codes": ["7891000100110", "7891000100127"]
+}
+```
+
+Bipar qualquer um desses EANs encontra o produto. Cada EAN de `codes` precisa ser válido e aparecer uma vez só no catálogo inteiro: não pode ser o nome de outro arquivo nem estar no `codes` de outro produto. Códigos internos nunca entram em `codes`, porque mudam de mercado para mercado.
+
 ## Produtos sem EAN
 
 Carnes, hortifrúti, padaria e outros produtos vendidos sem código de barras usam um código interno, que muda de mercado para mercado. Por isso, só a foto vai para o catálogo, em `catalog/no-ean/`, e cada mercado associa a foto ao próprio código (veja o [README](./README.md#usando-uma-imagem-sem-ean)).
@@ -78,8 +93,11 @@ Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook
 Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo:
 
 1. Em **Produtos** (`/produtos`), clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas.
-2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo (sem foto, sem marca ou unidade, foto com fundo, foto pequena demais ou produto que já está no catálogo). Corrija no app o que quiser incluir e exporte de novo.
+2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo (sem foto, sem marca ou unidade, foto com fundo, foto pequena demais ou EAN que já está no catálogo). Corrija no app o que quiser incluir e exporte de novo.
 3. Confira os nomes, as marcas e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
+
+   Um produto com vários EANs sai com um deles como nome e os outros em `codes`. Os códigos internos dele ficam de fora.
+
 4. Descompacte o ZIP dentro da pasta `catalog/` do seu fork, sem o `relatorio.txt`, e siga os passos abaixo. No commit, o hook de `pre-commit` otimiza e valida as imagens.
 
 ## Validando e enviando

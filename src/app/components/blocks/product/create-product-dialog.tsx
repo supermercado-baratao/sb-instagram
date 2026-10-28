@@ -54,10 +54,7 @@ const goToName = (event: KeyboardEvent<HTMLInputElement>) => {
   if (name instanceof HTMLInputElement) name.focus()
 }
 
-const getLookedUpCode = (lookup: DialogLookup | undefined) => {
-  if (!lookup) return ''
-  return lookup.status === 'catalog' ? lookup.product.code : lookup.code
-}
+const getLookedUpCode = (lookup: DialogLookup | undefined) => lookup?.code ?? ''
 
 const getDescription = (lookup: DialogLookup | undefined) => {
   if (!lookup) return 'Bipe ou digite o código e preencha os dados do produto.'
@@ -124,9 +121,12 @@ const CreateProductContent = ({
       </DialogHeader>
       <ProductForm
         key={filledCount}
-        codes={[]}
+        codes={
+          catalogProduct?.codes.filter((other) => other !== lookedUpCode) ?? []
+        }
         product={catalogProduct}
-        photoUrl={catalogProduct && getCatalogPhotoUrl(catalogProduct.code)}
+        photoUrl={catalogProduct && getCatalogPhotoUrl(catalogProduct.ean)}
+        catalogEan={catalogProduct?.ean}
         noEanImages={noEanImages}
         onSaved={onSaved}
         askBeforeReplacing

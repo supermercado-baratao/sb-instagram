@@ -23,6 +23,7 @@ import {
 import { Input } from '@/app/components/ui/shadcn/input'
 import {
   getCodeType,
+  isSameCodeSet,
   PHOTO_MAX_MEGABYTES,
   type Product,
   type ProductDetails
@@ -42,6 +43,8 @@ type ProductFormProps = {
   codes: string[]
   product?: ProductDetails
   photoUrl?: string
+  // The catalog image photoUrl shows, copied when a new product is saved
+  catalogEan?: string
   noEanImages: string[]
   onSaved: (product: Product, outcome: 'saved' | 'unchanged') => void
   askBeforeReplacing?: boolean
@@ -58,6 +61,7 @@ export const ProductForm = ({
   codes: initialCodes,
   product,
   photoUrl,
+  catalogEan,
   noEanImages,
   onSaved,
   askBeforeReplacing = false,
@@ -68,6 +72,7 @@ export const ProductForm = ({
 }: ProductFormProps) => {
   const [uploadPreview, setUploadPreview] = useState<string>()
   const [codes, setCodes] = useState(initialCodes)
+  const [seededCodes, setSeededCodes] = useState(initialCodes)
   const [catalogImage, setCatalogImage] = useState('')
   const [error, setError] = useState<string>()
   const [photoError, setPhotoError] = useState<string>()
@@ -79,6 +84,16 @@ export const ProductForm = ({
   const photoInput = useRef<HTMLInputElement>(null)
   // The dialog can open over the form on /produtos, so ids must not repeat
   const id = useId()
+  // A later lookup in the dialog takes back the codes a catalog product brought, keeping the typed ones
+  if (!isSameCodeSet(seededCodes, initialCodes)) {
+    setSeededCodes(initialCodes)
+    setCodes([
+      ...new Set([
+        ...codes.filter((code) => !seededCodes.includes(code)),
+        ...initialCodes
+      ])
+    ])
+  }
   const allCodes = typedCode === '' ? codes : [typedCode, ...codes]
   // The catalog has its own images for EANs, so the no-EAN ones are only for the other products
   const showPicker =
@@ -168,6 +183,9 @@ export const ProductForm = ({
         className={cn('flex flex-col gap-6', className)}
       >
         {productId && <input type="hidden" name="id" value={productId} />}
+        {catalogEan && (
+          <input type="hidden" name="catalogEan" value={catalogEan} />
+        )}
         {askBeforeReplacing && (
           <input type="hidden" name="replace" value="ask" />
         )}

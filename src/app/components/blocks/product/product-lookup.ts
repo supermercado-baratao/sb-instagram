@@ -3,7 +3,7 @@ import type { CatalogMatch, CodeType, Product } from '@/domain/product'
 
 export type ProductTarget =
   | { status: 'instance'; product: Product }
-  | { status: 'catalog'; product: CatalogMatch }
+  | { status: 'catalog'; code: string; product: CatalogMatch }
   | { status: 'new'; code: string; codeType: CodeType }
 
 export type ProductLookup = ProductTarget & {
@@ -35,9 +35,10 @@ export const getProductFormProps = (lookup: ProductLookup) => {
     }
     case 'catalog': {
       return {
-        codes: [lookup.product.code],
+        codes: lookup.product.codes,
         product: lookup.product,
-        photoUrl: getCatalogPhotoUrl(lookup.product.code)
+        photoUrl: getCatalogPhotoUrl(lookup.product.ean),
+        catalogEan: lookup.product.ean
       }
     }
     case 'instance': {

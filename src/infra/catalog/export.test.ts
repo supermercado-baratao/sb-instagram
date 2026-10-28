@@ -21,6 +21,7 @@ import { buildCatalogExport } from './export'
 
 const EAN = '7891000100103'
 const CATALOG_EAN = '7891000053508'
+const CATALOG_CODE = '7891000053515'
 
 const createImage = async ({
   side,
@@ -129,6 +130,50 @@ test('exports the products that fit the catalog in its folders', async () => {
   expect(checkCatalogImage(image)).toEqual([])
 })
 
+test('exports a group with its other EANs, after the single products', async () => {
+  const { database, addProduct, ...directories } = await setup()
+  const photo = await createImage({ side: 1600, background: 'transparent' })
+  const details = { brand: 'Albany', unit: '85 g' }
+  await addProduct(
+    {
+      codes: [EAN, '7891000100110', '7891000100127', '2001'],
+      name: 'Sabonete',
+      ...details
+    },
+    photo
+  )
+  await addProduct(
+    {
+      codes: ['7891000100127', '7891000100134'],
+      name: 'Amaciante',
+      ...details
+    },
+    photo
+  )
+  await addProduct(
+    { codes: ['7891000100134'], name: 'Sabonete Erva-Doce', ...details },
+    photo
+  )
+
+  const files = await buildCatalogExport(database, directories)
+
+  expect(Object.keys(files).toSorted((a, b) => a.localeCompare(b))).toEqual([
+    `ean/${EAN}.json`,
+    `ean/${EAN}.png`,
+    'ean/7891000100134.json',
+    'ean/7891000100134.png',
+    'relatorio.txt'
+  ])
+  expect(JSON.parse(read(files[`ean/${EAN}.json`]))).toEqual({
+    name: 'Sabonete',
+    ...details,
+    codes: ['7891000100110', '7891000100127']
+  })
+  expect(read(files['relatorio.txt'])).toContain(
+    '7891000100127, 7891000100134 · Amaciante: O EAN 7891000100134 já foi exportado em outro produto'
+  )
+})
+
 test('reports the products left out and why', async () => {
   const { database, addProduct, ...directories } = await setup()
   const transparent = await createImage({
@@ -140,6 +185,15 @@ test('reports the products left out and why', async () => {
     background: 'transparent'
   })
   await writeFile(path.join(directories.ean, `${CATALOG_EAN}.json`), '{}')
+  await writeFile(
+    path.join(directories.ean, '7891000053522.json'),
+    JSON.stringify({
+      name: 'Sabonete',
+      brand: 'Albany',
+      unit: '85 g',
+      codes: [CATALOG_CODE]
+    })
+  )
   await writeFile(path.join(directories.noEan, 'picanha.png'), catalogImage)
 
   await addProduct(
@@ -189,7 +243,7 @@ test('reports the products left out and why', async () => {
   )
   await addProduct(
     {
-      codes: [EAN, '7891000100110'],
+      codes: [EAN, CATALOG_CODE],
       name: 'Sabonete',
       brand: 'Albany',
       unit: '85 g'
@@ -229,7 +283,9 @@ test('reports the products left out and why', async () => {
   )
   expect(report).toContain('6 · Pepino: Sem foto')
   expect(report).toContain(
-    `${EAN}, 7891000100110 · Sabonete: O produto tem mais de um código`
+    `${CATALOG_CODE}, ${EAN} · Sabonete: O EAN ${CATALOG_CODE} já está no catálogo`
   )
-  expect(report).toContain(`${CATALOG_EAN} · Café: O EAN já está no catálogo`)
+  expect(report).toContain(
+    `${CATALOG_EAN} · Café: O EAN ${CATALOG_EAN} já está no catálogo`
+  )
 })

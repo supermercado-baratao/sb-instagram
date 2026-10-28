@@ -15,6 +15,8 @@ export type CatalogExportFolder = 'ean' | 'no-ean'
 export type CatalogExportTarget = {
   folder: CatalogExportFolder
   base: string
+  // The other EANs, written to the JSON of an ean/ product
+  codes: string[]
 }
 
 export type CatalogExportCheck =
@@ -22,7 +24,9 @@ export type CatalogExportCheck =
   | { status: 'skipped'; reason: string }
 
 export type CatalogExportContext = {
+  // File names and codes lists alike, since an EAN may be in only one catalog product
   catalogEans: ReadonlySet<string>
+  exportedEans: ReadonlySet<string>
   catalogNames: ReadonlySet<string>
   exportedNames: ReadonlySet<string>
 }
@@ -49,29 +53,39 @@ const getMissingFieldsReason = ({ brand, unit }: Product) => {
 
 export const checkCatalogExport = (
   product: Product,
-  { catalogEans, catalogNames, exportedNames }: CatalogExportContext
+  {
+    catalogEans,
+    exportedEans,
+    catalogNames,
+    exportedNames
+  }: CatalogExportContext
 ): CatalogExportCheck => {
   if (product.photo === null) return { status: 'skipped', reason: 'Sem foto' }
 
-  // The catalog format keeps one code per product until it takes groups (#51)
-  if (product.codes.length !== 1) {
-    return {
-      status: 'skipped',
-      reason:
-        'O produto tem mais de um código, e o catálogo ainda não aceita grupos'
-    }
-  }
-  const [code] = product.codes
-
-  if (getCodeType(code) === 'ean') {
+  // Internal codes differ from store to store, so a group with an EAN takes only its EANs
+  const eans = product.codes.filter((code) => getCodeType(code) === 'ean')
+  if (eans.length > 0) {
     const missingFields = getMissingFieldsReason(product)
     if (missingFields) return { status: 'skipped', reason: missingFields }
 
-    if (catalogEans.has(code)) {
-      return { status: 'skipped', reason: 'O EAN já está no catálogo' }
+    const inCatalog = eans.find((ean) => catalogEans.has(ean))
+    if (inCatalog !== undefined) {
+      return {
+        status: 'skipped',
+        reason: `O EAN ${inCatalog} já está no catálogo`
+      }
     }
 
-    return { status: 'ok', target: { folder: 'ean', base: code } }
+    const exported = eans.find((ean) => exportedEans.has(ean))
+    if (exported !== undefined) {
+      return {
+        status: 'skipped',
+        reason: `O EAN ${exported} já foi exportado em outro produto`
+      }
+    }
+
+    const [base, ...codes] = eans
+    return { status: 'ok', target: { folder: 'ean', base, codes } }
   }
 
   const base = toCatalogDescriptionName(product.name)
@@ -98,7 +112,7 @@ export const checkCatalogExport = (
     }
   }
 
-  return { status: 'ok', target: { folder: 'no-ean', base } }
+  return { status: 'ok', target: { folder: 'no-ean', base, codes: [] } }
 }
 
 export const getCatalogExportImagePath = ({
@@ -111,14 +125,27 @@ export const getCatalogExportDataPath = ({
   base
 }: CatalogExportTarget) => `${folder}/${base}${CATALOG_DATA_EXTENSION}`
 
+const PRETTIER_PRINT_WIDTH = 80
+
+// Prettier keeps an array on one line while it fits the print width
+const formatCodesLine = (codes: string[]) => {
+  const line = `  "codes": [${codes.map((code) => JSON.stringify(code)).join(', ')}]`
+  return line.length <= PRETTIER_PRINT_WIDTH
+    ? line
+    : `  "codes": ${JSON.stringify(codes, null, 2).replaceAll('\n', '\n  ')}`
+}
+
 // Matches Prettier's JSON output, so the files pass `pnpm prettier:check` once in the repository
-export const formatCatalogProduct = (product: Product) => {
+export const formatCatalogProduct = (product: Product, codes: string[]) => {
   const data: CatalogProduct = {
     name: product.name.trim(),
     brand: product.brand?.trim() ?? '',
     unit: product.unit?.trim() ?? ''
   }
-  return `${JSON.stringify(data, null, 2)}\n`
+  const json = JSON.stringify(data, null, 2)
+  return codes.length === 0
+    ? `${json}\n`
+    : `${json.slice(0, -2)},\n${formatCodesLine(codes)}\n}\n`
 }
 
 export const formatCatalogExportReport = (skipped: SkippedProduct[]) => {

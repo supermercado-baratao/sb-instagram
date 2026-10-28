@@ -4,35 +4,59 @@ import path from 'node:path'
 import {
   CATALOG_DATA_EXTENSION,
   CATALOG_IMAGE_EXTENSION,
+  type CatalogCodes,
   type CatalogError,
+  type CatalogProduct,
+  checkCatalogCodes,
   checkCatalogImage,
   checkCatalogProduct,
   checkEanFileNames,
-  checkNoEanFileNames
+  checkNoEanFileNames,
+  getCatalogProductCodes
 } from '@/domain/catalog'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
 import { readCatalogImage } from '@/infra/catalog/image'
 
-const checkProductFile = async (file: string) => {
+type FileCheck = {
+  messages: string[]
+  codes?: CatalogCodes
+}
+
+const checkProductFile = async (file: string): Promise<FileCheck> => {
+  const ean = path.basename(file, CATALOG_DATA_EXTENSION)
+  let data: unknown
   try {
-    return checkCatalogProduct(JSON.parse(await readFile(file, 'utf8')))
+    data = JSON.parse(await readFile(file, 'utf8'))
   } catch {
-    return ['O arquivo não é um JSON válido']
+    return { messages: ['O arquivo não é um JSON válido'] }
+  }
+
+  const messages = checkCatalogProduct(data, ean)
+  return messages.length === 0
+    ? {
+        messages,
+        codes: {
+          ean,
+          codes: getCatalogProductCodes(ean, data as CatalogProduct)
+        }
+      }
+    : { messages }
+}
+
+const checkImageFile = async (file: string): Promise<FileCheck> => {
+  try {
+    return {
+      messages: checkCatalogImage(await readCatalogImage(await readFile(file)))
+    }
+  } catch {
+    return { messages: ['O arquivo não é uma imagem válida'] }
   }
 }
 
-const checkImageFile = async (file: string) => {
-  try {
-    return checkCatalogImage(await readCatalogImage(await readFile(file)))
-  } catch {
-    return ['O arquivo não é uma imagem válida']
-  }
-}
-
-const checkFileContent = (file: string) => {
+const checkFileContent = async (file: string): Promise<FileCheck> => {
   if (file.endsWith(CATALOG_DATA_EXTENSION)) return checkProductFile(file)
   if (file.endsWith(CATALOG_IMAGE_EXTENSION)) return checkImageFile(file)
-  return []
+  return { messages: [] }
 }
 
 const checkFolder = async (
@@ -41,14 +65,25 @@ const checkFolder = async (
 ) => {
   const fileNames = await readdir(directory)
 
-  const contentErrors = await Promise.all(
-    fileNames.map(async (fileName) => {
-      const messages = await checkFileContent(path.join(directory, fileName))
-      return messages.map((message) => ({ file: fileName, message }))
-    })
+  const checks = await Promise.all(
+    fileNames.map(async (fileName) => ({
+      fileName,
+      ...(await checkFileContent(path.join(directory, fileName)))
+    }))
+  )
+  const contentErrors = checks.flatMap(({ fileName, messages }) =>
+    messages.map((message) => ({ file: fileName, message }))
   )
 
-  return [...checkFileNames(fileNames), ...contentErrors.flat()]
+  const fileEans = new Set(
+    fileNames.map((fileName) => fileName.slice(0, fileName.lastIndexOf('.')))
+  )
+  const codesErrors = checkCatalogCodes(
+    fileEans,
+    checks.flatMap(({ codes }) => (codes ? [codes] : []))
+  )
+
+  return [...checkFileNames(fileNames), ...contentErrors, ...codesErrors]
     .toSorted((a, b) => a.file.localeCompare(b.file))
     .map((error) => ({
       ...error,

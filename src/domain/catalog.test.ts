@@ -2,11 +2,13 @@ import { describe, expect, test } from 'vitest'
 
 import {
   type CatalogImage,
+  checkCatalogCodes,
   checkCatalogImage,
   checkCatalogProduct,
   checkEanFileNames,
   checkNoEanFileNames,
-  getCatalogImageLayout
+  getCatalogImageLayout,
+  getCatalogProductCodes
 } from './catalog'
 
 const ean = '7891000100103'
@@ -88,18 +90,18 @@ describe('checkCatalogProduct', () => {
   const product = { name: 'Leite Integral', brand: 'Marca', unit: '1 L' }
 
   test('accepts a product with name, brand and unit', () => {
-    expect(checkCatalogProduct(product)).toEqual([])
+    expect(checkCatalogProduct(product, ean)).toEqual([])
   })
 
   test.each([null, [], 'Leite', 1])(
     'rejects %j, which is not an object',
     (data) => {
-      expect(checkCatalogProduct(data)).toHaveLength(1)
+      expect(checkCatalogProduct(data, ean)).toHaveLength(1)
     }
   )
 
   test('reports each missing or empty field', () => {
-    expect(checkCatalogProduct({ name: ' ', brand: 1 })).toEqual([
+    expect(checkCatalogProduct({ name: ' ', brand: 1 }, ean)).toEqual([
       'O campo name precisa ser um texto não vazio',
       'O campo brand precisa ser um texto não vazio',
       'O campo unit precisa ser um texto não vazio'
@@ -107,9 +109,95 @@ describe('checkCatalogProduct', () => {
   })
 
   test('reports keys outside the schema', () => {
-    expect(checkCatalogProduct({ ...product, price: 10 })).toEqual([
+    expect(checkCatalogProduct({ ...product, price: 10 }, ean)).toEqual([
       'O campo price não faz parte do esquema'
     ])
+  })
+
+  test('accepts the other EANs of the product in codes', () => {
+    expect(
+      checkCatalogProduct(
+        { ...product, codes: ['7891000100110', '12345670'] },
+        ean
+      )
+    ).toEqual([])
+  })
+
+  test.each([[], '7891000100110', [7_891_000_100_110]])(
+    'rejects codes %j, which is not a list of EAN texts',
+    (codes) => {
+      expect(checkCatalogProduct({ ...product, codes }, ean)).toHaveLength(1)
+    }
+  )
+
+  test('reports invalid, repeated and own EANs in codes', () => {
+    expect(
+      checkCatalogProduct(
+        {
+          ...product,
+          codes: ['7891000100111', ean, '7891000100110', '7891000100110']
+        },
+        ean
+      )
+    ).toEqual([
+      'O código "7891000100111" em codes não é um EAN válido',
+      `O EAN ${ean} em codes já é o nome do arquivo`,
+      'O EAN 7891000100110 se repete em codes'
+    ])
+  })
+})
+
+describe('checkCatalogCodes', () => {
+  const other = '7891000053508'
+
+  test('accepts EANs that are in a single catalog product', () => {
+    expect(
+      checkCatalogCodes(new Set([ean, other]), [
+        { ean, codes: [ean, '7891000100110'] },
+        { ean: other, codes: [other, '7891000053515'] }
+      ])
+    ).toEqual([])
+  })
+
+  test('reports a code that names another product file', () => {
+    expect(
+      checkCatalogCodes(new Set([ean, other]), [
+        { ean, codes: [ean, other] },
+        { ean: other, codes: [other] }
+      ])
+    ).toEqual([
+      {
+        file: `${ean}.json`,
+        message: `O EAN ${other} em codes já é o nome de outro produto do catálogo (${other}.json)`
+      }
+    ])
+  })
+
+  test('reports a code already in the codes of another product', () => {
+    expect(
+      checkCatalogCodes(new Set([ean, other]), [
+        { ean: other, codes: [other, '7891000100110'] },
+        { ean, codes: [ean, '7891000100110'] }
+      ])
+    ).toEqual([
+      {
+        file: `${ean}.json`,
+        message: `O EAN 7891000100110 em codes já está em ${other}.json`
+      }
+    ])
+  })
+})
+
+describe('getCatalogProductCodes', () => {
+  test('joins the file EAN and the codes, sorted', () => {
+    expect(
+      getCatalogProductCodes(ean, {
+        name: 'Sabonete',
+        brand: 'Albany',
+        unit: '85 g',
+        codes: ['12345670']
+      })
+    ).toEqual(['12345670', ean])
   })
 })
 
