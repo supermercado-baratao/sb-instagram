@@ -120,6 +120,44 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   await expect(page.getByLabel(`Preço de ${name} (R$)`).nth(1)).toBeFocused()
 })
 
+test('edits a product placed in an offer slot', async ({ page }) => {
+  const code = `E2E-EDIT-${Date.now()}`
+  const productCode = page.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await page.getByLabel('Nome').fill('Café torrado')
+  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText('Café torrado salvo')).toBeVisible()
+
+  await page.goto('/ofertas')
+  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
+  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+
+  await page.getByLabel('Produto 1', { exact: true }).fill(code)
+  await page.getByLabel('Produto 1', { exact: true }).press('Enter')
+  await page.getByLabel('Preço de Café torrado (R$)').fill('15,90')
+  await page.getByRole('button', { name: 'Salvar' }).click()
+  await expect(page.getByText('Oferta salva.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Editar Café torrado' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await expect(dialog.getByLabel('Nome')).toBeFocused()
+  await dialog.getByLabel('Nome').fill('Café extraforte')
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText('Café extraforte atualizado.')).toBeVisible()
+  await expect(page.getByLabel('Preço de Café extraforte (R$)')).toHaveValue(
+    '15,90'
+  )
+  await expect(page.getByText('Tudo salvo')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Editar Café extraforte' })
+  ).toBeFocused()
+})
+
 test('asks before leaving the offer editor with unsaved changes', async ({
   page
 }) => {

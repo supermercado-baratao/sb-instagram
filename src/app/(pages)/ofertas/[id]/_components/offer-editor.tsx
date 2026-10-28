@@ -31,13 +31,15 @@ import {
   movePage,
   type OfferContent,
   type OfferPage,
-  removePage
+  removePage,
+  replaceProduct
 } from '@/domain/offer'
 import {
   type Brand,
   getPageTemplate,
   type PosterTemplate
 } from '@/domain/poster'
+import type { Product } from '@/domain/product'
 
 import { saveOfferAction } from '../actions'
 import { PagePanel } from './page-panel'
@@ -76,6 +78,8 @@ export const OfferEditor = ({
   )
   const [selectedKey, setSelectedKey] = useState(0)
   const [status, setStatus] = useState<Status>()
+  // A photo keeps its URL when it changes, so an edited product needs a new one to reload it
+  const [photoVersion, setPhotoVersion] = useState<number>()
   const [saving, startSave] = useTransition()
   const [downloading, startDownload] = useTransition()
   const dirty = content !== saved
@@ -96,6 +100,19 @@ export const OfferEditor = ({
 
   const updatePage = (index: number, page: OfferPage) =>
     update({ pages: content.pages.with(index, page) })
+
+  // The product is already saved, so the saved copy takes it too and the offer doesn't look changed
+  const updateProduct = (product: Product) => {
+    const next = { ...content, pages: replaceProduct(content.pages, product) }
+    setContent(next)
+    setSaved(
+      saved === content
+        ? next
+        : { ...saved, pages: replaceProduct(saved.pages, product) }
+    )
+    setPhotoVersion(Date.now())
+    show({ kind: 'info', message: `${product.name} atualizado.` })
+  }
 
   const addNewPage = () => {
     const key = Math.max(...pageKeys) + 1
@@ -356,7 +373,9 @@ export const OfferEditor = ({
                   page={selectedPage}
                   templates={templates}
                   noEanImages={noEanImages}
+                  photoVersion={photoVersion}
                   onChange={(page) => updatePage(selectedIndex, page)}
+                  onProductSaved={updateProduct}
                   onNotice={(message) => show({ kind: 'info', message })}
                   onMove={moveSelectedPage}
                   onRemove={removeSelectedPage}
@@ -383,7 +402,7 @@ export const OfferEditor = ({
                 offer={getPosterOffer(content)}
                 template={selectedTemplate}
                 layout={selectedPage.layout}
-                products={getPosterProducts(selectedPage.slots)}
+                products={getPosterProducts(selectedPage.slots, photoVersion)}
               />
             </div>
           )}

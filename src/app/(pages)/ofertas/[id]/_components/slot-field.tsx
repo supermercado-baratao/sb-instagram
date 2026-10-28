@@ -5,6 +5,7 @@ import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 
 import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
+import { EditProductDialog } from '@/app/components/blocks/product/edit-product-dialog'
 import {
   type ProductChoice,
   ProductChoiceDialog
@@ -29,7 +30,9 @@ type SlotFieldProps = {
   position: number
   slot: OfferSlot
   noEanImages: string[]
+  photoVersion?: number
   onChange: (slot: OfferSlot) => void
+  onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
 }
 
@@ -41,7 +44,9 @@ export const SlotField = ({
   position,
   slot,
   noEanImages,
+  photoVersion,
   onChange,
+  onProductSaved,
   onNotice
 }: SlotFieldProps) => {
   const [error, setError] = useState<LookupError>()
@@ -251,7 +256,7 @@ export const SlotField = ({
             {product.photo ? (
               // eslint-disable-next-line @next/next/no-img-element -- the photo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy
               <img
-                src={getPhotoUrl(product.id)}
+                src={getPhotoUrl(product.id, photoVersion)}
                 alt=""
                 className="size-full object-contain"
               />
@@ -268,6 +273,12 @@ export const SlotField = ({
               <p className="text-sm text-muted-foreground">{details}</p>
             )}
           </div>
+          <EditProductDialog
+            product={product}
+            photoVersion={photoVersion}
+            noEanImages={noEanImages}
+            onSaved={onProductSaved}
+          />
           <Button
             variant="ghost"
             size="icon-sm"

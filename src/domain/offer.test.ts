@@ -13,6 +13,7 @@ import {
   parsePrice,
   placeSlots,
   removePage,
+  replaceProduct,
   setSlot
 } from '@/domain/offer'
 import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
@@ -125,6 +126,27 @@ describe('setSlot', () => {
 
     expect(page.slots[3]).toEqual(item)
     expect(page.slots.filter(Boolean)).toHaveLength(1)
+  })
+})
+
+describe('replaceProduct', () => {
+  test('updates the product in every slot of every page and keeps the prices', () => {
+    const other: OfferItem = {
+      product: { ...item.product, id: 'e1d2c3b4-a5f6-4789-8abc-def012345678' },
+      priceInCents: 1990
+    }
+    const pages = [
+      setSlot(setSlot(createOfferPage('a'), 0, item), 1, other),
+      setSlot(createOfferPage('a'), 4, { ...item, priceInCents: 5990 })
+    ]
+    const edited = { ...item.product, name: 'Picanha maturada' }
+
+    const [first, second] = replaceProduct(pages, edited)
+
+    expect(first.slots[0]).toEqual({ product: edited, priceInCents: 6990 })
+    expect(first.slots[1]).toBe(other)
+    expect(second.slots[4]).toEqual({ product: edited, priceInCents: 5990 })
+    expect(second.slots[0]).toBeNull()
   })
 })
 
