@@ -1,22 +1,17 @@
 'use client'
 
 import { cn } from 'cn'
-import {
-  ArrowLeft,
-  CircleAlert,
-  CircleCheck,
-  Download,
-  Plus,
-  Save
-} from 'lucide-react'
+import { ArrowLeft, CircleAlert, Download, Plus, Save } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
+import { toast } from 'sonner'
 
 import { Poster } from '@/app/components/blocks/poster'
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Field, FieldGroup, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
+import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import {
   Tabs,
   TabsContent,
@@ -54,7 +49,7 @@ type OfferEditorProps = {
 }
 
 type Status = {
-  kind: 'saved' | 'error' | 'info'
+  kind: 'error' | 'info'
   message: string
   field?: 'name'
   // A new id remounts the message, so the same text twice in a row is announced again
@@ -111,7 +106,7 @@ export const OfferEditor = ({
         : { ...saved, pages: replaceProduct(saved.pages, product) }
     )
     setPhotoVersion(Date.now())
-    show({ kind: 'info', message: `${product.name} atualizado.` })
+    toast.success(`${product.name} atualizado.`)
   }
 
   const addNewPage = () => {
@@ -170,11 +165,14 @@ export const OfferEditor = ({
     startSave(async () => {
       const result = await saveOfferAction(id, snapshot)
       if (result.status === 'error') {
-        show({ kind: 'error', message: result.message })
+        setStatus(undefined)
+        // An error stays until it is closed, so it isn't missed (WCAG 2.2.1)
+        toast.error(result.message, { duration: Infinity })
         return
       }
       setSaved(snapshot)
-      show({ kind: 'saved', message: 'Oferta salva.' })
+      setStatus(undefined)
+      toast.success('Oferta salva.')
     })
   }
 
@@ -234,8 +232,12 @@ export const OfferEditor = ({
               Baixar páginas (PNG)
             </Button>
             <Button disabled={saving} focusableWhenDisabled onClick={save}>
-              <Save data-icon="inline-start" aria-hidden />
-              Salvar
+              {saving ? (
+                <Spinner data-icon="inline-start" aria-hidden />
+              ) : (
+                <Save data-icon="inline-start" aria-hidden />
+              )}
+              {saving ? 'Salvando…' : 'Salvar'}
             </Button>
           </div>
         </div>
@@ -256,12 +258,6 @@ export const OfferEditor = ({
             >
               {status.kind === 'error' && (
                 <CircleAlert className="size-4 shrink-0" aria-hidden />
-              )}
-              {status.kind === 'saved' && (
-                <CircleCheck
-                  className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                  aria-hidden
-                />
               )}
               {status.message}
             </p>

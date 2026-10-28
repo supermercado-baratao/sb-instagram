@@ -21,6 +21,7 @@ import {
   FieldLabel
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
+import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import {
   getCodeType,
   isSameCodeSet,
@@ -302,8 +303,12 @@ export const ProductForm = ({
             focusableWhenDisabled
             className="sm:ml-auto"
           >
-            <Save data-icon="inline-start" />
-            Salvar produto
+            {saving ? (
+              <Spinner data-icon="inline-start" aria-hidden />
+            ) : (
+              <Save data-icon="inline-start" aria-hidden />
+            )}
+            {saving ? 'Salvando…' : 'Salvar produto'}
           </Button>
         </div>
       </form>

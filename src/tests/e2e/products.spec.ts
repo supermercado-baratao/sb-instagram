@@ -280,7 +280,8 @@ test('adds a new code to an existing product from the create dialog', async ({
     .fill(name)
   await page.getByRole('option', { name: new RegExp(name) }).click()
   await expect(dialog).toBeHidden()
-  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+  // The previous notice for the same product is still fading out
+  await expect(page.getByText(`${name} salvo`).last()).toBeVisible()
 
   const codeField = page.getByLabel('Código de barras ou código interno')
   await codeField.fill(variation)
