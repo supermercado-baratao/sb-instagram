@@ -14,6 +14,7 @@ import {
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
+import { getCatalogProductCodes } from '@/domain/catalog'
 import {
   type CatalogMatch,
   getCodeType,
@@ -31,7 +32,7 @@ import {
   PRODUCTS_PAGE_SIZE
 } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import { readCatalogProduct } from '@/infra/catalog/product'
+import { findCatalogProduct } from '@/infra/catalog/product'
 import {
   offerPageItems,
   offerPages,
@@ -142,13 +143,20 @@ export const findProductsByCode = async (
   // Internal codes differ from store to store, so the catalog only knows products by EAN
   if (getCodeType(code) !== 'ean') return undefined
 
-  const catalogProduct = await readCatalogProduct(code, catalog)
-  return (
-    catalogProduct && {
-      source: 'catalog',
-      product: { code, ...catalogProduct }
+  const found = await findCatalogProduct(code, catalog)
+  if (!found) return undefined
+
+  const { ean, product } = found
+  return {
+    source: 'catalog',
+    product: {
+      ean,
+      codes: getCatalogProductCodes(ean, product),
+      name: product.name,
+      brand: product.brand,
+      unit: product.unit
     }
-  )
+  }
 }
 
 export class DuplicateCodesError extends Error {

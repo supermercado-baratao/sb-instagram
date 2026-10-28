@@ -141,7 +141,29 @@ describe('findProductsByCode', () => {
 
     expect(
       await findProductsByCode(database, ` ${EAN}\n`, { catalog })
-    ).toEqual({ source: 'catalog', product: { code: EAN, ...catalogProduct } })
+    ).toEqual({
+      source: 'catalog',
+      product: { ean: EAN, codes: [EAN], ...catalogProduct }
+    })
+  })
+
+  test('finds a catalog product by one of its other EANs', async () => {
+    const { database, catalog } = await setup()
+    await writeFile(
+      path.join(catalog, `${EAN}.json`),
+      JSON.stringify({ ...catalogProduct, codes: ['7891000100110'] })
+    )
+
+    expect(
+      await findProductsByCode(database, '7891000100110', { catalog })
+    ).toEqual({
+      source: 'catalog',
+      product: {
+        ean: EAN,
+        codes: [EAN, '7891000100110'],
+        ...catalogProduct
+      }
+    })
   })
 
   test('does not look up an internal code in the catalog', async () => {

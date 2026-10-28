@@ -20,6 +20,7 @@ import {
 import { getCodeType, type Product } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
 import { prepareCatalogImage } from '@/infra/catalog/optimize'
+import { readCatalogCodes } from '@/infra/catalog/product'
 import { products } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
 import { photosDirectory } from '@/infra/photos-directory'
@@ -99,13 +100,19 @@ export const buildCatalogExport = async (
   }: CatalogExportDirectories = {}
 ): Promise<Record<string, Uint8Array>> => {
   const catalogNames = await listBaseNames(noEan, CATALOG_IMAGE_EXTENSION)
+  const catalogCodes = await readCatalogCodes(ean)
   const context = {
-    catalogEans: new Set(await listBaseNames(ean, CATALOG_DATA_EXTENSION)),
+    catalogEans: new Set([
+      ...(await listBaseNames(ean, CATALOG_DATA_EXTENSION)),
+      ...catalogCodes.keys()
+    ]),
+    exportedEans: new Set<string>(),
     catalogNames: new Set(catalogNames),
     exportedNames: new Set<string>()
   }
   const noEanHashes = await hashNoEanImages(noEan, catalogNames)
 
+  // A single product takes its EAN before the groups that also have it
   const rows = attachCodes(
     database,
     database
@@ -113,7 +120,7 @@ export const buildCatalogExport = async (
       .from(products)
       .orderBy(searchText(products.name), firstProductCode)
       .all()
-  )
+  ).toSorted((a, b) => a.codes.length - b.codes.length)
 
   const files: Record<string, Uint8Array> = {}
   const skipped: SkippedProduct[] = []
@@ -139,8 +146,11 @@ export const buildCatalogExport = async (
     files[getCatalogExportImagePath(target)] = photo.image
     if (target.folder === 'ean') {
       files[getCatalogExportDataPath(target)] = new TextEncoder().encode(
-        formatCatalogProduct(product)
+        formatCatalogProduct(product, target.codes)
       )
+      for (const code of [target.base, ...target.codes]) {
+        context.exportedEans.add(code)
+      }
     } else {
       context.exportedNames.add(target.base)
     }

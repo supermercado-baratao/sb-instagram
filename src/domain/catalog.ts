@@ -4,6 +4,13 @@ export type CatalogProduct = {
   name: string
   brand: string
   unit: string
+  // The product's other EANs, for a photo that groups variations sold under different codes (#51)
+  codes?: string[]
+}
+
+export type CatalogCodes = {
+  ean: string
+  codes: string[]
 }
 
 export type CatalogImage = {
@@ -69,6 +76,11 @@ export const getCatalogImageLayout = (content: {
 }
 
 const CATALOG_PRODUCT_FIELDS = ['name', 'brand', 'unit'] as const
+
+const CATALOG_PRODUCT_KEYS: ReadonlySet<string> = new Set([
+  ...CATALOG_PRODUCT_FIELDS,
+  'codes'
+])
 
 // Lets git keep the folders while the catalog has no product in them
 const PLACEHOLDER_FILE = '.gitkeep'
@@ -171,7 +183,24 @@ export const checkNoEanFileNames = (fileNames: string[]): CatalogError[] =>
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-export const checkCatalogProduct = (data: unknown): string[] => {
+const checkCodesField = (codes: unknown, ean: string): string[] => {
+  if (!Array.isArray(codes) || codes.length === 0) {
+    return ['O campo codes precisa ser uma lista não vazia de EANs']
+  }
+
+  const seen = new Set<string>()
+  return codes.flatMap((code: unknown) => {
+    if (typeof code !== 'string' || !isValidEan(code)) {
+      return [`O código ${JSON.stringify(code)} em codes não é um EAN válido`]
+    }
+    if (code === ean) return [`O EAN ${code} em codes já é o nome do arquivo`]
+    if (seen.has(code)) return [`O EAN ${code} se repete em codes`]
+    seen.add(code)
+    return []
+  })
+}
+
+export const checkCatalogProduct = (data: unknown, ean: string): string[] => {
   if (!isPlainObject(data)) {
     return ['O JSON precisa ser um objeto com name, brand e unit']
   }
@@ -183,14 +212,57 @@ export const checkCatalogProduct = (data: unknown): string[] => {
       : [`O campo ${field} precisa ser um texto não vazio`]
   })
 
+  const codesErrors =
+    data.codes === undefined ? [] : checkCodesField(data.codes, ean)
+
   const extraKeyErrors = Object.keys(data)
-    .filter(
-      (key) => !(CATALOG_PRODUCT_FIELDS as readonly string[]).includes(key)
-    )
+    .filter((key) => !CATALOG_PRODUCT_KEYS.has(key))
     .map((key) => `O campo ${key} não faz parte do esquema`)
 
-  return [...fieldErrors, ...extraKeyErrors]
+  return [...fieldErrors, ...codesErrors, ...extraKeyErrors]
 }
+
+// A scan must find a single catalog product, so an EAN names one file or sits in one codes list
+export const checkCatalogCodes = (
+  fileEans: ReadonlySet<string>,
+  products: CatalogCodes[]
+): CatalogError[] => {
+  const owners = new Map<string, string>()
+
+  return products
+    .toSorted((a, b) => a.ean.localeCompare(b.ean))
+    .flatMap(({ ean, codes }) =>
+      codes.flatMap((code) => {
+        const file = `${ean}${CATALOG_DATA_EXTENSION}`
+        if (code !== ean && fileEans.has(code)) {
+          return [
+            {
+              file,
+              message: `O EAN ${code} em codes já é o nome de outro produto do catálogo (${code}${CATALOG_DATA_EXTENSION})`
+            }
+          ]
+        }
+
+        const owner = owners.get(code)
+        if (owner !== undefined && owner !== ean) {
+          return [
+            {
+              file,
+              message: `O EAN ${code} em codes já está em ${owner}${CATALOG_DATA_EXTENSION}`
+            }
+          ]
+        }
+
+        owners.set(code, ean)
+        return []
+      })
+    )
+}
+
+export const getCatalogProductCodes = (
+  ean: string,
+  { codes = [] }: CatalogProduct
+) => [ean, ...codes].toSorted((a, b) => a.localeCompare(b))
 
 export const TRANSPARENT_BACKGROUND_ERROR =
   'O fundo da imagem precisa ser transparente (os quatro cantos com transparência total)'

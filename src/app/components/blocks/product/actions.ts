@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
+import { isValidEan } from '@/domain/ean'
 import {
   type CatalogMatch,
   type CodeType,
@@ -31,7 +32,7 @@ import {
 export type LookupResult =
   // Every product of the instance with the code, a single product before the groups
   | { status: 'found'; code: string; products: Product[] }
-  | { status: 'catalog'; product: CatalogMatch }
+  | { status: 'catalog'; code: string; product: CatalogMatch }
   | { status: 'new'; code: string; codeType: CodeType }
   | { status: 'error'; message: string }
 
@@ -62,7 +63,7 @@ export const lookupProduct = async (rawCode: string): Promise<LookupResult> => {
   if (!found) return { status: 'new', code, codeType: getCodeType(code) }
   return found.source === 'instance'
     ? { status: 'found', code, products: found.products }
-    : { status: 'catalog', product: found.product }
+    : { status: 'catalog', code, product: found.product }
 }
 
 const readText = (formData: FormData, name: string) => {
@@ -110,6 +111,7 @@ export const saveProductForm = async (
   const catalogImage = codes.some((code) => getCodeType(code) === 'ean')
     ? ''
     : readText(formData, 'catalogImage')
+  const catalogEan = readText(formData, 'catalogEan')
 
   const details = {
     name,
@@ -161,13 +163,9 @@ export const saveProductForm = async (
     photo = { kind: 'upload', image: Buffer.from(await upload.arrayBuffer()) }
   } else if (catalogImage !== '') {
     photo = { kind: 'no-ean', name: catalogImage }
-  } else if (
-    !current &&
-    codes.length === 1 &&
-    getCodeType(codes[0]) === 'ean'
-  ) {
-    // A new product found in the community catalog starts with its image
-    photo = { kind: 'ean', ean: codes[0] }
+  } else if (!current && isValidEan(catalogEan)) {
+    // A new product found in the community catalog starts with the image the form showed
+    photo = { kind: 'ean', ean: catalogEan }
   }
 
   let product: Product

@@ -40,10 +40,9 @@ export const lookupSlotProduct = async (
   }
 
   // An offer item points to a row of products, so a catalog product joins the store's products
-  const { code: ean, ...details } = found.product
+  const { ean, ...details } = found.product
   const product = await saveProduct(database, {
     ...details,
-    codes: [ean],
     photo: { kind: 'ean', ean }
   })
   return { status: 'found', product }

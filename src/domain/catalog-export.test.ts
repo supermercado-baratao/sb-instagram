@@ -11,6 +11,7 @@ import {
 } from './catalog-export'
 
 const EAN = '7891000100103'
+const OTHER_EAN = '7891000100110'
 
 const eanProduct: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
@@ -32,6 +33,7 @@ const internalProduct: Product = {
 
 const emptyContext: CatalogExportContext = {
   catalogEans: new Set(),
+  exportedEans: new Set(),
   catalogNames: new Set(),
   exportedNames: new Set()
 }
@@ -51,14 +53,38 @@ describe('checkCatalogExport', () => {
   test('places a complete EAN product in ean/ under its code', () => {
     expect(checkCatalogExport(eanProduct, emptyContext)).toEqual({
       status: 'ok',
-      target: { folder: 'ean', base: EAN }
+      target: { folder: 'ean', base: EAN, codes: [] }
+    })
+  })
+
+  test('places a group in ean/ under its first EAN, with the others as codes', () => {
+    expect(
+      checkCatalogExport(
+        { ...eanProduct, codes: ['2001', EAN, OTHER_EAN] },
+        emptyContext
+      )
+    ).toEqual({
+      status: 'ok',
+      target: { folder: 'ean', base: EAN, codes: [OTHER_EAN] }
+    })
+  })
+
+  test('places a group of internal codes in no-ean/ under its name', () => {
+    expect(
+      checkCatalogExport(
+        { ...internalProduct, codes: ['2001', '2002'] },
+        emptyContext
+      )
+    ).toEqual({
+      status: 'ok',
+      target: { folder: 'no-ean', base: 'pao-frances', codes: [] }
     })
   })
 
   test('places an internal code product in no-ean/ under its name', () => {
     expect(checkCatalogExport(internalProduct, emptyContext)).toEqual({
       status: 'ok',
-      target: { folder: 'no-ean', base: 'pao-frances' }
+      target: { folder: 'no-ean', base: 'pao-frances', codes: [] }
     })
   })
 
@@ -78,13 +104,28 @@ describe('checkCatalogExport', () => {
     ).toEqual({ status: 'skipped', reason })
   })
 
-  test('skips an EAN already in the catalog', () => {
+  test('skips a product with an EAN already in the catalog', () => {
     expect(
-      checkCatalogExport(eanProduct, {
-        ...emptyContext,
-        catalogEans: new Set([EAN])
-      })
-    ).toEqual({ status: 'skipped', reason: 'O EAN já está no catálogo' })
+      checkCatalogExport(
+        { ...eanProduct, codes: [EAN, OTHER_EAN] },
+        { ...emptyContext, catalogEans: new Set([OTHER_EAN]) }
+      )
+    ).toEqual({
+      status: 'skipped',
+      reason: `O EAN ${OTHER_EAN} já está no catálogo`
+    })
+  })
+
+  test('skips a product with an EAN another product took in the export', () => {
+    expect(
+      checkCatalogExport(
+        { ...eanProduct, codes: [EAN, OTHER_EAN] },
+        { ...emptyContext, exportedEans: new Set([EAN]) }
+      )
+    ).toEqual({
+      status: 'skipped',
+      reason: `O EAN ${EAN} já foi exportado em outro produto`
+    })
   })
 
   test('skips an internal code product whose name has no letter', () => {
@@ -121,8 +162,21 @@ describe('checkCatalogExport', () => {
 describe('formatCatalogProduct', () => {
   test('writes only the catalog fields, trimmed', () => {
     expect(
-      JSON.parse(formatCatalogProduct({ ...eanProduct, name: ' Leite ' }))
+      JSON.parse(formatCatalogProduct({ ...eanProduct, name: ' Leite ' }, []))
     ).toEqual({ name: 'Leite', brand: 'Moça', unit: '395 g' })
+  })
+
+  test('keeps the codes on one line while they fit, like Prettier', () => {
+    expect(formatCatalogProduct(eanProduct, [OTHER_EAN])).toBe(
+      `{\n  "name": "Leite Condensado",\n  "brand": "Moça",\n  "unit": "395 g",\n  "codes": ["${OTHER_EAN}"]\n}\n`
+    )
+  })
+
+  test('breaks the codes into lines past the print width, like Prettier', () => {
+    const codes = Array.from({ length: 5 }, () => OTHER_EAN)
+    expect(formatCatalogProduct(eanProduct, codes)).toContain(
+      `  "codes": [\n${codes.map((code) => `    "${code}"`).join(',\n')}\n  ]\n}\n`
+    )
   })
 })
 
