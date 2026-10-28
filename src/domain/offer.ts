@@ -106,6 +106,17 @@ export const setSlot = (
   slot: OfferSlot
 ): OfferPage => ({ ...page, slots: page.slots.with(position, slot) })
 
+export const replaceProduct = (
+  pages: OfferPage[],
+  product: Product
+): OfferPage[] =>
+  pages.map((page) => ({
+    ...page,
+    slots: page.slots.map((slot) =>
+      slot?.product.id === product.id ? { ...slot, product } : slot
+    )
+  }))
+
 const PRICE_PATTERN = /^\d+(?:[.,]\d{1,2})?$/
 
 // Accepts what a cashier types ("12,90", "12.9", "12"), with or without "R$" and thousands dots

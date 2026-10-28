@@ -22,6 +22,7 @@ import {
   posterLayouts,
   type PosterTemplate
 } from '@/domain/poster'
+import type { Product } from '@/domain/product'
 
 import { RemovePageButton } from './remove-page-button'
 import { SlotField } from './slot-field'
@@ -32,7 +33,9 @@ type PagePanelProps = {
   page: OfferPage
   templates: PosterTemplate[]
   noEanImages: string[]
+  photoVersion?: number
   onChange: (page: OfferPage) => void
+  onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
   onMove: (to: number) => void
   onRemove: () => void
@@ -44,7 +47,9 @@ export const PagePanel = ({
   page,
   templates,
   noEanImages,
+  photoVersion,
   onChange,
+  onProductSaved,
   onNotice,
   onMove,
   onRemove
@@ -145,7 +150,9 @@ export const PagePanel = ({
               position={position}
               slot={slot}
               noEanImages={noEanImages}
+              photoVersion={photoVersion}
               onChange={(next) => onChange(setSlot(page, position, next))}
+              onProductSaved={onProductSaved}
               onNotice={onNotice}
             />
           </li>

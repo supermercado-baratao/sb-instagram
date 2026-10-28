@@ -16,7 +16,10 @@ export const VALIDITY_PLACEHOLDER = '__/__/____'
 
 // An empty slot becomes a blank product, which the poster fills with its placeholders. A product
 // without a brand hides the line instead, since the "MARCA" placeholder would print on its card
-export const getPosterProducts = (slots: OfferSlot[]): OfferProduct[] =>
+export const getPosterProducts = (
+  slots: OfferSlot[],
+  photoVersion?: number
+): OfferProduct[] =>
   slots.map((slot) =>
     slot
       ? {
@@ -25,7 +28,9 @@ export const getPosterProducts = (slots: OfferSlot[]): OfferProduct[] =>
           name: slot.product.name,
           brand: slot.product.brand ?? HIDDEN_FIELD_MARKER,
           unit: slot.product.unit ?? '',
-          image: slot.product.photo ? getPhotoUrl(slot.product.id) : null,
+          image: slot.product.photo
+            ? getPhotoUrl(slot.product.id, photoVersion)
+            : null,
           priceInCents: slot.priceInCents
         }
       : {
