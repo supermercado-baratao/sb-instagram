@@ -136,6 +136,7 @@ Abaixo estão os destaques das convenções.
 
 - **Tailwind CSS v4** via `@tailwindcss/postcss`.
 - **shadcn/ui** (estilo `base-nova`, cor base `neutral`, ícones `lucide`) sobre o [Base UI](https://base-ui.com), com `class-variance-authority` e o helper `cn()` do pacote `cn`. É a biblioteca de componentes do projeto: procure um componente do shadcn antes de escrever um do zero. Os componentes ficam em `src/app/components/ui/shadcn/`; adicione outros com `pnpm shadcn:add <name>`.
+- **Retorno ao salvar:** o botão mostra um spinner e "Salvando…" enquanto salva, e o resultado aparece numa notificação (`sonner`). Erros de um campo específico continuam ao lado do campo.
 - **Cores padrão como vêm:** os tokens do shadcn e a paleta do Tailwind não são alterados. Use os tokens (`bg-background`, `text-muted-foreground`, ...) para superfícies e textos, e escolha uma cor existente da paleta (ex.: `teal-500`) em vez de um tom personalizado.
 - **Modo escuro** segue a preferência do sistema (`prefers-color-scheme`).
 - Links com aparência de botão continuam sendo elementos `<a>`/`Link` estilizados com `buttonVariants(...)`, nunca renderizados pelo `Button`.

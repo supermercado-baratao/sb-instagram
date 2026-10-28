@@ -2,14 +2,7 @@
 
 import { Select as SelectPrimitive } from '@base-ui/react/select'
 import { cn } from 'cn'
-import {
-  CircleAlert,
-  CircleCheck,
-  ImageOff,
-  Plus,
-  Save,
-  Trash2
-} from 'lucide-react'
+import { CircleAlert, ImageOff, Plus, Save, Trash2 } from 'lucide-react'
 import {
   type ChangeEvent,
   type FormEvent,
@@ -19,6 +12,7 @@ import {
   useTransition
 } from 'react'
 import { flushSync } from 'react-dom'
+import { toast } from 'sonner'
 
 import { Poster } from '@/app/components/blocks/poster'
 import { Button } from '@/app/components/ui/shadcn/button'
@@ -36,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/app/components/ui/shadcn/select'
+import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
@@ -59,7 +54,7 @@ type BrandSettingsFormProps = {
 }
 
 type Status = {
-  kind: 'saved' | 'error' | 'info'
+  kind: 'error' | 'info'
   message: string
   field?: BrandContentError['field'] | 'logo'
   // A new id remounts the message, so the same text twice in a row is announced again
@@ -100,6 +95,7 @@ export const BrandSettingsForm = ({
   const logoInput = useRef<HTMLInputElement>(null)
   const addTemplateButton = useRef<HTMLButtonElement>(null)
   const dirty = content !== saved || uploadPreview !== undefined || removeLogo
+  const saveLabel = firstSetup ? 'Salvar e continuar' : 'Salvar'
 
   const previewIndex = Math.max(templateKeys.indexOf(previewKey), 0)
   const previewTemplate = content.templates[previewIndex]
@@ -195,7 +191,13 @@ export const BrandSettingsForm = ({
     startSave(async () => {
       const result = await saveBrandSettingsAction(formData)
       if (result.status === 'error') {
-        show({ kind: 'error', field: result.field, message: result.message })
+        if (result.field) {
+          show({ kind: 'error', field: result.field, message: result.message })
+        } else {
+          setStatus(undefined)
+          // An error stays until it is closed, so it isn't missed (WCAG 2.2.1)
+          toast.error(result.message, { duration: Infinity })
+        }
         return
       }
       const savedContent = {
@@ -209,7 +211,8 @@ export const BrandSettingsForm = ({
       setUploadPreview(undefined)
       setRemoveLogo(false)
       if (logoInput.current) logoInput.current.value = ''
-      show({ kind: 'saved', message: 'Configurações salvas.' })
+      setStatus(undefined)
+      toast.success('Configurações salvas.')
     })
   }
 
@@ -418,12 +421,6 @@ export const BrandSettingsForm = ({
                   {status.kind === 'error' && (
                     <CircleAlert className="size-4 shrink-0" aria-hidden />
                   )}
-                  {status.kind === 'saved' && (
-                    <CircleCheck
-                      className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                      aria-hidden
-                    />
-                  )}
                   {status.message}
                 </p>
               )}
@@ -435,8 +432,12 @@ export const BrandSettingsForm = ({
               focusableWhenDisabled
               className="sm:ml-auto"
             >
-              <Save data-icon="inline-start" aria-hidden />
-              {firstSetup ? 'Salvar e continuar' : 'Salvar'}
+              {saving ? (
+                <Spinner data-icon="inline-start" aria-hidden />
+              ) : (
+                <Save data-icon="inline-start" aria-hidden />
+              )}
+              {saving ? 'Salvando…' : saveLabel}
             </Button>
           </div>
         </div>

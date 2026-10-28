@@ -9,6 +9,7 @@ import {
   ScanBarcode
 } from 'lucide-react'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 
 import { lookupProduct } from '@/app/components/blocks/product/actions'
 import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
@@ -66,11 +67,8 @@ export const ProductEditor = ({
   const [choosing, setChoosing] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string>()
-  const [saved, setSaved] = useState<{
-    product: Product
-    unchanged: boolean
-  }>()
   const [deleted, setDeleted] = useState<Product>()
+  const savedToast = useRef<string | number>(undefined)
   const [merged, setMerged] = useState<Product>()
   // Kept across searches and pages, so products that never show up together can be merged
   const [selected, setSelected] = useState<ReadonlyMap<string, Product>>(
@@ -84,7 +82,6 @@ export const ProductEditor = ({
   const formArea = useRef<HTMLDivElement>(null)
 
   const clearMessages = () => {
-    setSaved(undefined)
     setDeleted(undefined)
     setMerged(undefined)
     setError(undefined)
@@ -144,16 +141,27 @@ export const ProductEditor = ({
     })
   }
 
+  // A scanner saves one product after another, so each notice replaces the last instead of piling
+  // up. It gets a new toast rather than updating the last one, so the same text is announced again
+  const showSaved = (product: Product, outcome: 'saved' | 'unchanged') => {
+    if (savedToast.current !== undefined) toast.dismiss(savedToast.current)
+    savedToast.current = toast.success(
+      outcome === 'unchanged'
+        ? `${product.name} já estava cadastrado, e nenhum dado mudou.`
+        : `${product.name} salvo. Bipe o próximo código.`
+    )
+  }
+
   const handleSaved = (product: Product) => {
     clearMessages()
-    setSaved({ product, unchanged: false })
+    showSaved(product, 'saved')
     setLookup(undefined)
     codeInput.current?.focus()
   }
 
   const handleCreated = (product: Product, outcome: 'saved' | 'unchanged') => {
     clearMessages()
-    setSaved({ product, unchanged: outcome === 'unchanged' })
+    showSaved(product, outcome)
     // Only a form open for the same product is outdated; any other keeps its unsaved edits
     if (lookup?.status === 'instance' && lookup.product.id === product.id) {
       setLookup(undefined)
@@ -265,14 +273,6 @@ export const ProductEditor = ({
           >
             <CircleAlert className="size-4 shrink-0" />
             {error}
-          </p>
-        )}
-        {saved && (
-          <p className="flex items-center gap-2 text-sm">
-            <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            {saved.unchanged
-              ? `${saved.product.name} já estava cadastrado, e nenhum dado mudou.`
-              : `${saved.product.name} salvo. Bipe o próximo código.`}
           </p>
         )}
         {deleted && (
