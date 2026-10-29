@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { and, asc, eq, exists, inArray, or, type SQL, sql } from 'drizzle-orm'
+import { and, asc, eq, exists, inArray, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
@@ -11,13 +11,13 @@ import {
   getCodeType,
   getPhotoFileName,
   getProductPage,
+  getSearchWords,
   isSameCodeSet,
   isValidCode,
   isValidProductId,
   matchesProductQuery,
   normalizeCode,
   normalizeCodes,
-  normalizeSearchText,
   type Product,
   PRODUCT_SUGGESTION_LIMIT,
   type ProductDetails,
@@ -305,16 +305,20 @@ const toCatalogMatch = ({ ean, product }: CatalogEntry): CatalogMatch => ({
   unit: product.unit
 })
 
+// Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany")
+const productSearchFields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || coalesce(${productCodeList}, ''))`
+
+// Every word in the name, brand, unit or codes, ignoring case and accents
+const matchesWords = (words: string[]) =>
+  and(...words.map((word) => contains(productSearchFields, word)))
+
 const listStoreItems = (database: Database, query: string) => {
-  const name = query.trim()
-  const where =
-    name === ''
-      ? undefined
-      : or(
-          contains(searchText(products.name), normalizeSearchText(name)),
-          contains(productCodeList, normalizeCode(query))
-        )
-  const rows = database.select().from(products).where(where).all()
+  const words = getSearchWords(query)
+  const rows = database
+    .select()
+    .from(products)
+    .where(words.length === 0 ? undefined : matchesWords(words))
+    .all()
   return attachCodes(database, rows).map((product): ProductListItem => ({
     origin: 'store',
     product
@@ -367,16 +371,13 @@ export const searchProducts = (
   query: string,
   { limit = PRODUCT_SUGGESTION_LIMIT }: { limit?: number } = {}
 ): Product[] => {
-  const words = normalizeSearchText(query).split(/\s+/).filter(Boolean)
+  const words = getSearchWords(query)
   if (words.length === 0) return []
-
-  // Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany")
-  const fields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || coalesce(${productCodeList}, ''))`
 
   const rows = database
     .select()
     .from(products)
-    .where(and(...words.map((word) => contains(fields, word))))
+    .where(matchesWords(words))
     .orderBy(searchText(products.name), firstProductCode)
     .limit(limit)
     .all()

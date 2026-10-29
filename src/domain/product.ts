@@ -109,18 +109,19 @@ export type ProductPage = {
   pageCount: number
 }
 
-// Matches what listProducts asks SQLite for the store's products: the name ignoring case and
-// accents, or any part of any code
+export const getSearchWords = (query: string) =>
+  normalizeSearchText(query).split(/\s+/).filter(Boolean)
+
+// Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany"), like
+// the SQLite search of the store's products
 export const matchesProductQuery = (
-  { name, codes }: Pick<Product, 'name' | 'codes'>,
+  { name, brand, unit, codes }: ProductDetails & Pick<Product, 'codes'>,
   query: string
 ) => {
-  const text = normalizeSearchText(query.trim())
-  if (text === '') return true
-  return (
-    normalizeSearchText(name).includes(text) ||
-    codes.join(' ').includes(normalizeCode(query))
+  const fields = normalizeSearchText(
+    [name, brand ?? '', unit ?? '', codes.join(' ')].join(' ')
   )
+  return getSearchWords(query).every((word) => fields.includes(word))
 }
 
 const getSortKey = ({ product }: ProductListItem) =>

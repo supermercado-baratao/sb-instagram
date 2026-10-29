@@ -451,6 +451,19 @@ describe('listProducts', () => {
     expect(await names('')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
   })
 
+  test('searches every word in the name, brand, unit or codes', async () => {
+    const { database, addProduct } = await setup()
+    addProduct(['7891'], 'Sabonete', { brand: 'Albany', unit: '85 g' })
+    addProduct(['7892'], 'Sabonete', { brand: 'Lux', unit: '90 g' })
+    addProduct(['7893'], 'Papel Higiênico', { brand: 'Velud', unit: '12/30m' })
+
+    const names = (query: string) => listStoreNames(database, { query })
+    expect(await names('sabonete ALBANY')).toEqual(['Sabonete'])
+    expect(await names('90 g')).toEqual(['Sabonete'])
+    expect(await names('higienico 12/30m')).toEqual(['Papel Higiênico'])
+    expect(await names('velud 7891')).toEqual([])
+  })
+
   test('returns each product with its codes', async () => {
     const { database, addProduct } = await setup()
     const product = addProduct(['2002', '2001'], 'Sabonete')
@@ -588,7 +601,7 @@ describe('listProducts with the catalog', () => {
     ])
   })
 
-  test('searches the catalog by name ignoring accents, or by any part of a code', async () => {
+  test('searches the catalog by every word in the name, brand, unit or codes', async () => {
     const { database, catalog, addProduct } = await setup()
     addProduct(['1001'], 'Leite Integral')
 
@@ -600,7 +613,8 @@ describe('listProducts with the catalog', () => {
     ])
     expect(await search('condensádo')).toEqual(['catalog: Leite Condensado'])
     expect(await search('0100 ')).toEqual(['catalog: Leite Condensado'])
-    expect(await search('Moça')).toEqual([])
+    expect(await search('moca 395')).toEqual(['catalog: Leite Condensado'])
+    expect(await search('leite moça 1 kg')).toEqual([])
   })
 
   test('keeps to one origin when filtered', async () => {
