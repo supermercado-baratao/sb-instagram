@@ -15,6 +15,7 @@ import {
   formatCatalogProduct,
   getCatalogExportDataPath,
   getCatalogExportImagePath,
+  type SkipKind,
   type SkippedProduct
 } from '@/domain/catalog-export'
 import { getCodeType, type Product } from '@/domain/product'
@@ -70,24 +71,27 @@ const preparePhoto = async (
   product: Product,
   photos: string,
   noEanHashes: ReadonlySet<string>
-): Promise<{ image: Buffer } | { reason: string }> => {
+): Promise<{ image: Buffer } | { kind: SkipKind; reason: string }> => {
   const original = product.photo && (await readPhoto(photos, product.photo))
-  if (!original) return { reason: 'A foto não foi encontrada' }
+  if (!original) return { kind: 'pending', reason: 'A foto não foi encontrada' }
 
   const isInternal = product.codes.every(
     (code) => getCodeType(code) === 'internal'
   )
   if (isInternal && noEanHashes.has(hash(original))) {
-    return { reason: 'A foto é uma imagem do catálogo' }
+    return { kind: 'in-catalog', reason: 'A foto é uma imagem do catálogo' }
   }
 
   try {
     const { image, errors } = await prepareCatalogImage(original)
     return image && errors.length === 0
       ? { image }
-      : { reason: errors.join('; ') }
+      : { kind: 'pending', reason: errors.join('; ') }
   } catch {
-    return { reason: 'O arquivo da foto não é uma imagem válida' }
+    return {
+      kind: 'pending',
+      reason: 'O arquivo da foto não é uma imagem válida'
+    }
   }
 }
 
@@ -124,21 +128,21 @@ export const buildCatalogExport = async (
 
   const files: Record<string, Uint8Array> = {}
   const skipped: SkippedProduct[] = []
-  const skip = ({ codes, name }: Product, reason: string) => {
-    skipped.push({ codes, name, reason })
+  const skip = ({ codes, name }: Product, kind: SkipKind, reason: string) => {
+    skipped.push({ codes, name, kind, reason })
   }
 
   // One photo at a time, so a large instance doesn't hold every decoded image in memory at once
   for (const product of rows) {
     const check = checkCatalogExport(product, context)
     if (check.status === 'skipped') {
-      skip(product, check.reason)
+      skip(product, check.kind, check.reason)
       continue
     }
 
     const photo = await preparePhoto(product, photos, noEanHashes)
     if ('reason' in photo) {
-      skip(product, photo.reason)
+      skip(product, photo.kind, photo.reason)
       continue
     }
 
