@@ -1,6 +1,6 @@
 'use client'
 
-import { CircleAlert } from 'lucide-react'
+import { CircleAlert, Info } from 'lucide-react'
 import {
   type KeyboardEvent,
   type RefObject,
@@ -10,6 +10,7 @@ import {
   useTransition
 } from 'react'
 
+import { Button } from '@/app/components/ui/shadcn/button'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import { getCodeType, normalizeCode, type Product } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from './actions'
 import { AddCodeToProduct } from './add-code-to-product'
+import type { ProductChoice } from './product-choice-dialog'
 import { ProductForm } from './product-form'
 import { getLookupMessage } from './product-lookup'
 
@@ -36,12 +38,17 @@ type CreateProductDialogProps = {
   noEanImages: string[]
   onSaved: (product: Product, outcome: SaveOutcome) => void
   getFocusAfterSave: () => HTMLElement | null
+  // Takes the store's products that already have the typed code, instead of registering another
+  onOpenExisting: (choice: ProductChoice) => void
+  openExistingLabel: string
+  getFocusAfterOpen: () => HTMLElement | null
 }
 
 type CreateProductContentProps = Pick<
   CreateProductDialogProps,
-  'missingCode' | 'noEanImages' | 'onSaved'
+  'missingCode' | 'noEanImages' | 'onSaved' | 'openExistingLabel'
 > & {
+  onOpenExisting: (choice: ProductChoice) => void
   codeInput: RefObject<HTMLInputElement | null>
 }
 
@@ -61,19 +68,18 @@ const getDescription = (lookup: DialogLookup | undefined) => {
   if (!lookup) return 'Bipe ou digite o código e preencha os dados do produto.'
   if (lookup.status !== 'found') return getLookupMessage({ ...lookup, id: 0 })
 
-  // A code may be in several products, so a new one is registered unless every code matches (#55)
-  const [first] = lookup.products
-  const where =
-    lookup.products.length === 1
-      ? `Este código já está em ${first.name}.`
-      : `Este código já está em ${lookup.products.length} produtos.`
-  return `${where} Com outros códigos junto, o app cadastra um produto novo; com os mesmos códigos de um produto, mostra o que muda antes de substituir.`
+  const [first, ...others] = lookup.products
+  return others.length === 0
+    ? `Este código já está cadastrado em ${first.name}.`
+    : `Este código já está cadastrado em ${others.length + 1} produtos.`
 }
 
 const CreateProductContent = ({
   missingCode,
   noEanImages,
   onSaved,
+  onOpenExisting,
+  openExistingLabel,
   codeInput
 }: CreateProductContentProps) => {
   const [code, setCode] = useState(missingCode ?? '')
@@ -172,6 +178,30 @@ const CreateProductContent = ({
                 {error}
               </p>
             )}
+            {lookup?.status === 'found' && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-muted px-3 py-2 text-sm">
+                <p className="flex items-center gap-2">
+                  <Info className="size-4 shrink-0" aria-hidden />
+                  {/* A code may be in several products, so a new one is registered unless every
+                      code matches (#55) */}
+                  Use o que já existe ou, para cadastrar outro produto com este
+                  código, junte outros códigos.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    onOpenExisting({
+                      code: lookup.code,
+                      products: lookup.products
+                    })
+                  }
+                >
+                  {openExistingLabel}
+                </Button>
+              </div>
+            )}
           </Field>
         }
       />
@@ -185,9 +215,12 @@ export const CreateProductDialog = ({
   missingCode,
   noEanImages,
   onSaved,
-  getFocusAfterSave
+  getFocusAfterSave,
+  onOpenExisting,
+  openExistingLabel,
+  getFocusAfterOpen
 }: CreateProductDialogProps) => {
-  const saved = useRef(false)
+  const closedBy = useRef<'save' | 'open'>(undefined)
   const codeInput = useRef<HTMLInputElement>(null)
 
   return (
@@ -195,7 +228,7 @@ export const CreateProductDialog = ({
       open={open}
       onOpenChange={onOpenChange}
       onOpenChangeComplete={(isOpen) => {
-        if (isOpen) saved.current = false
+        if (isOpen) closedBy.current = undefined
       }}
     >
       <DialogContent
@@ -203,7 +236,12 @@ export const CreateProductDialog = ({
         // The photo input comes first in the form, so the code (or, when it is known, the name
         // the form focuses itself) has to be picked explicitly
         initialFocus={missingCode === undefined ? codeInput : false}
-        finalFocus={() => (saved.current ? getFocusAfterSave() : true)}
+        finalFocus={() => {
+          if (closedBy.current === 'save') return getFocusAfterSave()
+          // A product choice that opens next takes the focus itself
+          if (closedBy.current === 'open') return getFocusAfterOpen() ?? false
+          return true
+        }}
       >
         {/* The popup unmounts when closed, so every opening starts from an empty form */}
         <CreateProductContent
@@ -211,10 +249,16 @@ export const CreateProductDialog = ({
           noEanImages={noEanImages}
           codeInput={codeInput}
           onSaved={(product, outcome) => {
-            saved.current = true
+            closedBy.current = 'save'
             onSaved(product, outcome)
             onOpenChange(false)
           }}
+          onOpenExisting={(choice) => {
+            closedBy.current = 'open'
+            onOpenExisting(choice)
+            onOpenChange(false)
+          }}
+          openExistingLabel={openExistingLabel}
         />
       </DialogContent>
     </Dialog>

@@ -33,23 +33,36 @@ export const readCatalogProduct = async (
   }
 }
 
-// Every EAN of the catalog, file names and codes lists, mapped to the file that holds it
-export const readCatalogCodes = async (directory = eanDirectory) => {
-  const owners = new Map<string, string>()
+export type CatalogEntry = {
+  ean: string
+  product: CatalogProduct
+}
+
+export const readCatalogEntries = async (
+  directory = eanDirectory
+): Promise<CatalogEntry[]> => {
   let fileNames: string[]
   try {
     fileNames = await readdir(directory)
   } catch {
-    return owners
+    return []
   }
 
-  const eans = fileNames
-    .filter((fileName) => fileName.endsWith(CATALOG_DATA_EXTENSION))
-    .map((fileName) => fileName.slice(0, -CATALOG_DATA_EXTENSION.length))
-
-  for (const ean of eans) {
+  const entries: CatalogEntry[] = []
+  for (const fileName of fileNames) {
+    if (!fileName.endsWith(CATALOG_DATA_EXTENSION)) continue
+    const ean = fileName.slice(0, -CATALOG_DATA_EXTENSION.length)
     const product = await readCatalogProduct(ean, directory)
-    if (!product) continue
+    if (product) entries.push({ ean, product })
+  }
+  return entries
+}
+
+// Every EAN of the catalog, file names and codes lists, mapped to the file that holds it
+export const readCatalogCodes = async (directory = eanDirectory) => {
+  const owners = new Map<string, string>()
+  const entries = await readCatalogEntries(directory)
+  for (const { ean, product } of entries) {
     for (const code of getCatalogProductCodes(ean, product)) {
       if (!owners.has(code)) owners.set(code, ean)
     }
@@ -57,8 +70,9 @@ export const readCatalogCodes = async (directory = eanDirectory) => {
   return owners
 }
 
-// The catalog only changes with a new image, so the index lives as long as the process
+// The catalog only changes with a new image, so what is read from it lives as long as the process
 const codeIndexes = new Map<string, Promise<Map<string, string>>>()
+const entryLists = new Map<string, Promise<CatalogEntry[]>>()
 
 const getCodeIndex = (directory: string) => {
   let index = codeIndexes.get(directory)
@@ -69,9 +83,13 @@ const getCodeIndex = (directory: string) => {
   return index
 }
 
-export type CatalogEntry = {
-  ean: string
-  product: CatalogProduct
+export const listCatalogEntries = (directory = eanDirectory) => {
+  let entries = entryLists.get(directory)
+  if (!entries) {
+    entries = readCatalogEntries(directory)
+    entryLists.set(directory, entries)
+  }
+  return entries
 }
 
 export const findCatalogProduct = async (

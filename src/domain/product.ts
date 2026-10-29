@@ -93,9 +93,67 @@ export const PRODUCT_SUGGESTION_LIMIT = 8
 export const normalizeSearchText = (text: string) =>
   text.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase()
 
+export type ProductOrigin = 'store' | 'catalog'
+
+// The catalog only lists the products the store hasn't saved, so the two never repeat
+export type ProductListItem =
+  | { origin: 'store'; product: Product }
+  | { origin: 'catalog'; product: CatalogMatch }
+
+export type ProductListFilter = ProductOrigin | 'all'
+
 export type ProductPage = {
-  products: Product[]
+  items: ProductListItem[]
   total: number
   page: number
   pageCount: number
+}
+
+export const getSearchWords = (query: string) =>
+  normalizeSearchText(query).split(/\s+/).filter(Boolean)
+
+// Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany"), like
+// the SQLite search of the store's products
+export const matchesProductQuery = (
+  { name, brand, unit, codes }: ProductDetails & Pick<Product, 'codes'>,
+  query: string
+) => {
+  const fields = normalizeSearchText(
+    [name, brand ?? '', unit ?? '', codes.join(' ')].join(' ')
+  )
+  return getSearchWords(query).every((word) => fields.includes(word))
+}
+
+const getSortKey = ({ product }: ProductListItem) =>
+  [normalizeSearchText(product.name), product.codes[0] ?? ''] as const
+
+// Plain code unit order, like SQLite's BINARY collation, so both origins sort alike
+const compareText = (a: string, b: string) => {
+  if (a === b) return 0
+  return a < b ? -1 : 1
+}
+
+export const compareProductListItems = (
+  a: ProductListItem,
+  b: ProductListItem
+) => {
+  const [nameA, codeA] = getSortKey(a)
+  const [nameB, codeB] = getSortKey(b)
+  return compareText(nameA, nameB) || compareText(codeA, codeB)
+}
+
+export const getProductPage = (
+  items: ProductListItem[],
+  page: number
+): ProductPage => {
+  const total = items.length
+  const pageCount = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE))
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount)
+  const start = (current - 1) * PRODUCTS_PAGE_SIZE
+  return {
+    items: items.slice(start, start + PRODUCTS_PAGE_SIZE),
+    total,
+    page: current,
+    pageCount
+  }
 }

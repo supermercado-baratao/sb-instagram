@@ -92,6 +92,15 @@ export const isHiddenField = (value: string) =>
 // Instagram's portrait ratio (4:5), the tallest a feed post is shown without cropping
 export const POSTER_SIZE = { width: 1080, height: 1350 }
 
+// Never above 1, since an enlarged poster would show blurrier photos than the PNG
+export const getPosterFitScale = ({
+  width,
+  height
+}: {
+  width: number
+  height: number
+}) => Math.min(1, width / POSTER_SIZE.width, height / POSTER_SIZE.height)
+
 // Returns null when the field is hidden, so the poster drops the whole line
 export const resolvePosterField = (value: string, placeholder: string) =>
   isHiddenField(value) ? null : value.trim() || placeholder

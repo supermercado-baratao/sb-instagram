@@ -14,13 +14,15 @@ test('fills an offer page, saves it and downloads its pages as PNG', async ({
 
   // A reused e2e server keeps its data between runs, so each run uses a code it never saw
   const code = `E2E-OFFER-${Date.now()}`
-  const productCode = page.getByLabel('Código de barras ou código interno')
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
 
   await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await page.getByLabel('Nome').fill('Feijão carioca')
-  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await dialog.getByLabel('Nome').fill('Feijão carioca')
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão carioca salvo')).toBeVisible()
 
   await page.goto('/ofertas')
@@ -87,13 +89,15 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   const stamp = Date.now()
   const code = `E2E-NAME-${stamp}`
   const name = `Sabão em pó ${stamp}`
-  const productCode = page.getByLabel('Código de barras ou código interno')
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
 
   await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await page.getByLabel('Nome').fill(name)
-  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
   await page.goto('/ofertas')
@@ -122,13 +126,19 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
 
 test('edits a product placed in an offer slot', async ({ page }) => {
   const code = `E2E-EDIT-${Date.now()}`
-  const productCode = page.getByLabel('Código de barras ou código interno')
+  const createDialog = page.getByRole('dialog', {
+    name: 'Cadastrar produto'
+  })
+  const productCode = createDialog.getByLabel(
+    'Código de barras ou código interno'
+  )
 
   await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await page.getByLabel('Nome').fill('Café torrado')
-  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await createDialog.getByLabel('Nome').fill('Café torrado')
+  await createDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Café torrado salvo')).toBeVisible()
 
   await page.goto('/ofertas')

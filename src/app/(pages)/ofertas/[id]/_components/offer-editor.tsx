@@ -6,7 +6,6 @@ import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
-import { Poster } from '@/app/components/blocks/poster'
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Field, FieldGroup, FieldLabel } from '@/app/components/ui/shadcn/field'
@@ -18,7 +17,6 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
-import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
@@ -29,15 +27,13 @@ import {
   removePage,
   replaceProduct
 } from '@/domain/offer'
-import {
-  type Brand,
-  getPageTemplate,
-  type PosterTemplate
-} from '@/domain/poster'
+import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 import { saveOfferAction } from '../actions'
 import { PagePanel } from './page-panel'
+import { PosterFullView } from './poster-full-view'
+import { PosterStage } from './poster-stage'
 import { PRICE_MISSING_ATTRIBUTE } from './price-field'
 
 type OfferEditorProps = {
@@ -81,7 +77,6 @@ export const OfferEditor = ({
 
   const selectedIndex = Math.max(pageKeys.indexOf(selectedKey), 0)
   const selectedPage = content.pages[selectedIndex]
-  const selectedTemplate = getPageTemplate(templates, selectedPage.templateId)
 
   useUnsavedChangesWarning(dirty)
 
@@ -198,7 +193,7 @@ export const OfferEditor = ({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
+    <main className="flex w-full flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <header className="flex flex-col gap-4">
         <GuardedLink
           href="/ofertas"
@@ -265,7 +260,8 @@ export const OfferEditor = ({
         </div>
       </header>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto]">
+      {/* The preview column is as wide as a poster as tall as the screen, up to 40% of the width */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_min(40vw,calc((100dvh-6rem)*0.8))]">
         <div className="flex min-w-0 flex-col gap-10">
           <section
             aria-labelledby="offer-texts-heading"
@@ -383,25 +379,28 @@ export const OfferEditor = ({
 
         <aside
           aria-labelledby="offer-preview-heading"
-          className="flex flex-col items-center gap-3 lg:sticky lg:top-6 lg:self-start"
+          className="flex flex-col items-center gap-3 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:self-start"
         >
-          <h2
-            id="offer-preview-heading"
-            className="self-start text-lg font-semibold"
-          >
-            Pré-visualização da página {selectedIndex + 1}
-          </h2>
-          {selectedTemplate && (
-            <div className="zoom-[0.3] sm:zoom-[0.45] lg:zoom-[0.36] xl:zoom-[0.42]">
-              <Poster
-                brand={brand}
-                offer={getPosterOffer(content)}
-                template={selectedTemplate}
-                layout={selectedPage.layout}
-                products={getPosterProducts(selectedPage.slots, photoVersion)}
-              />
-            </div>
-          )}
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <h2 id="offer-preview-heading" className="text-lg font-semibold">
+              Pré-visualização da página {selectedIndex + 1}
+            </h2>
+            <PosterFullView
+              content={content}
+              brand={brand}
+              templates={templates}
+              photoVersion={photoVersion}
+              selectedIndex={selectedIndex}
+            />
+          </div>
+          <PosterStage
+            content={content}
+            brand={brand}
+            templates={templates}
+            photoVersion={photoVersion}
+            index={selectedIndex}
+            className="aspect-4/5 w-full max-w-xl lg:aspect-auto lg:max-w-none lg:flex-1 lg:items-start"
+          />
         </aside>
       </div>
     </main>
