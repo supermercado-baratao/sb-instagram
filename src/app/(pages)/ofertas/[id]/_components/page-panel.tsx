@@ -2,6 +2,8 @@
 
 import { Select as SelectPrimitive } from '@base-ui/react/select'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { useState } from 'react'
+import { flushSync } from 'react-dom'
 
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
@@ -15,7 +17,7 @@ import {
   ToggleGroup,
   ToggleGroupItem
 } from '@/app/components/ui/shadcn/toggle-group'
-import { type OfferPage, setSlot } from '@/domain/offer'
+import { moveSlot, type OfferPage, setSlot } from '@/domain/offer'
 import {
   getPageTemplate,
   isPosterLayout,
@@ -56,9 +58,25 @@ export const PagePanel = ({
 }: PagePanelProps) => {
   const id = `page-${index}`
   const template = getPageTemplate(templates, page.templateId)
+  // Each slot keeps its key when it moves, so a price being typed moves with its product
+  const [slotKeys, setSlotKeys] = useState(() =>
+    page.slots.map((_, position) => position)
+  )
   const hiddenCount = page.slots
     .slice(page.layout)
     .filter((slot) => slot !== null).length
+
+  const moveSlotTo = (from: number, to: number) => {
+    const moved = moveSlot(page, from, to)
+    if (moved === page) return
+    // React moves the slot's node, which drops the focus, so it goes back to the same button
+    flushSync(() => {
+      onChange(moved)
+      setSlotKeys(slotKeys.with(from, slotKeys[to]).with(to, slotKeys[from]))
+    })
+    const button = to < from ? 'move-before' : 'move-after'
+    document.querySelector<HTMLElement>(`#${id}-slot-${to}-${button}`)?.focus()
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -144,14 +162,17 @@ export const PagePanel = ({
 
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {page.slots.slice(0, page.layout).map((slot, position) => (
-          <li key={position}>
+          <li key={slotKeys[position]}>
             <SlotField
               id={`${id}-slot-${position}`}
               position={position}
               slot={slot}
               noEanImages={noEanImages}
               photoVersion={photoVersion}
+              canMoveBefore={position > 0}
+              canMoveAfter={position < page.layout - 1}
               onChange={(next) => onChange(setSlot(page, position, next))}
+              onMove={(to) => moveSlotTo(position, to)}
               onProductSaved={onProductSaved}
               onNotice={onNotice}
             />

@@ -1,6 +1,14 @@
 'use client'
 
-import { CircleAlert, ImageOff, Plus, Search, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleAlert,
+  ImageOff,
+  Plus,
+  Search,
+  X
+} from 'lucide-react'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 
@@ -31,7 +39,11 @@ type SlotFieldProps = {
   slot: OfferSlot
   noEanImages: string[]
   photoVersion?: number
+  // How far the slot can move, given the slots the page layout shows
+  canMoveBefore: boolean
+  canMoveAfter: boolean
   onChange: (slot: OfferSlot) => void
+  onMove: (to: number) => void
   onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
 }
@@ -45,7 +57,10 @@ export const SlotField = ({
   slot,
   noEanImages,
   photoVersion,
+  canMoveBefore,
+  canMoveAfter,
   onChange,
+  onMove,
   onProductSaved,
   onNotice
 }: SlotFieldProps) => {
@@ -301,6 +316,32 @@ export const SlotField = ({
           autoFocus={focusPrice}
           onChange={(cents) => onChange({ product, priceInCents: cents })}
         />
+        <div className="flex gap-2">
+          <Button
+            id={`${id}-move-before`}
+            variant="outline"
+            size="sm"
+            disabled={!canMoveBefore}
+            focusableWhenDisabled
+            aria-label={`Mover ${product.name} para antes`}
+            onClick={() => onMove(position - 1)}
+          >
+            <ArrowLeft data-icon="inline-start" aria-hidden />
+            Antes
+          </Button>
+          <Button
+            id={`${id}-move-after`}
+            variant="outline"
+            size="sm"
+            disabled={!canMoveAfter}
+            focusableWhenDisabled
+            aria-label={`Mover ${product.name} para depois`}
+            onClick={() => onMove(position + 1)}
+          >
+            Depois
+            <ArrowRight data-icon="inline-end" aria-hidden />
+          </Button>
+        </div>
       </div>
       {dialog}
     </>

@@ -106,6 +106,19 @@ export const setSlot = (
   slot: OfferSlot
 ): OfferPage => ({ ...page, slots: page.slots.with(position, slot) })
 
+// Swaps with the slot already there, so the grid keeps its gaps and nothing else shifts
+export const moveSlot = (
+  page: OfferPage,
+  from: number,
+  to: number
+): OfferPage => {
+  if (from === to || to < 0 || to >= page.layout) return page
+  return {
+    ...page,
+    slots: page.slots.with(from, page.slots[to]).with(to, page.slots[from])
+  }
+}
+
 export const replaceProduct = (
   pages: OfferPage[],
   product: Product

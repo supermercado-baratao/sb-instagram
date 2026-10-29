@@ -9,6 +9,7 @@ import {
   formatValidUntil,
   isOfferContent,
   movePage,
+  moveSlot,
   type OfferItem,
   parsePrice,
   placeSlots,
@@ -117,6 +118,32 @@ describe('movePage', () => {
 
   test.each([-1, 3])('ignores a move to %i, outside the list', (to) => {
     expect(movePage(pages, 0, to)).toBe(pages)
+  })
+})
+
+describe('moveSlot', () => {
+  const other = { ...item, priceInCents: 500 }
+  const page = setSlot(setSlot(createOfferPage('mercado'), 0, item), 1, other)
+
+  test('swaps two filled slots', () => {
+    const moved = moveSlot(page, 0, 1)
+    expect(moved.slots[0]).toBe(other)
+    expect(moved.slots[1]).toBe(item)
+  })
+
+  test('moves into an empty slot and leaves the old one empty', () => {
+    const moved = moveSlot(page, 1, 2)
+    expect(moved.slots[1]).toBeNull()
+    expect(moved.slots[2]).toBe(other)
+  })
+
+  test.each([-1, 9])('ignores a move to %i, outside the slots', (to) => {
+    expect(moveSlot(page, 0, to)).toBe(page)
+  })
+
+  test('ignores a move past the slots the layout shows', () => {
+    const small = { ...page, layout: 3 as const }
+    expect(moveSlot(small, 2, 3)).toBe(small)
   })
 })
 
