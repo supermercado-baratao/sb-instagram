@@ -118,6 +118,18 @@ export const SlotField = ({
           }
         }}
         getFocusAfterSave={getPriceInput}
+        onOpenExisting={({ code, products }) => {
+          if (products.length > 1) {
+            setChoice({ code, products })
+            setChoosing(true)
+            return
+          }
+          // The dialog moves the focus to the price once it closes
+          setFocusPrice(false)
+          placeProduct(products[0])
+        }}
+        openExistingLabel="Usar produto cadastrado"
+        getFocusAfterOpen={getPriceInput}
       />
     </>
   )

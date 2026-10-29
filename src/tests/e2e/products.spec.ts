@@ -101,6 +101,35 @@ test('registers a product from the create dialog', async ({ page }) => {
   ).toBeVisible()
 })
 
+test('opens the registered product when its code is typed in the create dialog', async ({
+  page
+}) => {
+  const code = `E2E-OPEN-${Date.now()}`
+  const name = `Contrafilé ${code}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const dialogCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(code)
+  await dialogCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialogCode.fill(code)
+  await dialogCode.press('Enter')
+  await expect(
+    dialog.getByText(`Este código já está cadastrado em ${name}.`)
+  ).toBeVisible()
+  await dialog.getByRole('button', { name: 'Abrir produto cadastrado' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByLabel('Nome')).toHaveValue(name)
+  await expect(page.getByLabel('Nome')).toBeFocused()
+})
+
 test('asks before replacing a product registered again with other data', async ({
   page
 }) => {
@@ -165,7 +194,7 @@ test('chooses between a single product and a group with the same code', async ({
   await dialogCode.fill(lavender)
   await dialogCode.press('Enter')
   await expect(
-    dialog.getByText(`Este código já está em ${single}.`)
+    dialog.getByText(`Este código já está cadastrado em ${single}.`)
   ).toBeVisible()
   await dialog.getByLabel('Nome').fill(group)
   await dialog.getByLabel('Adicionar código').fill(fennel)
@@ -231,7 +260,8 @@ test('merges two products and finds the kept one by the merged code', async ({
   }
 
   const codeField = page.getByLabel('Buscar produto')
-  await codeField.fill(String(stamp))
+  // A bare 13-digit stamp may pass as an EAN, which opens the form instead of searching
+  await codeField.fill(`-${stamp}`)
   await codeField.press('Enter')
   await expect(page.getByText('2 produtos', { exact: true })).toBeVisible()
   await page.getByRole('checkbox', { name: `Selecionar ${kept}` }).click()

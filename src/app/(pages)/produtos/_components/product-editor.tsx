@@ -154,6 +154,19 @@ export const ProductEditor = ({
     })
   }
 
+  const openExisting = ({ code, products }: ProductChoice) => {
+    if (products.length === 1) {
+      openProduct(products[0])
+      return
+    }
+    setLookup(undefined)
+    setChoice({ code, products })
+    setChoosing(true)
+  }
+
+  const getNameInput = () =>
+    formArea.current?.querySelector<HTMLElement>('[name="name"]') ?? null
+
   const openCatalogProduct = (product: CatalogMatch) => {
     clearMessages()
     setLookup({
@@ -195,13 +208,7 @@ export const ProductEditor = ({
         setLookup({ ...result, id: Date.now() })
         return
       }
-      if (result.products.length === 1) {
-        openProduct(result.products[0])
-        return
-      }
-      setLookup(undefined)
-      setChoice({ code: result.code, products: result.products })
-      setChoosing(true)
+      openExisting(result)
     })
   }
 
@@ -292,16 +299,16 @@ export const ProductEditor = ({
         noEanImages={noEanImages}
         onSaved={handleCreated}
         getFocusAfterSave={() => codeInput.current}
+        onOpenExisting={openExisting}
+        openExistingLabel="Abrir produto cadastrado"
+        getFocusAfterOpen={getNameInput}
       />
       <ProductChoiceDialog
         open={choosing}
         choice={choice}
         onOpenChange={setChoosing}
         onChoose={openProduct}
-        getFocusAfterChoice={() =>
-          formArea.current?.querySelector<HTMLElement>('[name="name"]') ??
-          codeInput.current
-        }
+        getFocusAfterChoice={() => getNameInput() ?? codeInput.current}
       />
 
       <form onSubmit={search} role="search" className="flex items-end gap-2">
