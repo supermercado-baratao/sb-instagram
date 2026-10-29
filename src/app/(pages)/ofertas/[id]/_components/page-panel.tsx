@@ -79,7 +79,7 @@ export const PagePanel = ({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="@container flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
         <Select
           items={templates.map(({ id: value, name }) => ({
@@ -160,7 +160,7 @@ export const PagePanel = ({
         </div>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
         {page.slots.slice(0, page.layout).map((slot, position) => (
           <li key={slotKeys[position]}>
             <SlotField

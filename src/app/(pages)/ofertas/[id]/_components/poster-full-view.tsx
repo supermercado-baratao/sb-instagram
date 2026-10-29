@@ -1,9 +1,8 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
-import { Poster } from '@/app/components/blocks/poster'
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
   Dialog,
@@ -14,14 +13,10 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/app/components/ui/shadcn/dialog'
-import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
-import { usePosterFitScale } from '@/app/hooks/use-poster-fit-scale'
 import type { OfferContent } from '@/domain/offer'
-import {
-  type Brand,
-  getPageTemplate,
-  type PosterTemplate
-} from '@/domain/poster'
+import type { Brand, PosterTemplate } from '@/domain/poster'
+
+import { PosterStage } from './poster-stage'
 
 type PosterFullViewProps = {
   content: OfferContent
@@ -29,42 +24,6 @@ type PosterFullViewProps = {
   templates: PosterTemplate[]
   photoVersion?: number
   selectedIndex: number
-}
-
-type PosterStageProps = Omit<PosterFullViewProps, 'selectedIndex'> & {
-  index: number
-}
-
-const PosterStage = ({
-  content,
-  brand,
-  templates,
-  photoVersion,
-  index
-}: PosterStageProps) => {
-  const stage = useRef<HTMLDivElement>(null)
-  const scale = usePosterFitScale(stage)
-  const page = content.pages[index]
-  const template = getPageTemplate(templates, page.templateId)
-
-  return (
-    <div
-      ref={stage}
-      className="flex min-h-0 items-center justify-center overflow-hidden"
-    >
-      {template && scale > 0 && (
-        <div style={{ zoom: scale }}>
-          <Poster
-            brand={brand}
-            offer={getPosterOffer(content)}
-            template={template}
-            layout={page.layout}
-            products={getPosterProducts(page.slots, photoVersion)}
-          />
-        </div>
-      )}
-    </div>
-  )
 }
 
 export const PosterFullView = ({

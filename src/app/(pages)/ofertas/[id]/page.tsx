@@ -30,7 +30,7 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
 
   const { id, ...content } = offer
   return (
-    <AppLayout brand={brand}>
+    <AppLayout brand={brand} wide>
       <OfferEditor
         id={id}
         offer={content}

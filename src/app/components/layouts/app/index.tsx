@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import type { ReactNode } from 'react'
 
 import { NavigationGuardProvider } from '@/app/components/providers/navigation-guard'
@@ -13,10 +14,12 @@ const CONTENT_ID = 'conteudo'
 
 type AppLayoutProps = {
   brand: StoreBrand
+  // Drops the max width, for a page that needs the whole screen
+  wide?: boolean
   children: ReactNode
 }
 
-export const AppLayout = ({ brand, children }: AppLayoutProps) => {
+export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
   const logoUrl = getLogoUrl(brand)
 
   return (
@@ -31,7 +34,12 @@ export const AppLayout = ({ brand, children }: AppLayoutProps) => {
         Pular para o conteúdo
       </a>
       <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+        <div
+          className={cn(
+            'mx-auto flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6',
+            !wide && 'max-w-7xl'
+          )}
+        >
           <GuardedLink
             href="/ofertas"
             className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
