@@ -93,7 +93,7 @@ Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook
 Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo:
 
 1. Em **Produtos** (`/produtos`), clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas.
-2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo (sem foto, sem marca ou unidade, foto com fundo, foto pequena demais ou EAN que já está no catálogo). Corrija no app o que quiser incluir e exporte de novo.
+2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo, em duas seções. Em "pendências" estão os que você pode corrigir (sem foto, sem marca ou unidade, foto com fundo ou foto pequena demais); em "já estão no catálogo", os que não precisam de nada (EAN ou imagem que o catálogo já tem). Corrija no app o que quiser incluir e exporte de novo.
 3. Confira os nomes, as marcas e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
 
    Um produto com vários EANs sai com um deles como nome e os outros em `codes`. Os códigos internos dele ficam de fora.

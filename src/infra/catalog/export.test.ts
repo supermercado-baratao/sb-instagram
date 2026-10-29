@@ -272,20 +272,23 @@ test('reports the products left out and why', async () => {
     'no-ean/laranja.png',
     'relatorio.txt'
   ])
-  const report = read(files['relatorio.txt'])
-  expect(report).toContain(
+  const [pending, inCatalog] = read(files['relatorio.txt']).split(
+    'Produtos que já estão no catálogo:',
+    2
+  )
+  expect(pending).toContain(
     '1 · Alface: O fundo da imagem precisa ser transparente'
   )
-  expect(report).toMatch(/2 · Banana: O lado da imagem precisa ter/)
-  expect(report).toContain('3 · Coxão Mole: A foto é uma imagem do catálogo')
-  expect(report).toContain(
+  expect(pending).toMatch(/2 · Banana: O lado da imagem precisa ter/)
+  expect(inCatalog).toContain('3 · Coxão Mole: A foto é uma imagem do catálogo')
+  expect(pending).toContain(
     '5 · laranja: Outro produto já foi exportado como laranja.png'
   )
-  expect(report).toContain('6 · Pepino: Sem foto')
-  expect(report).toContain(
+  expect(pending).toContain('6 · Pepino: Sem foto')
+  expect(inCatalog).toContain(
     `${CATALOG_CODE}, ${EAN} · Sabonete: O EAN ${CATALOG_CODE} já está no catálogo`
   )
-  expect(report).toContain(
+  expect(inCatalog).toContain(
     `${CATALOG_EAN} · Café: O EAN ${CATALOG_EAN} já está no catálogo`
   )
 })

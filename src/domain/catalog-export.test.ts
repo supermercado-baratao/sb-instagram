@@ -91,7 +91,7 @@ describe('checkCatalogExport', () => {
   test('skips a product without photo', () => {
     expect(
       checkCatalogExport({ ...eanProduct, photo: null }, emptyContext)
-    ).toEqual({ status: 'skipped', reason: 'Sem foto' })
+    ).toEqual({ status: 'skipped', kind: 'pending', reason: 'Sem foto' })
   })
 
   test.each([
@@ -101,17 +101,18 @@ describe('checkCatalogExport', () => {
   ])('skips an EAN product with %o', (changes, reason) => {
     expect(
       checkCatalogExport({ ...eanProduct, ...changes }, emptyContext)
-    ).toEqual({ status: 'skipped', reason })
+    ).toEqual({ status: 'skipped', kind: 'pending', reason })
   })
 
-  test('skips a product with an EAN already in the catalog', () => {
+  test('skips a product with an EAN already in the catalog as in the catalog', () => {
     expect(
       checkCatalogExport(
-        { ...eanProduct, codes: [EAN, OTHER_EAN] },
+        { ...eanProduct, codes: [EAN, OTHER_EAN], photo: null, brand: null },
         { ...emptyContext, catalogEans: new Set([OTHER_EAN]) }
       )
     ).toEqual({
       status: 'skipped',
+      kind: 'in-catalog',
       reason: `O EAN ${OTHER_EAN} já está no catálogo`
     })
   })
@@ -124,6 +125,7 @@ describe('checkCatalogExport', () => {
       )
     ).toEqual({
       status: 'skipped',
+      kind: 'pending',
       reason: `O EAN ${EAN} já foi exportado em outro produto`
     })
   })
@@ -131,17 +133,21 @@ describe('checkCatalogExport', () => {
   test('skips an internal code product whose name has no letter', () => {
     expect(
       checkCatalogExport({ ...internalProduct, name: '123' }, emptyContext)
-    ).toMatchObject({ status: 'skipped' })
+    ).toMatchObject({ status: 'skipped', kind: 'pending' })
   })
 
-  test('skips a name the catalog already has', () => {
+  test('skips a name the catalog already has as in the catalog', () => {
     expect(
-      checkCatalogExport(internalProduct, {
-        ...emptyContext,
-        catalogNames: new Set(['pao-frances'])
-      })
+      checkCatalogExport(
+        { ...internalProduct, photo: null },
+        {
+          ...emptyContext,
+          catalogNames: new Set(['pao-frances'])
+        }
+      )
     ).toEqual({
       status: 'skipped',
+      kind: 'in-catalog',
       reason: 'O catálogo já tem a imagem pao-frances.png'
     })
   })
@@ -154,6 +160,7 @@ describe('checkCatalogExport', () => {
       })
     ).toEqual({
       status: 'skipped',
+      kind: 'pending',
       reason: 'Outro produto já foi exportado como pao-frances.png'
     })
   })
@@ -181,16 +188,47 @@ describe('formatCatalogProduct', () => {
 })
 
 describe('formatCatalogExportReport', () => {
-  test('lists each skipped product with its reason', () => {
+  test('lists the pending products apart from those in the catalog', () => {
     expect(
       formatCatalogExportReport([
         {
+          codes: [OTHER_EAN],
+          name: 'Café',
+          kind: 'in-catalog',
+          reason: `O EAN ${OTHER_EAN} já está no catálogo`
+        },
+        {
           codes: [EAN, '2001'],
           name: 'Leite Condensado',
+          kind: 'pending',
           reason: 'Falta a marca'
         }
       ])
-    ).toContain(`${EAN}, 2001 · Leite Condensado: Falta a marca`)
+    ).toBe(
+      [
+        'Produtos com pendências, que ficaram fora da exportação:',
+        '',
+        `${EAN}, 2001 · Leite Condensado: Falta a marca`,
+        '',
+        'Produtos que já estão no catálogo:',
+        '',
+        `${OTHER_EAN} · Café: O EAN ${OTHER_EAN} já está no catálogo`,
+        ''
+      ].join('\n')
+    )
+  })
+
+  test('leaves out a section without products', () => {
+    expect(
+      formatCatalogExportReport([
+        {
+          codes: ['2001'],
+          name: 'Pão Francês',
+          kind: 'in-catalog',
+          reason: 'O catálogo já tem a imagem pao-frances.png'
+        }
+      ])
+    ).not.toContain('pendências')
   })
 
   test('says when no product was left out', () => {
