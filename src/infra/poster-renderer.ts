@@ -30,8 +30,7 @@ const getBrowser = () => {
   return globalForRenderer.browser
 }
 
-export const renderPosterPng = async (path: string) => {
-  const browser = await getBrowser()
+const openPosterPage = async (browser: Browser, path: string) => {
   const page = await browser.newPage({ viewport: POSTER_SIZE })
   try {
     const response = await page.goto(new URL(path, origin).href, {
@@ -46,7 +45,31 @@ export const renderPosterPng = async (path: string) => {
     await page.evaluate(async () => {
       await document.fonts.ready
     })
+    return page
+  } catch (error) {
+    await page.close()
+    throw error
+  }
+}
+
+export const renderPosterPng = async (path: string) => {
+  const page = await openPosterPage(await getBrowser(), path)
+  try {
     return await page.locator('article').screenshot({ animations: 'disabled' })
+  } finally {
+    await page.close()
+  }
+}
+
+// The sheet size and margins come from the page's `@page` rule, so they live next to its layout
+export const renderPosterPdf = async (path: string) => {
+  const page = await openPosterPage(await getBrowser(), path)
+  try {
+    return await page.pdf({
+      preferCSSPageSize: true,
+      printBackground: true,
+      tagged: true
+    })
   } finally {
     await page.close()
   }
