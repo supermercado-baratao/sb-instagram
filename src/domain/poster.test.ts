@@ -2,12 +2,14 @@ import { describe, expect, test } from 'vitest'
 
 import {
   getPageTemplate,
+  getPosterFitScale,
   getPosterLayout,
   getVisibleProducts,
   isHiddenField,
   isPosterLayout,
   type OfferProduct,
   PAGE_PRODUCT_COUNT,
+  POSTER_SIZE,
   type PosterLayout,
   type PosterTemplate,
   resolvePosterField,
@@ -118,5 +120,21 @@ describe('splitPrice', () => {
 
   test('shows zero reais for prices under one real', () => {
     expect(splitPrice(99)).toEqual({ integer: '0', decimal: '99' })
+  })
+})
+
+describe('getPosterFitScale', () => {
+  test('fits the poster to the narrower side', () => {
+    expect(getPosterFitScale({ width: 540, height: 1350 })).toBe(0.5)
+    expect(getPosterFitScale({ width: 1080, height: 675 })).toBe(0.5)
+  })
+
+  test('never enlarges the poster', () => {
+    expect(getPosterFitScale({ width: 4000, height: 4000 })).toBe(1)
+    expect(getPosterFitScale(POSTER_SIZE)).toBe(1)
+  })
+
+  test('returns 0 for an area not measured yet', () => {
+    expect(getPosterFitScale({ width: 0, height: 0 })).toBe(0)
   })
 })

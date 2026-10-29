@@ -38,6 +38,7 @@ import type { Product } from '@/domain/product'
 
 import { saveOfferAction } from '../actions'
 import { PagePanel } from './page-panel'
+import { PosterFullView } from './poster-full-view'
 import { PRICE_MISSING_ATTRIBUTE } from './price-field'
 
 type OfferEditorProps = {
@@ -385,12 +386,18 @@ export const OfferEditor = ({
           aria-labelledby="offer-preview-heading"
           className="flex flex-col items-center gap-3 lg:sticky lg:top-6 lg:self-start"
         >
-          <h2
-            id="offer-preview-heading"
-            className="self-start text-lg font-semibold"
-          >
-            Pré-visualização da página {selectedIndex + 1}
-          </h2>
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <h2 id="offer-preview-heading" className="text-lg font-semibold">
+              Pré-visualização da página {selectedIndex + 1}
+            </h2>
+            <PosterFullView
+              content={content}
+              brand={brand}
+              templates={templates}
+              photoVersion={photoVersion}
+              selectedIndex={selectedIndex}
+            />
+          </div>
           {selectedTemplate && (
             <div className="zoom-[0.3] sm:zoom-[0.45] lg:zoom-[0.36] xl:zoom-[0.42]">
               <Poster
