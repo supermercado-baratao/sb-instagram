@@ -5,7 +5,7 @@ import { unzipSync } from 'fflate'
 
 import { POSTER_SIZE } from '@/domain/poster'
 
-test('fills an offer page, saves it and downloads its pages as PNG', async ({
+test('fills an offer page, saves it, downloads its pages as PNG and prints them', async ({
   page
 }) => {
   // On a cold `next dev` this test compiles most routes and launches the poster renderer's
@@ -56,6 +56,22 @@ test('fills an offer page, saves it and downloads its pages as PNG', async ({
   expect({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) }).toEqual(
     POSTER_SIZE
   )
+
+  // Headless Chromium downloads a PDF instead of showing it, so the popup never settles on its URL
+  const pdfEvent = page
+    .context()
+    .waitForEvent('request', (request) =>
+      request.url().endsWith('/paginas.pdf')
+    )
+  await page.getByRole('link', { name: /Imprimir páginas/ }).click()
+  const pdfRequest = await pdfEvent
+  // A downloaded response has no body to read, so the PDF is fetched again
+  const response = await page.request.get(pdfRequest.url())
+  expect(response.headers()['content-type']).toBe('application/pdf')
+  const body = await response.body()
+  const pdf = body.toString('latin1')
+  // One sheet per offer page; `/Type /Pages` is the page tree, not a sheet
+  expect(pdf.match(/\/Type\s*\/Page\b/g)).toHaveLength(1)
 })
 
 test('registers a missing product from an offer slot', async ({ page }) => {

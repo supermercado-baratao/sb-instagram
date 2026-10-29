@@ -1,7 +1,14 @@
 'use client'
 
 import { cn } from 'cn'
-import { ArrowLeft, CircleAlert, Download, Plus, Save } from 'lucide-react'
+import {
+  ArrowLeft,
+  CircleAlert,
+  Download,
+  Plus,
+  Printer,
+  Save
+} from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
@@ -226,6 +233,29 @@ export const OfferEditor = ({
               <Download data-icon="inline-start" aria-hidden />
               Baixar páginas (PNG)
             </Button>
+            {dirty ? (
+              // A link can't be disabled, so it stays a button until the offer is saved
+              <Button
+                variant="outline"
+                disabled
+                focusableWhenDisabled
+                aria-describedby="download-hint"
+              >
+                <Printer data-icon="inline-start" aria-hidden />
+                Imprimir páginas
+              </Button>
+            ) : (
+              <a
+                href={`/ofertas/${id}/paginas.pdf`}
+                target="_blank"
+                rel="noopener"
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                <Printer data-icon="inline-start" aria-hidden />
+                Imprimir páginas
+                <span className="sr-only"> (abre em nova aba)</span>
+              </a>
+            )}
             <Button disabled={saving} focusableWhenDisabled onClick={save}>
               {saving ? (
                 <Spinner data-icon="inline-start" aria-hidden />
@@ -238,7 +268,7 @@ export const OfferEditor = ({
         </div>
         {dirty && (
           <p id="download-hint" className="text-sm text-muted-foreground">
-            Salve a oferta para baixar as páginas.
+            Salve a oferta para baixar ou imprimir as páginas.
           </p>
         )}
         <div aria-live="polite" className="min-h-5">
