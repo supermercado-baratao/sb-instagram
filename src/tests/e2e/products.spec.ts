@@ -11,21 +11,27 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
 }) => {
   // A reused e2e server keeps its data between runs, so each run uses a code it never saw
   const code = `E2E-${Date.now()}`
-  const codeField = page.getByLabel('Código de barras ou código interno')
+  const codeField = page.getByLabel('Buscar produto')
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
 
   await page.goto('/produtos')
   await codeField.fill(code)
   await codeField.press('Enter')
 
-  await expect(page.getByText('Código interno novo')).toBeVisible()
-  await page.getByLabel('Nome').fill('Picanha bovina')
-  await page.getByLabel('Unidade').fill('1 kg')
-  await page.getByLabel('Enviar foto').setInputFiles({
+  // No product has the internal code, so it may be a name: the list is filtered instead
+  await expect(page).toHaveURL(/\?q=/)
+  await page
+    .getByRole('button', { name: `Cadastrar produto com o código ${code}` })
+    .click()
+  await expect(dialog.getByText('Código interno novo')).toBeVisible()
+  await dialog.getByLabel('Nome').fill('Picanha bovina')
+  await dialog.getByLabel('Unidade').fill('1 kg')
+  await dialog.getByLabel('Enviar foto').setInputFiles({
     name: 'picanha.png',
     mimeType: 'image/png',
     buffer: PHOTO
   })
-  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
 
   await expect(page.getByText('Picanha bovina salvo')).toBeVisible()
   await expect(codeField).toBeFocused()
@@ -46,18 +52,19 @@ test('finds a saved product by name and opens it from the list', async ({
 }) => {
   const code = `E2E-${Date.now()}`
   const name = `Alcatra ${code}`
-  const codeField = page.getByLabel('Código de barras ou código interno')
+  const codeField = page.getByLabel('Buscar produto')
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
 
   await page.goto('/produtos')
-  await codeField.fill(code)
-  await codeField.press('Enter')
-  await page.getByLabel('Nome').fill(name)
-  await page.getByRole('button', { name: 'Salvar produto' }).click()
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await dialog.getByLabel('Código de barras ou código interno').fill(code)
+  await dialog.getByLabel('Código de barras ou código interno').press('Enter')
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
-  const searchField = page.getByLabel('Pesquisar produtos')
-  await searchField.fill(name.toUpperCase())
-  await searchField.press('Enter')
+  await codeField.fill(name.toUpperCase())
+  await codeField.press('Enter')
 
   await expect(page).toHaveURL(/\?q=/)
   await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
@@ -88,9 +95,7 @@ test('registers a product from the create dialog', async ({ page }) => {
 
   await expect(dialog).toBeHidden()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
-  await expect(
-    page.getByLabel('Código de barras ou código interno')
-  ).toBeFocused()
+  await expect(page.getByLabel('Buscar produto')).toBeFocused()
   await expect(
     page.getByRole('button', { name: new RegExp(`^${name}`) })
   ).toBeVisible()
@@ -172,7 +177,7 @@ test('chooses between a single product and a group with the same code', async ({
   await expect(dialog).toBeHidden()
   await expect(page.getByText(`${group} salvo`)).toBeVisible()
 
-  const codeField = page.getByLabel('Código de barras ou código interno')
+  const codeField = page.getByLabel('Buscar produto')
   await codeField.fill(lavender)
   await codeField.press('Enter')
   const choice = page.getByRole('dialog', { name: 'Escolha o produto' })
@@ -225,9 +230,9 @@ test('merges two products and finds the kept one by the merged code', async ({
     await expect(page.getByText(`${name} salvo`)).toBeVisible()
   }
 
-  const searchField = page.getByLabel('Pesquisar produtos')
-  await searchField.fill(String(stamp))
-  await searchField.press('Enter')
+  const codeField = page.getByLabel('Buscar produto')
+  await codeField.fill(String(stamp))
+  await codeField.press('Enter')
   await expect(page.getByText('2 produtos', { exact: true })).toBeVisible()
   await page.getByRole('checkbox', { name: `Selecionar ${kept}` }).click()
   await page.getByRole('checkbox', { name: `Selecionar ${merged}` }).click()
@@ -242,7 +247,6 @@ test('merges two products and finds the kept one by the merged code', async ({
   await expect(page.getByText(`Produtos mesclados em ${kept}.`)).toBeVisible()
   await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
 
-  const codeField = page.getByLabel('Código de barras ou código interno')
   await codeField.fill(fennel)
   await codeField.press('Enter')
   await expect(page.getByLabel('Nome')).toHaveValue(kept)
@@ -283,7 +287,7 @@ test('adds a new code to an existing product from the create dialog', async ({
   // The previous notice for the same product is still fading out
   await expect(page.getByText(`${name} salvo`).last()).toBeVisible()
 
-  const codeField = page.getByLabel('Código de barras ou código interno')
+  const codeField = page.getByLabel('Buscar produto')
   await codeField.fill(variation)
   await codeField.press('Enter')
   await expect(page.getByLabel('Nome')).toHaveValue(name)

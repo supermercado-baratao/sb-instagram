@@ -6,8 +6,9 @@ import {
   Info,
   Merge,
   Plus,
-  ScanBarcode
+  Search
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -26,28 +27,55 @@ import {
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import type { Product, ProductPage } from '@/domain/product'
+import {
+  ToggleGroup,
+  ToggleGroupItem
+} from '@/app/components/ui/shadcn/toggle-group'
+import {
+  type CatalogMatch,
+  isValidCode,
+  normalizeCode,
+  type Product,
+  type ProductListFilter,
+  type ProductPage
+} from '@/domain/product'
 
 import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'
 import { MergeProductsDialog } from './merge-products-dialog'
 import { ProductList } from './product-list'
 import { ProductPagination } from './product-pagination'
-import { ProductSearch } from './product-search'
+import { getProductsHref } from './products-href'
 
 type ProductEditorProps = {
   noEanImages: string[]
   productPage: ProductPage
   query: string
+  filter: ProductListFilter
 }
 
-const getListSummary = ({ total }: ProductPage, query: string) => {
-  if (total === 0) {
-    return query === ''
-      ? 'Nenhum produto cadastrado ainda. Bipe um código acima para cadastrar.'
-      : `Nenhum produto encontrado para “${query}”.`
-  }
-  return total === 1 ? '1 produto' : `${total} produtos`
+const FILTERS: { value: ProductListFilter; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'store', label: 'Da loja' },
+  { value: 'catalog', label: 'Catálogo' }
+]
+
+const isProductListFilter = (value: unknown): value is ProductListFilter =>
+  FILTERS.some((filter) => filter.value === value)
+
+// A name may hold spaces, which a code never has, so only a single word is looked up as a code
+const isCodeLike = (text: string) => !/\s/.test(text) && isValidCode(text)
+
+const getListSummary = (
+  { total }: ProductPage,
+  query: string,
+  filter: ProductListFilter
+) => {
+  if (total > 0) return total === 1 ? '1 produto' : `${total} produtos`
+  if (query !== '') return `Nenhum produto encontrado para “${query}”.`
+  return filter === 'catalog'
+    ? 'O catálogo não tem produtos que a loja ainda não cadastrou.'
+    : 'Nenhum produto ainda. Bipe um código acima para cadastrar.'
 }
 
 const getSelectionSummary = (count: number) => {
@@ -60,12 +88,17 @@ const getSelectionSummary = (count: number) => {
 export const ProductEditor = ({
   noEanImages,
   productPage,
-  query
+  query,
+  filter
 }: ProductEditorProps) => {
+  const router = useRouter()
+  const [value, setValue] = useState(query)
+  const [syncedQuery, setSyncedQuery] = useState(query)
   const [lookup, setLookup] = useState<ProductLookup>()
   const [choice, setChoice] = useState<ProductChoice>()
   const [choosing, setChoosing] = useState(false)
-  const [creating, setCreating] = useState(false)
+  // Holds the code the dialog starts from, if any, while it is open
+  const [creating, setCreating] = useState<{ missingCode?: string }>()
   const [error, setError] = useState<string>()
   const [deleted, setDeleted] = useState<Product>()
   const savedToast = useRef<string | number>(undefined)
@@ -80,6 +113,16 @@ export const ProductEditor = ({
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
   const formArea = useRef<HTMLDivElement>(null)
+
+  // Synced during render rather than remounted with a key, so a search keeps the focus in the field
+  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  if (query !== syncedQuery) {
+    setSyncedQuery(query)
+    setValue(query)
+  }
+
+  const showList = (nextQuery: string, nextFilter = filter) =>
+    router.push(getProductsHref({ query: nextQuery, filter: nextFilter }))
 
   const clearMessages = () => {
     setDeleted(undefined)
@@ -111,14 +154,29 @@ export const ProductEditor = ({
     })
   }
 
+  const openCatalogProduct = (product: CatalogMatch) => {
+    clearMessages()
+    setLookup({
+      status: 'catalog',
+      code: product.ean,
+      product,
+      id: Date.now()
+    })
+  }
+
+  // Enter (what a scanner sends after the code) opens the product with that code, or registers
+  // an unknown EAN; anything else, a name or an internal code no product has, filters the list
   const search = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const form = event.currentTarget
-    const code = String(new FormData(form).get('code') ?? '')
+    const text = value.trim()
+    clearMessages()
+    if (!isCodeLike(text)) {
+      startSearch(() => showList(text))
+      return
+    }
 
     startSearch(async () => {
-      const result = await lookupProduct(code)
-      clearMessages()
+      const result = await lookupProduct(text)
       if (result.status === 'error') {
         setError(result.message)
         setLookup(undefined)
@@ -126,7 +184,13 @@ export const ProductEditor = ({
         codeInput.current?.select()
         return
       }
-      form.reset()
+      if (result.status === 'new' && result.codeType === 'internal') {
+        showList(text)
+        return
+      }
+      // The next scan starts from an empty field, and the list goes back to every product
+      setValue('')
+      if (query !== '') showList('')
       if (result.status !== 'found') {
         setLookup({ ...result, id: Date.now() })
         return
@@ -210,17 +274,21 @@ export const ProductEditor = ({
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Produtos</h1>
           <p className="text-muted-foreground">
-            Bipe o código com o leitor ou digite e aperte Enter.
+            Bipe o código com o leitor, ou digite um código ou nome e aperte
+            Enter.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating({})}>
           <Plus data-icon="inline-start" />
           Cadastrar produto
         </Button>
       </header>
       <CreateProductDialog
-        open={creating}
-        onOpenChange={setCreating}
+        open={creating !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setCreating(undefined)
+        }}
+        missingCode={creating?.missingCode}
         noEanImages={noEanImages}
         onSaved={handleCreated}
         getFocusAfterSave={() => codeInput.current}
@@ -236,21 +304,22 @@ export const ProductEditor = ({
         }
       />
 
-      <form onSubmit={search} className="flex items-end gap-2">
+      <form onSubmit={search} role="search" className="flex items-end gap-2">
         <Field className="flex-1" data-invalid={error ? true : undefined}>
-          <FieldLabel htmlFor="code">
-            Código de barras ou código interno
-          </FieldLabel>
+          <FieldLabel htmlFor="code">Buscar produto</FieldLabel>
           <Input
             ref={codeInput}
             id="code"
             name="code"
+            value={value}
+            onChange={(event) => setValue(event.currentTarget.value)}
+            placeholder="Código ou nome"
             autoFocus
             autoComplete="off"
             spellCheck={false}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? 'code-error' : undefined}
-            className="h-12 font-mono text-xl tracking-wider md:text-xl"
+            className="h-12 font-mono text-xl tracking-wider placeholder:font-sans placeholder:tracking-normal md:text-xl"
           />
         </Field>
         <Button
@@ -260,7 +329,7 @@ export const ProductEditor = ({
           disabled={searching}
           focusableWhenDisabled
         >
-          <ScanBarcode data-icon="inline-start" />
+          <Search data-icon="inline-start" aria-hidden />
           Buscar
         </Button>
       </form>
@@ -317,16 +386,35 @@ export const ProductEditor = ({
             tabIndex={-1}
             className="text-lg font-semibold outline-none"
           >
-            Produtos cadastrados
+            Lista de produtos
           </h2>
           <p className="text-sm text-muted-foreground">
-            Clique num produto para alterar os dados ou a foto, ou na lixeira
-            para excluir. Para juntar produtos cadastrados separados por engano,
-            selecione-os e clique em Mesclar.
+            Clique num produto da loja para alterar os dados ou a foto, ou na
+            lixeira para excluir. Um produto do catálogo da comunidade abre já
+            preenchido, pronto para cadastrar. Para juntar produtos cadastrados
+            separados por engano, selecione-os e clique em Mesclar.
           </p>
         </div>
-        <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
-        <ProductSearch query={query} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ToggleGroup
+            variant="outline"
+            spacing={0}
+            aria-label="Origem dos produtos"
+            value={[filter]}
+            onValueChange={([next]) => {
+              if (next !== filter && isProductListFilter(next)) {
+                startSearch(() => showList(query, next))
+              }
+            }}
+          >
+            {FILTERS.map(({ value: option, label }) => (
+              <ToggleGroupItem key={option} value={option}>
+                {label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
+        </div>
         {/* Mounted before the first selection, so the first count is announced too */}
         <p aria-live="polite" className="sr-only">
           {getSelectionSummary(selected.size)}
@@ -363,22 +451,40 @@ export const ProductEditor = ({
             getFinalFocus={() => mergeButton.current ?? getHeading()}
           />
         )}
-        <p aria-live="polite" className="text-sm text-muted-foreground">
-          {getListSummary(productPage, query)}
-        </p>
-        {productPage.products.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {getListSummary(productPage, query, filter)}
+          </p>
+          {productPage.total === 0 &&
+            filter !== 'catalog' &&
+            isCodeLike(query) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCreating({ missingCode: normalizeCode(query) })
+                }
+              >
+                <Plus data-icon="inline-start" aria-hidden />
+                Cadastrar produto com o código {query}
+              </Button>
+            )}
+        </div>
+        {productPage.items.length > 0 && (
           <ProductList
-            products={productPage.products}
+            items={productPage.items}
             busy={searching}
             selectedIds={new Set(selected.keys())}
             onSelect={select}
             onOpen={openProduct}
+            onOpenCatalog={openCatalogProduct}
             onDeleted={handleDeleted}
           />
         )}
         {productPage.pageCount > 1 && (
           <ProductPagination
             query={query}
+            filter={filter}
             page={productPage.page}
             pageCount={productPage.pageCount}
           />

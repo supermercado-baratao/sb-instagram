@@ -1,38 +1,36 @@
 import { randomUUID } from 'node:crypto'
 
-import {
-  and,
-  asc,
-  count,
-  eq,
-  exists,
-  inArray,
-  or,
-  type SQL,
-  sql
-} from 'drizzle-orm'
+import { and, asc, eq, exists, inArray, or, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import { getCatalogProductCodes } from '@/domain/catalog'
 import {
   type CatalogMatch,
+  compareProductListItems,
   getCodeType,
   getPhotoFileName,
+  getProductPage,
   isSameCodeSet,
   isValidCode,
   isValidProductId,
+  matchesProductQuery,
   normalizeCode,
   normalizeCodes,
   normalizeSearchText,
   type Product,
   PRODUCT_SUGGESTION_LIMIT,
   type ProductDetails,
-  type ProductPage,
-  PRODUCTS_PAGE_SIZE
+  type ProductListFilter,
+  type ProductListItem,
+  type ProductPage
 } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import { findCatalogProduct } from '@/infra/catalog/product'
+import {
+  type CatalogEntry,
+  findCatalogProduct,
+  listCatalogEntries
+} from '@/infra/catalog/product'
 import {
   offerPageItems,
   offerPages,
@@ -146,17 +144,7 @@ export const findProductsByCode = async (
   const found = await findCatalogProduct(code, catalog)
   if (!found) return undefined
 
-  const { ean, product } = found
-  return {
-    source: 'catalog',
-    product: {
-      ean,
-      codes: getCatalogProductCodes(ean, product),
-      name: product.name,
-      brand: product.brand,
-      unit: product.unit
-    }
-  }
+  return { source: 'catalog', product: toCatalogMatch(found) }
 }
 
 export class DuplicateCodesError extends Error {
@@ -309,10 +297,15 @@ const contains = (column: SQL | SQLiteColumn, text: string): SQL =>
 
 const productCodeList = sql`(SELECT group_concat(${productCodes.code}, ' ') FROM ${productCodes} WHERE ${productCodes.productId} = ${products.id})`
 
-export const listProducts = (
-  database: Database,
-  { query = '', page = 1 }: { query?: string; page?: number } = {}
-): ProductPage => {
+const toCatalogMatch = ({ ean, product }: CatalogEntry): CatalogMatch => ({
+  ean,
+  codes: getCatalogProductCodes(ean, product),
+  name: product.name,
+  brand: product.brand,
+  unit: product.unit
+})
+
+const listStoreItems = (database: Database, query: string) => {
   const name = query.trim()
   const where =
     name === ''
@@ -321,28 +314,52 @@ export const listProducts = (
           contains(searchText(products.name), normalizeSearchText(name)),
           contains(productCodeList, normalizeCode(query))
         )
+  const rows = database.select().from(products).where(where).all()
+  return attachCodes(database, rows).map((product): ProductListItem => ({
+    origin: 'store',
+    product
+  }))
+}
 
-  const total =
-    database.select({ total: count() }).from(products).where(where).get()
-      ?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE))
-  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount)
+const listCatalogItems = async (
+  database: Database,
+  query: string,
+  catalog: string
+) => {
+  const storeCodes = new Set(
+    database
+      .selectDistinct({ code: productCodes.code })
+      .from(productCodes)
+      .all()
+      .map(({ code }) => code)
+  )
+  const entries = await listCatalogEntries(catalog)
+  return entries
+    .map((entry) => toCatalogMatch(entry))
+    .filter(
+      (product) =>
+        product.codes.every((code) => !storeCodes.has(code)) &&
+        matchesProductQuery(product, query)
+    )
+    .map((product): ProductListItem => ({ origin: 'catalog', product }))
+}
 
-  const rows = database
-    .select()
-    .from(products)
-    .where(where)
-    .orderBy(searchText(products.name), firstProductCode)
-    .limit(PRODUCTS_PAGE_SIZE)
-    .offset((current - 1) * PRODUCTS_PAGE_SIZE)
-    .all()
-
-  return {
-    products: attachCodes(database, rows),
-    total,
-    page: current,
-    pageCount
-  }
+export const listProducts = async (
+  database: Database,
+  {
+    query = '',
+    page = 1,
+    filter = 'all'
+  }: { query?: string; page?: number; filter?: ProductListFilter } = {},
+  { catalog = eanDirectory }: ProductDirectories = {}
+): Promise<ProductPage> => {
+  const items = [
+    ...(filter === 'catalog' ? [] : listStoreItems(database, query)),
+    ...(filter === 'store'
+      ? []
+      : await listCatalogItems(database, query, catalog))
+  ]
+  return getProductPage(items.toSorted(compareProductListItems), page)
 }
 
 export const searchProducts = (

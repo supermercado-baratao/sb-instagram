@@ -8,6 +8,7 @@ import { listNoEanImages } from '@/infra/photo'
 import { listProducts } from '@/infra/product'
 
 import { ProductEditor } from './_components/product-editor'
+import { parseProductListFilter } from './_components/products-href'
 
 export const metadata: Metadata = {
   title: 'Produtos'
@@ -23,8 +24,10 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
   const noEanImages = await listNoEanImages()
   const params = await searchParams
   const query = readParameter(params.q).trim()
-  const productPage = listProducts(database, {
+  const filter = parseProductListFilter(readParameter(params.origem))
+  const productPage = await listProducts(database, {
     query,
+    filter,
     page: Number(readParameter(params.pagina))
   })
 
@@ -35,6 +38,7 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
           noEanImages={noEanImages}
           productPage={productPage}
           query={query}
+          filter={filter}
         />
       </main>
     </AppLayout>

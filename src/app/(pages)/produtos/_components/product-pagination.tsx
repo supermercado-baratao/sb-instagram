@@ -6,22 +6,16 @@ import {
   PaginationPrevious
 } from '@/app/components/ui/shadcn/pagination'
 
-type ProductPaginationProps = {
-  query: string
+import { getProductsHref, type ProductsView } from './products-href'
+
+type ProductPaginationProps = ProductsView & {
   page: number
   pageCount: number
 }
 
-const getPageHref = (query: string, page: number) => {
-  const params = new URLSearchParams()
-  if (query !== '') params.set('q', query)
-  if (page > 1) params.set('pagina', String(page))
-  const search = params.toString()
-  return search === '' ? '/produtos' : `/produtos?${search}`
-}
-
 export const ProductPagination = ({
   query,
+  filter,
   page,
   pageCount
 }: ProductPaginationProps) => (
@@ -30,7 +24,7 @@ export const ProductPagination = ({
       {page > 1 && (
         <PaginationItem>
           <PaginationPrevious
-            href={getPageHref(query, page - 1)}
+            href={getProductsHref({ query, filter, page: page - 1 })}
             text="Anterior"
             aria-label="Página anterior"
           />
@@ -42,7 +36,7 @@ export const ProductPagination = ({
       {page < pageCount && (
         <PaginationItem>
           <PaginationNext
-            href={getPageHref(query, page + 1)}
+            href={getProductsHref({ query, filter, page: page + 1 })}
             text="Próxima"
             aria-label="Próxima página"
           />
