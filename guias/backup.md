@@ -1,6 +1,6 @@
 # Backup e restauração
 
-Tudo o que o mercado cadastra no app fica no volume de dados do Docker: o banco (produtos, ofertas, marca e modelos de arte), as fotos dos produtos e o logo. O backup é uma cópia desse volume num único arquivo, `sb-instagram-backup.tar.gz`.
+Tudo o que o mercado cadastra no app fica no volume de dados do Docker: o banco (produtos, ofertas, marca e modelos de arte), as fotos dos produtos, o logo e as ofertas geradas (imagens e PDFs). O backup é uma cópia desse volume num único arquivo, `sb-instagram-backup.tar.gz`.
 
 Faça um backup antes de cada [atualização](./atualizacao.md) e, de tempos em tempos, guarde uma cópia fora do computador do app (num pendrive, num HD externo ou na nuvem). Se esse computador quebrar, é essa cópia que salva os dados do mercado.
 

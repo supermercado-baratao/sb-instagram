@@ -103,6 +103,30 @@ export const offerPageItems = sqliteTable(
   ]
 )
 
+// What an offer looked like when it was generated, so editing a product or the brand later never
+// changes it. AUTOINCREMENT never reuses an id, so the files' URLs can be cached as immutable
+export const offerGenerations = sqliteTable(
+  'offer_generations',
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    offerId: integer()
+      .notNull()
+      .references(() => offers.id, { onDelete: 'cascade' }),
+    number: integer().notNull(),
+    offerExport: text().notNull(),
+    pageCount: integer().notNull(),
+    createdAt: integer({ mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(() => new Date())
+  },
+  (table) => [
+    uniqueIndex('offer_generations_offer_id_number_unique').on(
+      table.offerId,
+      table.number
+    )
+  ]
+)
+
 // One row per instance, since each store runs its own instance
 export const brand = sqliteTable(
   'brand',

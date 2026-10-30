@@ -20,6 +20,6 @@ export const duplicateOfferAction = async (id: number) => {
 }
 
 export const deleteOfferAction = async (id: number) => {
-  deleteOffer(database, id)
+  await deleteOffer(database, id)
   refresh()
 }

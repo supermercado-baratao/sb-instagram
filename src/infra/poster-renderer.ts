@@ -74,3 +74,10 @@ export const renderPosterPdf = async (path: string) => {
     await page.close()
   }
 }
+
+export const offerRenderer = {
+  renderPage: (offerId: number, pageNumber: number) =>
+    renderPosterPng(`/ofertas/${offerId}/render/${pageNumber}`),
+  renderPdf: (offerId: number) =>
+    renderPosterPdf(`/ofertas/${offerId}/impressao`)
+}

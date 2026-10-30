@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises'
+
 import { count, desc, eq } from 'drizzle-orm'
 
 import {
@@ -10,7 +12,16 @@ import {
 } from '@/domain/offer'
 import { DEFAULT_POSTER_LAYOUT, isPosterLayout } from '@/domain/poster'
 import type { Database } from '@/infra/database/relations'
-import { offerPageItems, offerPages, offers } from '@/infra/database/schema'
+import {
+  offerGenerations,
+  offerPageItems,
+  offerPages,
+  offers
+} from '@/infra/database/schema'
+import {
+  generationsDirectory,
+  getGenerationFolder
+} from '@/infra/generations-directory'
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 
@@ -147,6 +158,27 @@ export const duplicateOffer = (database: Database, id: number) => {
   return createOffer(database, { ...offer, name: getCopyName(offer.name) })
 }
 
-export const deleteOffer = (database: Database, id: number) => {
-  database.delete(offers).where(eq(offers.id, id)).run()
+// The generations' rows go with the offer (cascade), but their files must be removed by hand
+export const deleteOffer = async (
+  database: Database,
+  id: number,
+  { generations = generationsDirectory }: { generations?: string } = {}
+) => {
+  const generationIds = database.transaction((transaction) => {
+    const rows = transaction
+      .select({ id: offerGenerations.id })
+      .from(offerGenerations)
+      .where(eq(offerGenerations.offerId, id))
+      .all()
+    transaction.delete(offers).where(eq(offers.id, id)).run()
+    return rows.map((row) => row.id)
+  })
+  await Promise.all(
+    generationIds.map((generationId) =>
+      rm(getGenerationFolder(generationId, generations), {
+        recursive: true,
+        force: true
+      })
+    )
+  )
 }

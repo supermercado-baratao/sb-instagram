@@ -5,7 +5,7 @@ import { unzipSync } from 'fflate'
 
 import { POSTER_SIZE } from '@/domain/poster'
 
-test('fills an offer page, saves it, downloads its pages as PNG, prints them and exports its products', async ({
+test('fills an offer page, saves it, generates it and keeps the generation when a product changes', async ({
   page
 }) => {
   // On a cold `next dev` this test compiles most routes and launches the poster renderer's
@@ -45,8 +45,24 @@ test('fills an offer page, saves it, downloads its pages as PNG, prints them and
   await page.reload()
   await expect(price).toHaveValue('7,89')
 
+  await page.getByRole('button', { name: 'Gerar' }).click()
+  await expect(page.getByText('Geração 1 pronta.')).toBeVisible()
+  const generation = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: 'Geração 1' })
+  })
+  await expect(
+    generation.getByRole('img', { name: /Página 1 da geração 1/ })
+  ).toBeVisible()
+
+  // The generation keeps what was generated, so a product changed later never reaches it
+  await page.getByRole('button', { name: 'Editar Feijão carioca' }).click()
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await editDialog.getByLabel('Nome').fill('Feijão preto')
+  await editDialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText('Feijão preto atualizado.')).toBeVisible()
+
   const downloadEvent = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Baixar páginas (PNG)' }).click()
+  await generation.getByRole('link', { name: 'Baixar páginas (PNG)' }).click()
   const download = await downloadEvent
   const zip = unzipSync(await readFile(await download.path()))
 
@@ -63,7 +79,7 @@ test('fills an offer page, saves it, downloads its pages as PNG, prints them and
     .waitForEvent('request', (request) =>
       request.url().endsWith('/paginas.pdf')
     )
-  await page.getByRole('link', { name: /Imprimir páginas/ }).click()
+  await generation.getByRole('link', { name: /Imprimir páginas/ }).click()
   const pdfRequest = await pdfEvent
   // A downloaded response has no body to read, so the PDF is fetched again
   const response = await page.request.get(pdfRequest.url())
@@ -77,7 +93,9 @@ test('fills an offer page, saves it, downloads its pages as PNG, prints them and
   const jsonEvent = page.waitForEvent('download', (download) =>
     download.suggestedFilename().endsWith('.json')
   )
-  await page.getByRole('link', { name: 'Exportar produtos (JSON)' }).click()
+  await generation
+    .getByRole('link', { name: 'Exportar produtos (JSON)' })
+    .click()
   const jsonDownload = await jsonEvent
   const json = JSON.parse(await readFile(await jsonDownload.path(), 'utf8'))
   expect(json.pages).toEqual([
@@ -94,6 +112,15 @@ test('fills an offer page, saves it, downloads its pages as PNG, prints them and
       ]
     }
   ])
+
+  await generation.getByRole('button', { name: 'Excluir a geração 1' }).click()
+  await page
+    .getByRole('alertdialog', { name: 'Excluir a geração 1?' })
+    .getByRole('button', { name: 'Excluir' })
+    .click()
+  await expect(page.getByText('Geração 1 excluída.')).toBeVisible()
+  await expect(page.getByText('Nenhuma geração ainda.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gerações' })).toBeFocused()
 })
 
 test('registers a missing product from an offer slot', async ({ page }) => {

@@ -1,15 +1,7 @@
 'use client'
 
 import { cn } from 'cn'
-import {
-  ArrowLeft,
-  CircleAlert,
-  Download,
-  FileBraces,
-  Plus,
-  Printer,
-  Save
-} from 'lucide-react'
+import { ArrowLeft, CircleAlert, Images, Plus, Save } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
@@ -35,10 +27,12 @@ import {
   removePage,
   replaceProduct
 } from '@/domain/offer'
+import type { OfferGeneration } from '@/domain/offer-generation'
 import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
-import { saveOfferAction } from '../actions'
+import { generateOfferAction, saveOfferAction } from '../actions'
+import { OfferGenerations } from './offer-generations'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
 import { PosterStage } from './poster-stage'
@@ -50,6 +44,7 @@ type OfferEditorProps = {
   brand: Brand
   templates: PosterTemplate[]
   noEanImages: string[]
+  generations: OfferGeneration[]
 }
 
 type Status = {
@@ -67,7 +62,8 @@ export const OfferEditor = ({
   offer,
   brand,
   templates,
-  noEanImages
+  noEanImages,
+  generations
 }: OfferEditorProps) => {
   const [content, setContent] = useState(offer)
   const [saved, setSaved] = useState(offer)
@@ -80,7 +76,7 @@ export const OfferEditor = ({
   // A photo keeps its URL when it changes, so an edited product needs a new one to reload it
   const [photoVersion, setPhotoVersion] = useState<number>()
   const [saving, startSave] = useTransition()
-  const [downloading, startDownload] = useTransition()
+  const [generating, startGenerate] = useTransition()
   const dirty = content !== saved
 
   const selectedIndex = Math.max(pageKeys.indexOf(selectedKey), 0)
@@ -179,24 +175,17 @@ export const OfferEditor = ({
     })
   }
 
-  const download = () => {
-    show({ kind: 'info', message: 'Gerando as imagens das páginas…' })
-    startDownload(async () => {
-      const response = await fetch(`/ofertas/${id}/paginas.zip`)
-      if (!response.ok) {
-        show({
-          kind: 'error',
-          message: 'Não foi possível gerar as imagens. Tente de novo.'
-        })
+  const generate = () => {
+    show({ kind: 'info', message: 'Gerando as páginas…' })
+    startGenerate(async () => {
+      const result = await generateOfferAction(id)
+      setStatus(undefined)
+      toast.dismiss()
+      if (result.status === 'error') {
+        toast.error(result.message, { duration: Infinity })
         return
       }
-      const url = URL.createObjectURL(await response.blob())
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `oferta-${id}.zip`
-      link.click()
-      URL.revokeObjectURL(url)
-      show({ kind: 'info', message: 'Imagens baixadas.' })
+      toast.success(`Geração ${result.number} pronta.`)
     })
   }
 
@@ -226,57 +215,18 @@ export const OfferEditor = ({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={dirty || downloading}
+              disabled={dirty || generating}
               focusableWhenDisabled
-              aria-describedby={dirty ? 'download-hint' : undefined}
-              onClick={download}
+              aria-describedby={dirty ? 'generate-hint' : undefined}
+              onClick={generate}
             >
-              <Download data-icon="inline-start" aria-hidden />
-              Baixar páginas (PNG)
+              {generating ? (
+                <Spinner data-icon="inline-start" aria-hidden />
+              ) : (
+                <Images data-icon="inline-start" aria-hidden />
+              )}
+              {generating ? 'Gerando…' : 'Gerar'}
             </Button>
-            {dirty ? (
-              // A link can't be disabled, so it stays a button until the offer is saved
-              <Button
-                variant="outline"
-                disabled
-                focusableWhenDisabled
-                aria-describedby="download-hint"
-              >
-                <Printer data-icon="inline-start" aria-hidden />
-                Imprimir páginas
-              </Button>
-            ) : (
-              <a
-                href={`/ofertas/${id}/paginas.pdf`}
-                target="_blank"
-                rel="noopener"
-                className={buttonVariants({ variant: 'outline' })}
-              >
-                <Printer data-icon="inline-start" aria-hidden />
-                Imprimir páginas
-                <span className="sr-only"> (abre em nova aba)</span>
-              </a>
-            )}
-            {dirty ? (
-              <Button
-                variant="outline"
-                disabled
-                focusableWhenDisabled
-                aria-describedby="download-hint"
-              >
-                <FileBraces data-icon="inline-start" aria-hidden />
-                Exportar produtos (JSON)
-              </Button>
-            ) : (
-              <a
-                href={`/ofertas/${id}/ofertas.json`}
-                download
-                className={buttonVariants({ variant: 'outline' })}
-              >
-                <FileBraces data-icon="inline-start" aria-hidden />
-                Exportar produtos (JSON)
-              </a>
-            )}
             <Button disabled={saving} focusableWhenDisabled onClick={save}>
               {saving ? (
                 <Spinner data-icon="inline-start" aria-hidden />
@@ -288,8 +238,8 @@ export const OfferEditor = ({
           </div>
         </div>
         {dirty && (
-          <p id="download-hint" className="text-sm text-muted-foreground">
-            Salve a oferta para baixar, imprimir ou exportar.
+          <p id="generate-hint" className="text-sm text-muted-foreground">
+            Salve a oferta para gerar as páginas.
           </p>
         )}
         <div aria-live="polite" className="min-h-5">
@@ -426,6 +376,8 @@ export const OfferEditor = ({
               </TabsContent>
             </Tabs>
           </section>
+
+          <OfferGenerations generations={generations} />
         </div>
 
         <aside

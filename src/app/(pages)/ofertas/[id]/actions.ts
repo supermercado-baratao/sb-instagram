@@ -1,10 +1,17 @@
 'use server'
 
+import { refresh } from 'next/cache'
+
 import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
 import { isOfferContent } from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
 import { database } from '@/infra/database/client'
 import { saveOffer } from '@/infra/offer'
+import {
+  createOfferGeneration,
+  deleteOfferGeneration
+} from '@/infra/offer-generation'
+import { offerRenderer } from '@/infra/poster-renderer'
 import { findProductsByCode, saveProduct } from '@/infra/product'
 
 export type SlotLookupResult =
@@ -16,6 +23,14 @@ export type SlotLookupResult =
 
 export type SaveOfferResult =
   { status: 'saved' } | { status: 'error'; message: string }
+
+export type GenerateOfferResult =
+  { status: 'generated'; number: number } | { status: 'error'; message: string }
+
+export type DeleteGenerationResult =
+  { status: 'deleted' } | { status: 'error'; message: string }
+
+const MISSING_OFFER_MESSAGE = 'Esta oferta não existe mais.'
 
 export const lookupSlotProduct = async (
   rawCode: string
@@ -62,12 +77,54 @@ export const saveOfferAction = async (
     })
     return saved
       ? { status: 'saved' }
-      : { status: 'error', message: 'Esta oferta não existe mais.' }
+      : { status: 'error', message: MISSING_OFFER_MESSAGE }
   } catch {
     // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
     return {
       status: 'error',
       message: 'Não foi possível salvar. Algum produto não está cadastrado.'
+    }
+  }
+}
+
+export const generateOfferAction = async (
+  id: number
+): Promise<GenerateOfferResult> => {
+  if (!Number.isSafeInteger(id)) {
+    return { status: 'error', message: MISSING_OFFER_MESSAGE }
+  }
+  try {
+    const generation = await createOfferGeneration(database, id, offerRenderer)
+    if (!generation) return { status: 'error', message: MISSING_OFFER_MESSAGE }
+    refresh()
+    return { status: 'generated', number: generation.number }
+  } catch {
+    return {
+      status: 'error',
+      message: 'Não foi possível gerar a oferta. Tente de novo.'
+    }
+  }
+}
+
+export const deleteOfferGenerationAction = async (
+  offerId: number,
+  generationId: number
+): Promise<DeleteGenerationResult> => {
+  const missing = {
+    status: 'error',
+    message: 'Esta geração não existe mais.'
+  } as const
+  if (!Number.isSafeInteger(offerId) || !Number.isSafeInteger(generationId)) {
+    return missing
+  }
+  try {
+    const deleted = await deleteOfferGeneration(database, offerId, generationId)
+    refresh()
+    return deleted ? { status: 'deleted' } : missing
+  } catch {
+    return {
+      status: 'error',
+      message: 'Não foi possível excluir a geração. Tente de novo.'
     }
   }
 }
