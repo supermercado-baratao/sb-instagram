@@ -5,7 +5,7 @@ import { unzipSync } from 'fflate'
 
 import { POSTER_SIZE } from '@/domain/poster'
 
-test('fills an offer page, saves it, downloads its pages as PNG and prints them', async ({
+test('fills an offer page, saves it, downloads its pages as PNG, prints them and exports its products', async ({
   page
 }) => {
   // On a cold `next dev` this test compiles most routes and launches the poster renderer's
@@ -72,6 +72,28 @@ test('fills an offer page, saves it, downloads its pages as PNG and prints them'
   const pdf = body.toString('latin1')
   // One sheet per offer page; `/Type /Pages` is the page tree, not a sheet
   expect(pdf.match(/\/Type\s*\/Page\b/g)).toHaveLength(1)
+
+  // The PDF popup may still deliver its own download, so the JSON one is picked by name
+  const jsonEvent = page.waitForEvent('download', (download) =>
+    download.suggestedFilename().endsWith('.json')
+  )
+  await page.getByRole('link', { name: 'Exportar produtos (JSON)' }).click()
+  const jsonDownload = await jsonEvent
+  const json = JSON.parse(await readFile(await jsonDownload.path(), 'utf8'))
+  expect(json.pages).toEqual([
+    {
+      number: 1,
+      products: [
+        {
+          name: 'Feijão carioca',
+          brand: null,
+          unit: null,
+          codes: [code],
+          price: '7,89'
+        }
+      ]
+    }
+  ])
 })
 
 test('registers a missing product from an offer slot', async ({ page }) => {

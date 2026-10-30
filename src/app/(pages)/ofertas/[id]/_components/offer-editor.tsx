@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CircleAlert,
   Download,
+  FileBraces,
   Plus,
   Printer,
   Save
@@ -256,6 +257,26 @@ export const OfferEditor = ({
                 <span className="sr-only"> (abre em nova aba)</span>
               </a>
             )}
+            {dirty ? (
+              <Button
+                variant="outline"
+                disabled
+                focusableWhenDisabled
+                aria-describedby="download-hint"
+              >
+                <FileBraces data-icon="inline-start" aria-hidden />
+                Exportar produtos (JSON)
+              </Button>
+            ) : (
+              <a
+                href={`/ofertas/${id}/ofertas.json`}
+                download
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                <FileBraces data-icon="inline-start" aria-hidden />
+                Exportar produtos (JSON)
+              </a>
+            )}
             <Button disabled={saving} focusableWhenDisabled onClick={save}>
               {saving ? (
                 <Spinner data-icon="inline-start" aria-hidden />
@@ -268,7 +289,7 @@ export const OfferEditor = ({
         </div>
         {dirty && (
           <p id="download-hint" className="text-sm text-muted-foreground">
-            Salve a oferta para baixar ou imprimir as páginas.
+            Salve a oferta para baixar, imprimir ou exportar.
           </p>
         )}
         <div aria-live="polite" className="min-h-5">
