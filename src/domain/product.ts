@@ -13,22 +13,26 @@ export type Product = {
   name: string
   brand: string | null
   unit: string | null
+  // How the radio ad speaks it; null falls back to suggestVoiceText (#72)
+  voiceText: string | null
   photo: string | null
 }
 
 export type ProductDetails = Pick<Product, 'name' | 'brand' | 'unit'>
 
+export type ProductFields = ProductDetails & Pick<Product, 'voiceText'>
+
 export type ProductChange = {
-  field: keyof ProductDetails
+  field: keyof ProductFields
   from: string | null
   to: string | null
 }
 
-const DETAIL_FIELDS = ['name', 'brand', 'unit'] as const
+const DETAIL_FIELDS = ['name', 'brand', 'unit', 'voiceText'] as const
 
 export const getProductChanges = (
-  current: ProductDetails,
-  next: ProductDetails
+  current: ProductFields,
+  next: ProductFields
 ): ProductChange[] =>
   DETAIL_FIELDS.filter((field) => current[field] !== next[field]).map(
     (field) => ({ field, from: current[field], to: next[field] })

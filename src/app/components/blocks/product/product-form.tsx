@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from 'cn'
-import { CircleAlert, ImageOff, Save } from 'lucide-react'
+import { CircleAlert, ImageOff, Save, Sparkles } from 'lucide-react'
 import {
   type ChangeEvent,
   type FormEvent,
@@ -12,6 +12,7 @@ import {
   useState,
   useTransition
 } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
@@ -30,7 +31,7 @@ import {
   type ProductDetails
 } from '@/domain/product'
 
-import { saveProductForm } from './actions'
+import { saveProductForm, suggestProductVoiceText } from './actions'
 import { CatalogImagePicker } from './catalog-image-picker'
 import { CodesField } from './codes-field'
 import {
@@ -42,7 +43,8 @@ type ProductFormProps = {
   // Left out for a new product
   productId?: string
   codes: string[]
-  product?: ProductDetails
+  // A catalog product has no voice text yet
+  product?: ProductDetails & Partial<Pick<Product, 'voiceText'>>
   photoUrl?: string
   // The catalog image photoUrl shows, copied when a new product is saved
   catalogEan?: string
@@ -78,10 +80,15 @@ export const ProductForm = ({
   const [error, setError] = useState<string>()
   const [photoError, setPhotoError] = useState<string>()
   const [saving, startSave] = useTransition()
+  const [voiceText, setVoiceText] = useState(product?.voiceText ?? '')
+  const [suggesting, startSuggest] = useTransition()
   const [replaceRequest, setReplaceRequest] = useState<ReplaceRequest>()
   const [replaceOpen, setReplaceOpen] = useState(false)
   const pendingForm = useRef<FormData>(undefined)
+  const form = useRef<HTMLFormElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
+  const voiceInput = useRef<HTMLInputElement>(null)
+  const suggestButton = useRef<HTMLButtonElement>(null)
   const photoInput = useRef<HTMLInputElement>(null)
   // The dialog can open over the form on /produtos, so ids must not repeat
   const id = useId()
@@ -136,6 +143,36 @@ export const ProductForm = ({
     if (photoInput.current) photoInput.current.value = ''
   }
 
+  const suggestVoiceText = () => {
+    if (!form.current) return
+    const formData = new FormData(form.current)
+    const read = (name: string) => {
+      const value = formData.get(name)
+      return typeof value === 'string' ? value : ''
+    }
+    startSuggest(async () => {
+      try {
+        setVoiceText(
+          await suggestProductVoiceText({
+            name: read('name'),
+            brand: read('brand'),
+            unit: read('unit')
+          })
+        )
+      } catch {
+        // A suggestion is optional, so failing it must not cost the form what was typed
+        toast.error('Não foi possível sugerir o texto. Tente de novo.', {
+          duration: Infinity
+        })
+        return
+      }
+      // Someone who moved on while it loaded keeps the focus where they went
+      if (document.activeElement === suggestButton.current) {
+        voiceInput.current?.focus()
+      }
+    })
+  }
+
   const send = (formData: FormData) => {
     startSave(async () => {
       const result = await saveProductForm(formData)
@@ -179,6 +216,7 @@ export const ProductForm = ({
   return (
     <>
       <form
+        ref={form}
         onSubmit={save}
         aria-labelledby={`${id}-title`}
         className={cn('flex flex-col gap-6', className)}
@@ -272,6 +310,47 @@ export const ProductForm = ({
                 />
               </Field>
             </div>
+            <Field>
+              <FieldLabel htmlFor={`${id}-voice-text`}>
+                Texto da locução
+              </FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  ref={voiceInput}
+                  id={`${id}-voice-text`}
+                  name="voiceText"
+                  autoComplete="off"
+                  aria-describedby={`${id}-voice-text-description`}
+                  value={voiceText}
+                  onChange={(event) => setVoiceText(event.target.value)}
+                />
+                <Button
+                  ref={suggestButton}
+                  type="button"
+                  variant="outline"
+                  aria-label={
+                    suggesting
+                      ? 'Sugerindo texto da locução…'
+                      : 'Sugerir texto da locução'
+                  }
+                  disabled={suggesting}
+                  focusableWhenDisabled
+                  onClick={suggestVoiceText}
+                >
+                  {suggesting ? (
+                    <Spinner data-icon="inline-start" aria-hidden />
+                  ) : (
+                    <Sparkles data-icon="inline-start" aria-hidden />
+                  )}
+                  {suggesting ? 'Sugerindo…' : 'Sugerir'}
+                </Button>
+              </div>
+              <FieldDescription id={`${id}-voice-text-description`}>
+                Como o produto é falado no comercial da rádio, com números e
+                medidas por extenso. Vazio, o comercial usa a sugestão. Sugerir
+                troca o texto do campo.
+              </FieldDescription>
+            </Field>
             {codeField && codesField}
           </FieldGroup>
         </div>

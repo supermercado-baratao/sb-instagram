@@ -15,8 +15,10 @@ import {
   normalizeCodes,
   PHOTO_MAX_MEGABYTES,
   type Product,
-  type ProductChange
+  type ProductChange,
+  type ProductDetails
 } from '@/domain/product'
+import { suggestVoiceText } from '@/domain/spoken-text'
 import { database } from '@/infra/database/client'
 import {
   DuplicateCodesError,
@@ -29,6 +31,7 @@ import {
   saveProduct,
   searchProducts
 } from '@/infra/product'
+import { listPronunciations } from '@/infra/pronunciation'
 
 export type LookupResult =
   // Every product of the instance with the code, a single product before the groups
@@ -71,6 +74,23 @@ export const lookupProduct = async (rawCode: string): Promise<LookupResult> => {
 export const searchInstanceProducts = async (
   query: string
 ): Promise<Product[]> => searchProducts(database, query)
+
+const readUnknownText = (value: unknown) =>
+  typeof value === 'string' ? value.trim() : ''
+
+// Takes what the form holds, saved or not, since the store suggests while it types
+export const suggestProductVoiceText = async (
+  details: Record<keyof ProductDetails, unknown>
+): Promise<string> => {
+  return suggestVoiceText(
+    {
+      name: readUnknownText(details.name),
+      brand: readUnknownText(details.brand) || null,
+      unit: readUnknownText(details.unit) || null
+    },
+    listPronunciations(database)
+  )
+}
 
 const readText = (formData: FormData, name: string) => {
   const value = formData.get(name)
@@ -122,7 +142,8 @@ export const saveProductForm = async (
   const details = {
     name,
     brand: readText(formData, 'brand') || null,
-    unit: readText(formData, 'unit') || null
+    unit: readText(formData, 'unit') || null,
+    voiceText: readText(formData, 'voiceText') || null
   }
 
   const formId = readText(formData, 'id')

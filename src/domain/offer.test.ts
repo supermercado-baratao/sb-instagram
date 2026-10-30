@@ -28,6 +28,7 @@ const item: OfferItem = {
     name: 'Picanha bovina',
     brand: null,
     unit: 'Kg',
+    voiceText: null,
     photo: null
   },
   priceInCents: 6990

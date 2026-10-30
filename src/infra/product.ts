@@ -170,6 +170,8 @@ export type ProductInput = ProductDetails & {
   // Left out for a new product
   id?: string
   codes: string[]
+  // Left out, the current text stays
+  voiceText?: string | null
   // Left out, the current photo stays, renamed if the codes change its file name
   photo?: PhotoSource
 }
@@ -257,6 +259,10 @@ export const saveProduct = async (
     name: input.name,
     brand: input.brand,
     unit: input.unit,
+    voiceText:
+      input.voiceText === undefined
+        ? (current?.voiceText ?? null)
+        : input.voiceText,
     photo
   }
 
@@ -268,6 +274,7 @@ export const saveProduct = async (
       name: saved.name,
       brand: saved.brand,
       unit: saved.unit,
+      voiceText: saved.voiceText,
       photo
     }
     transaction

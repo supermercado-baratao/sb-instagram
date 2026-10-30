@@ -6,6 +6,7 @@ import { CircleAlert, ImageOff, Plus, Save, Trash2 } from 'lucide-react'
 import {
   type ChangeEvent,
   type FormEvent,
+  type ReactNode,
   useEffect,
   useRef,
   useState,
@@ -51,6 +52,8 @@ type BrandSettingsFormProps = {
   firstSetup: boolean
   initialContent: BrandContent
   initialLogoUrl: string | null
+  // Left out on the first setup, which has nowhere else to go
+  nav?: ReactNode
 }
 
 type Status = {
@@ -78,7 +81,8 @@ const STATUS_ID = 'brand-status'
 export const BrandSettingsForm = ({
   firstSetup,
   initialContent,
-  initialLogoUrl
+  initialLogoUrl,
+  nav
 }: BrandSettingsFormProps) => {
   const [content, setContent] = useState(initialContent)
   const [saved, setSaved] = useState(initialContent)
@@ -218,6 +222,7 @@ export const BrandSettingsForm = ({
 
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
+      {nav}
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           {firstSetup ? 'Boas-vindas! Configure a sua marca' : 'Marca'}

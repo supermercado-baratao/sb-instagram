@@ -19,6 +19,7 @@ const eanProduct: Product = {
   name: 'Leite Condensado',
   brand: 'Moça',
   unit: '395 g',
+  voiceText: null,
   photo: `${EAN}.png`
 }
 
@@ -28,6 +29,7 @@ const internalProduct: Product = {
   name: 'Pão Francês',
   brand: null,
   unit: null,
+  voiceText: null,
   photo: '2001.png'
 }
 

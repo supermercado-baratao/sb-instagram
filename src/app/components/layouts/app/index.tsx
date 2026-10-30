@@ -64,7 +64,7 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
                 <NavLink href="/produtos">Produtos</NavLink>
               </li>
               <li>
-                <NavLink href={SETTINGS_PATH}>Marca</NavLink>
+                <NavLink href={SETTINGS_PATH}>Configurações</NavLink>
               </li>
             </ul>
           </nav>
