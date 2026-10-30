@@ -6,6 +6,7 @@ import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { database } from '@/infra/database/client'
 import { findOffer } from '@/infra/offer'
+import { listOfferGenerations } from '@/infra/offer-generation'
 import { listNoEanImages } from '@/infra/photo'
 
 import { OfferEditor } from './_components/offer-editor'
@@ -37,6 +38,7 @@ const OfferPage = async ({ params }: PageProps<'/ofertas/[id]'>) => {
         brand={getPosterBrand(brand)}
         templates={templates}
         noEanImages={noEanImages}
+        generations={listOfferGenerations(database, id)}
       />
     </AppLayout>
   )

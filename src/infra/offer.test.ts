@@ -124,11 +124,11 @@ describe('listOffers', () => {
 })
 
 describe('deleteOffer', () => {
-  test('removes the offer with its pages and items', () => {
+  test('removes the offer with its pages and items', async () => {
     const database = setup()
     const id = createOffer(database, withProduct())
 
-    deleteOffer(database, id)
+    await deleteOffer(database, id)
 
     expect(listOffers(database)).toEqual([])
     expect(database.select().from(offerPageItems).all()).toEqual([])
