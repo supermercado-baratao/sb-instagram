@@ -15,6 +15,7 @@ const product: Product = {
   name: 'Leite integral',
   brand: 'Italac',
   unit: '1L',
+  voiceText: null,
   photo: '7891000100103.png'
 }
 

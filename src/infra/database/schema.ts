@@ -18,6 +18,8 @@ export const products = sqliteTable(
     name: text().notNull(),
     brand: text(),
     unit: text(),
+    // How the radio ad speaks the product; null falls back to suggestVoiceText (#72)
+    voiceText: text(),
     // File name inside photos/, derived by getPhotoFileName and renamed when the codes change
     photo: text()
   },
@@ -131,4 +133,16 @@ export const templates = sqliteTable(
     position: integer().notNull()
   },
   (table) => [primaryKey({ columns: [table.id] })]
+)
+
+// Rewritten as a whole on save, like templates; terms are unique ignoring case, which
+// getPronunciationsError checks, since SQLite's NOCASE only folds ASCII
+export const pronunciations = sqliteTable(
+  'pronunciations',
+  {
+    term: text().notNull(),
+    spoken: text().notNull(),
+    position: integer().notNull()
+  },
+  (table) => [primaryKey({ columns: [table.term] })]
 )

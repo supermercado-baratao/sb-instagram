@@ -3,11 +3,13 @@ import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
+import { SETTINGS_PATH } from '@/app/helpers/brand-settings'
 import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
 
 import { BrandSettingsForm } from './_components/brand-settings-form'
+import { SettingsNav } from './_components/settings-nav'
 
 export const generateMetadata = async (): Promise<Metadata> => {
   await connection()
@@ -26,6 +28,7 @@ const SettingsPage = async () => {
       firstSetup={!settings}
       initialContent={createBrandContent(settings)}
       initialLogoUrl={settings ? getLogoUrl(settings.brand) : null}
+      nav={settings && <SettingsNav current={SETTINGS_PATH} />}
     />
   )
 

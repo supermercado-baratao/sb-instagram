@@ -33,7 +33,8 @@ type ReplaceProductDialogProps = {
 const FIELD_LABELS: Record<ProductChange['field'], string> = {
   name: 'Nome',
   brand: 'Marca',
-  unit: 'Unidade'
+  unit: 'Unidade',
+  voiceText: 'Texto da locução'
 }
 
 const PHOTO_CHANGE_LABELS: Record<NonNullable<PhotoChange>, string> = {

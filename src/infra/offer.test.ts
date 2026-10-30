@@ -25,6 +25,7 @@ const product: Product = {
   name: 'Leite Condensado',
   brand: 'Moça',
   unit: '395 g',
+  voiceText: null,
   photo: null
 }
 

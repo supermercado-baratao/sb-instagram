@@ -38,7 +38,12 @@ describe('normalizeSearchText', () => {
 })
 
 describe('getProductChanges', () => {
-  const current = { name: 'Arroz agulhinha', brand: 'Camil', unit: '5 kg' }
+  const current = {
+    name: 'Arroz agulhinha',
+    brand: 'Camil',
+    unit: '5 kg',
+    voiceText: null
+  }
 
   test('finds no change in the same details', () => {
     expect(getProductChanges(current, { ...current })).toEqual([])
@@ -49,7 +54,8 @@ describe('getProductChanges', () => {
       getProductChanges(current, {
         name: 'Arroz agulhinha tipo 1',
         brand: null,
-        unit: '5 kg'
+        unit: '5 kg',
+        voiceText: 'Arroz agulhinha Camil'
       })
     ).toEqual([
       {
@@ -57,7 +63,8 @@ describe('getProductChanges', () => {
         from: 'Arroz agulhinha',
         to: 'Arroz agulhinha tipo 1'
       },
-      { field: 'brand', from: 'Camil', to: null }
+      { field: 'brand', from: 'Camil', to: null },
+      { field: 'voiceText', from: null, to: 'Arroz agulhinha Camil' }
     ])
   })
 })

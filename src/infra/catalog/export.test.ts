@@ -70,7 +70,7 @@ const setup = async () => {
   migrate(database, { migrationsFolder })
 
   const addProduct = async (
-    { codes, ...product }: Omit<Product, 'id' | 'photo'>,
+    { codes, ...product }: Omit<Product, 'id' | 'photo' | 'voiceText'>,
     photo?: Buffer
   ) => {
     const id = randomUUID()

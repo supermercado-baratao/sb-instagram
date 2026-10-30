@@ -58,7 +58,8 @@ test('products-by-id keeps each product, its codes and the offer items', async (
 
   const rows = sqlite
     .prepare(
-      `SELECT products.*, group_concat(product_codes.code, ',') AS codes
+      `SELECT products.id, products.name, products.brand, products.unit, products.photo,
+         group_concat(product_codes.code, ',') AS codes
        FROM products JOIN product_codes ON product_codes.productId = products.id
        GROUP BY products.id ORDER BY products.name`
     )

@@ -16,6 +16,7 @@ const item = (name: string, priceInCents: number): OfferItem => ({
     name,
     brand: 'Marca',
     unit: '500g',
+    voiceText: null,
     photo: 'foto.png'
   },
   priceInCents

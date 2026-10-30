@@ -80,6 +80,7 @@ const setup = async () => {
       name,
       brand: null,
       unit: null,
+      voiceText: null,
       photo: null,
       ...details
     }
