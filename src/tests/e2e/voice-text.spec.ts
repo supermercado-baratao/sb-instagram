@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('suggests the voice text of a product through the saved dictionary', async ({
+test('saves the radio ad settings and suggests the voice text through the dictionary', async ({
   page
 }) => {
   test.slow()
@@ -11,8 +11,11 @@ test('suggests the voice text of a product through the saved dictionary', async 
   await page.getByRole('button', { name: 'Adicionar termo' }).click()
   await page.getByLabel('Termo', { exact: true }).fill('cream cracker')
   await page.getByLabel('Como falar').fill('kreme cráquer')
+  await page.getByLabel('Abertura').fill('[animado] Atenção!')
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Configurações salvas.')).toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Abertura')).toHaveValue('[animado] Atenção!')
 
   const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
   await page.goto('/produtos')

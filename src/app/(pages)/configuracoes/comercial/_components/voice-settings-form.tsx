@@ -15,24 +15,28 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
   Field,
+  FieldDescription,
   FieldLabel,
   FieldLegend,
   FieldSet
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
+import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   getPronunciationsError,
   type Pronunciation,
   type PronunciationError
 } from '@/domain/pronunciation'
+import type { RadioScriptTemplate } from '@/domain/radio-script'
 
 import { saveVoiceSettingsAction } from '../actions'
 
 type VoiceSettingsFormProps = {
   nav: ReactNode
   initialPronunciations: Pronunciation[]
+  initialRadioScript: RadioScriptTemplate
 }
 
 type Status = {
@@ -44,6 +48,31 @@ type Status = {
 
 const STATUS_ID = 'voice-settings-status'
 
+const RADIO_SCRIPT_FIELDS = [
+  {
+    field: 'opening',
+    label: 'Abertura',
+    description: 'Fala no começo do primeiro bloco.'
+  },
+  {
+    field: 'beforeBlock',
+    label: 'Antes de cada bloco',
+    description:
+      'Fala antes dos produtos de cada bloco, como a chamada da promoção.'
+  },
+  {
+    field: 'afterBlock',
+    label: 'Depois de cada bloco',
+    description:
+      'Fala depois dos produtos de cada bloco, como as formas de pagamento e o Instagram.'
+  },
+  {
+    field: 'closing',
+    label: 'Fechamento',
+    description: 'Fala no fim do último bloco.'
+  }
+] as const
+
 const getRowId = (key: number) => `pronunciation-${key}`
 
 const getRowLabel = ({ term }: Pronunciation, index: number) =>
@@ -51,10 +80,13 @@ const getRowLabel = ({ term }: Pronunciation, index: number) =>
 
 export const VoiceSettingsForm = ({
   nav,
-  initialPronunciations
+  initialPronunciations,
+  initialRadioScript
 }: VoiceSettingsFormProps) => {
   const [pronunciations, setPronunciations] = useState(initialPronunciations)
   const [saved, setSaved] = useState(initialPronunciations)
+  const [radioScript, setRadioScript] = useState(initialRadioScript)
+  const [savedRadioScript, setSavedRadioScript] = useState(initialRadioScript)
   // New rows have no term yet, so each one gets a key that follows it
   const [keys, setKeys] = useState(() =>
     initialPronunciations.map((_, index) => index)
@@ -63,7 +95,7 @@ export const VoiceSettingsForm = ({
   const [saving, startSave] = useTransition()
   const addButton = useRef<HTMLButtonElement>(null)
   const statusCount = useRef(0)
-  const dirty = pronunciations !== saved
+  const dirty = pronunciations !== saved || radioScript !== savedRadioScript
 
   useUnsavedChangesWarning(dirty)
 
@@ -121,7 +153,7 @@ export const VoiceSettingsForm = ({
 
     startSave(async () => {
       const result = await saveVoiceSettingsAction(
-        JSON.stringify(pronunciations)
+        JSON.stringify({ pronunciations, radioScript })
       )
       if (result.status === 'error') {
         const { index, field, message } = result
@@ -136,6 +168,8 @@ export const VoiceSettingsForm = ({
       }
       setPronunciations(result.pronunciations)
       setSaved(result.pronunciations)
+      setRadioScript(result.radioScript)
+      setSavedRadioScript(result.radioScript)
       setStatus(undefined)
       toast.success('Configurações salvas.')
     })
@@ -147,11 +181,70 @@ export const VoiceSettingsForm = ({
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Comercial</h1>
         <p className="text-muted-foreground">
-          Como o comercial da rádio fala os produtos.
+          O roteiro do comercial da rádio e como ele fala os produtos.
         </p>
       </header>
 
       <form noValidate onSubmit={save} className="flex flex-col gap-10">
+        <section
+          aria-labelledby="radio-script-heading"
+          className="flex flex-col gap-4"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="radio-script-heading" className="text-lg font-semibold">
+              Roteiro
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Cada página da oferta vira um bloco do comercial, com os produtos
+              e os preços por extenso. Os textos entram como escritos, com as
+              marcações de tom da voz, como [animado].
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            {RADIO_SCRIPT_FIELDS.map(({ field, label, description }) => (
+              <Field key={field}>
+                <FieldLabel htmlFor={`radio-script-${field}`}>
+                  {label}
+                </FieldLabel>
+                <Textarea
+                  id={`radio-script-${field}`}
+                  aria-describedby={`radio-script-${field}-description`}
+                  value={radioScript[field]}
+                  onChange={(event) =>
+                    setRadioScript({
+                      ...radioScript,
+                      [field]: event.target.value
+                    })
+                  }
+                />
+                <FieldDescription id={`radio-script-${field}-description`}>
+                  {description}
+                </FieldDescription>
+              </Field>
+            ))}
+            <Field>
+              <FieldLabel htmlFor="radio-script-price-markers">
+                Antes de cada preço
+              </FieldLabel>
+              <Textarea
+                id="radio-script-price-markers"
+                aria-describedby="radio-script-price-markers-description"
+                value={radioScript.priceMarkers.join('\n')}
+                onChange={(event) =>
+                  setRadioScript({
+                    ...radioScript,
+                    priceMarkers: event.target.value.split('\n')
+                  })
+                }
+              />
+              <FieldDescription id="radio-script-price-markers-description">
+                Um por linha, usados em ciclo a partir do primeiro em cada
+                bloco, como por apenas, somente, somente.
+              </FieldDescription>
+            </Field>
+          </div>
+        </section>
+
         <section
           aria-labelledby="pronunciations-heading"
           className="flex flex-col gap-4"

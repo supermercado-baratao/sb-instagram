@@ -1,4 +1,10 @@
-import { Download, FileBraces, Printer } from 'lucide-react'
+import {
+  Download,
+  FileBraces,
+  ListOrdered,
+  Megaphone,
+  Printer
+} from 'lucide-react'
 
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import {
@@ -14,12 +20,17 @@ import {
   getGenerationPageHref
 } from '@/app/helpers/offer-generation'
 import type { OfferGeneration } from '@/domain/offer-generation'
+import {
+  getRadioListMarkdown,
+  getRadioScriptMarkdown
+} from '@/domain/radio-script'
 
 import {
   DeleteGenerationButton,
   GENERATIONS_HEADING_ID
 } from './delete-generation-button'
 import { GeneratedAt } from './generated-at'
+import { RadioTextDialog } from './radio-text-dialog'
 
 const describePages = (pageCount: number) =>
   pageCount === 1 ? '1 página' : `${pageCount} páginas`
@@ -97,6 +108,28 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
           Exportar produtos (JSON)
           <span className="sr-only"> da geração {generation.number}</span>
         </a>
+        {generation.radioScript && (
+          <>
+            <RadioTextDialog
+              title="Roteiro do comercial"
+              description="Um bloco por página, com os textos do roteiro salvos em Configurações › Comercial."
+              copiedMessage="Roteiro do comercial copiado."
+              icon={Megaphone}
+              generationNumber={generation.number}
+              text={getRadioScriptMarkdown(generation.radioScript)}
+              href={getGenerationHref(generation, 'roteiro.md')}
+            />
+            <RadioTextDialog
+              title="Lista da rádio"
+              description="Os produtos de cada bloco, numerados em sequência, com o texto da locução e o preço."
+              copiedMessage="Lista da rádio copiada."
+              icon={ListOrdered}
+              generationNumber={generation.number}
+              text={getRadioListMarkdown(generation.radioScript)}
+              href={getGenerationHref(generation, 'lista.md')}
+            />
+          </>
+        )}
         <DeleteGenerationButton generation={generation} />
       </CardFooter>
     </Card>

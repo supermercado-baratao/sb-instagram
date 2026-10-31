@@ -17,6 +17,7 @@ import {
   getGenerationPageFileName,
   type OfferGeneration
 } from '@/domain/offer-generation'
+import { getRadioScript } from '@/domain/radio-script'
 import type { Database } from '@/infra/database/relations'
 import { offerGenerations } from '@/infra/database/schema'
 import {
@@ -24,6 +25,8 @@ import {
   getGenerationFolder
 } from '@/infra/generations-directory'
 import { findOffer } from '@/infra/offer'
+import { listPronunciations } from '@/infra/pronunciation'
+import { findRadioScriptTemplate } from '@/infra/radio-script'
 
 export type OfferRenderer = {
   renderPage: (offerId: number, pageNumber: number) => Promise<Uint8Array>
@@ -39,6 +42,7 @@ const generationColumns = {
   offerId: offerGenerations.offerId,
   number: offerGenerations.number,
   pageCount: offerGenerations.pageCount,
+  radioScript: offerGenerations.radioScript,
   createdAt: offerGenerations.createdAt
 }
 
@@ -125,7 +129,12 @@ export const createOfferGeneration = async (
           number: (last?.number ?? 0) + 1,
           // Indented, since the store opens the file to read or edit it by hand
           offerExport: JSON.stringify(getOfferExport(offer), null, 2),
-          pageCount: offer.pages.length
+          pageCount: offer.pages.length,
+          radioScript: getRadioScript(
+            offer,
+            findRadioScriptTemplate(transaction),
+            listPronunciations(transaction)
+          )
         })
         .returning(generationColumns)
         .get()

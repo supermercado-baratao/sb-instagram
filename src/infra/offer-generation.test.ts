@@ -13,6 +13,8 @@ import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import { productCodes, products } from '@/infra/database/schema'
+import { savePronunciations } from '@/infra/pronunciation'
+import { saveRadioScriptTemplate } from '@/infra/radio-script'
 
 import { createOffer, deleteOffer, duplicateOffer, saveOffer } from './offer'
 import {
@@ -120,6 +122,45 @@ describe('createOfferGeneration', () => {
     )
     expect(offerExport).toContain('Leite Condensado')
     expect(offerExport).not.toContain('Creme de Leite')
+  })
+
+  test('records the radio ad script with the saved template and dictionary', async () => {
+    const { database, directory } = await setup()
+    saveRadioScriptTemplate(database, {
+      opening: 'Atenção!',
+      beforeBlock: '',
+      afterBlock: '',
+      closing: '',
+      priceMarkers: ['somente']
+    })
+    savePronunciations(database, [{ term: 'Moça', spoken: 'Mossa' }])
+    const offerId = createOffer(database, twoPages())
+
+    const generation = await createOfferGeneration(
+      database,
+      offerId,
+      renderer,
+      { directory }
+    )
+
+    expect(
+      findOfferGeneration(database, offerId, generation?.id ?? 0)?.radioScript
+    ).toEqual({
+      version: 1,
+      offerName: 'Nova oferta',
+      blocks: [
+        'Atenção!\n\nLeite Condensado Mossa trezentos e noventa e cinco gramas, somente sete e noventa e nove.'
+      ],
+      list: [
+        [
+          {
+            number: 1,
+            text: 'Leite Condensado Mossa trezentos e noventa e cinco gramas',
+            price: '7,99'
+          }
+        ]
+      ]
+    })
   })
 
   test('numbers the generations of each offer in order, newest first', async () => {
