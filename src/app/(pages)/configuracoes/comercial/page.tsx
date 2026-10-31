@@ -8,6 +8,7 @@ import {
 } from '@/app/helpers/brand-settings'
 import { database } from '@/infra/database/client'
 import { listPronunciations } from '@/infra/pronunciation'
+import { findRadioScriptTemplate } from '@/infra/radio-script'
 
 import { SettingsNav } from '../_components/settings-nav'
 import { VoiceSettingsForm } from './_components/voice-settings-form'
@@ -24,6 +25,7 @@ const VoiceSettingsPage = async () => {
       <VoiceSettingsForm
         nav={<SettingsNav current={VOICE_SETTINGS_PATH} />}
         initialPronunciations={listPronunciations(database)}
+        initialRadioScript={findRadioScriptTemplate(database)}
       />
     </AppLayout>
   )

@@ -10,6 +10,8 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
+import type { RadioScript, RadioScriptBlock } from '@/domain/radio-script'
+
 export const products = sqliteTable(
   'products',
   {
@@ -115,6 +117,8 @@ export const offerGenerations = sqliteTable(
     number: integer().notNull(),
     offerExport: text().notNull(),
     pageCount: integer().notNull(),
+    // Null for generations recorded before the radio ad script existed (#76)
+    radioScript: text({ mode: 'json' }).$type<RadioScript>(),
     createdAt: integer({ mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date())
@@ -169,4 +173,15 @@ export const pronunciations = sqliteTable(
     position: integer().notNull()
   },
   (table) => [primaryKey({ columns: [table.term] })]
+)
+
+// One row per instance, like the brand
+export const radioScriptTemplate = sqliteTable(
+  'radio_script_template',
+  {
+    id: integer().primaryKey(),
+    blocks: text({ mode: 'json' }).$type<RadioScriptBlock[]>().notNull(),
+    priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull()
+  },
+  (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]
 )

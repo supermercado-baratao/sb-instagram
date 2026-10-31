@@ -1,0 +1,716 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "50017396-7038-45dc-8fd8-1a4ec084b566",
+  "prevIds": ["c0773bf0-b711-4be2-974f-efe936ca7db0"],
+  "ddl": [
+    {
+      "name": "brand",
+      "entityType": "tables"
+    },
+    {
+      "name": "offer_generations",
+      "entityType": "tables"
+    },
+    {
+      "name": "offer_page_items",
+      "entityType": "tables"
+    },
+    {
+      "name": "offer_pages",
+      "entityType": "tables"
+    },
+    {
+      "name": "offers",
+      "entityType": "tables"
+    },
+    {
+      "name": "product_codes",
+      "entityType": "tables"
+    },
+    {
+      "name": "products",
+      "entityType": "tables"
+    },
+    {
+      "name": "pronunciations",
+      "entityType": "tables"
+    },
+    {
+      "name": "radio_script_template",
+      "entityType": "tables"
+    },
+    {
+      "name": "templates",
+      "entityType": "tables"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slogan",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "instagram",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "logo",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "brand"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "offerId",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "number",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "offerExport",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pageCount",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "radioScript",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "offer_generations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pageId",
+      "entityType": "columns",
+      "table": "offer_page_items"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "offer_page_items"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "productId",
+      "entityType": "columns",
+      "table": "offer_page_items"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "priceInCents",
+      "entityType": "columns",
+      "table": "offer_page_items"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "offer_pages"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "offerId",
+      "entityType": "columns",
+      "table": "offer_pages"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "offer_pages"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "templateId",
+      "entityType": "columns",
+      "table": "offer_pages"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "layout",
+      "entityType": "columns",
+      "table": "offer_pages"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "validUntil",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "highlightTitle",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "highlightMessage",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updatedAt",
+      "entityType": "columns",
+      "table": "offers"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "productId",
+      "entityType": "columns",
+      "table": "product_codes"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "code",
+      "entityType": "columns",
+      "table": "product_codes"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "brand",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "unit",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "voiceText",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "photo",
+      "entityType": "columns",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "term",
+      "entityType": "columns",
+      "table": "pronunciations"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "spoken",
+      "entityType": "columns",
+      "table": "pronunciations"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "pronunciations"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "radio_script_template"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "blocks",
+      "entityType": "columns",
+      "table": "radio_script_template"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "priceMarkers",
+      "entityType": "columns",
+      "table": "radio_script_template"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "templates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "templates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "primaryColor",
+      "entityType": "columns",
+      "table": "templates"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "accentColor",
+      "entityType": "columns",
+      "table": "templates"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "templates"
+    },
+    {
+      "columns": ["offerId"],
+      "tableTo": "offers",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_offer_generations_offerId_offers_id_fk",
+      "entityType": "fks",
+      "table": "offer_generations"
+    },
+    {
+      "columns": ["pageId"],
+      "tableTo": "offer_pages",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_offer_page_items_pageId_offer_pages_id_fk",
+      "entityType": "fks",
+      "table": "offer_page_items"
+    },
+    {
+      "columns": ["productId"],
+      "tableTo": "products",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_offer_page_items_productId_products_id_fk",
+      "entityType": "fks",
+      "table": "offer_page_items"
+    },
+    {
+      "columns": ["offerId"],
+      "tableTo": "offers",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_offer_pages_offerId_offers_id_fk",
+      "entityType": "fks",
+      "table": "offer_pages"
+    },
+    {
+      "columns": ["productId"],
+      "tableTo": "products",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_product_codes_productId_products_id_fk",
+      "entityType": "fks",
+      "table": "product_codes"
+    },
+    {
+      "columns": ["pageId", "position"],
+      "nameExplicit": false,
+      "name": "offer_page_items_pk",
+      "entityType": "pks",
+      "table": "offer_page_items"
+    },
+    {
+      "columns": ["productId", "code"],
+      "nameExplicit": false,
+      "name": "product_codes_pk",
+      "entityType": "pks",
+      "table": "product_codes"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "products_pk",
+      "entityType": "pks",
+      "table": "products"
+    },
+    {
+      "columns": ["term"],
+      "nameExplicit": false,
+      "name": "pronunciations_pk",
+      "entityType": "pks",
+      "table": "pronunciations"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "templates_pk",
+      "entityType": "pks",
+      "table": "templates"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "brand_pk",
+      "table": "brand",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "offer_generations_pk",
+      "table": "offer_generations",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "offer_pages_pk",
+      "table": "offer_pages",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "offers_pk",
+      "table": "offers",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "radio_script_template_pk",
+      "table": "radio_script_template",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "offerId",
+          "isExpression": false
+        },
+        {
+          "value": "number",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "offer_generations_offer_id_number_unique",
+      "entityType": "indexes",
+      "table": "offer_generations"
+    },
+    {
+      "columns": [
+        {
+          "value": "offerId",
+          "isExpression": false
+        },
+        {
+          "value": "position",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "offer_pages_offer_id_position_unique",
+      "entityType": "indexes",
+      "table": "offer_pages"
+    },
+    {
+      "columns": [
+        {
+          "value": "code",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "product_codes_code_index",
+      "entityType": "indexes",
+      "table": "product_codes"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "brand_single_row",
+      "entityType": "checks",
+      "table": "brand"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "radio_script_template_single_row",
+      "entityType": "checks",
+      "table": "radio_script_template"
+    }
+  ],
+  "renames": []
+}

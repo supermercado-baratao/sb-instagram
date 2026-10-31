@@ -105,3 +105,39 @@ test('products-by-id keeps each product, its codes and the offer items', async (
     { code: '2001' }
   ])
 })
+
+test('radio-script-blocks resets the saved template and drops the first script format', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_radio-script-blocks')
+  })
+
+  sqlite.exec(`
+    INSERT INTO radio_script_template (id, opening, beforeBlock, afterBlock, closing, priceMarkers)
+      VALUES (1, 'Oi', '', '', 'Tchau', '["somente"]');
+    INSERT INTO offers (name, highlightTitle, highlightMessage, createdAt, updatedAt)
+      VALUES ('Semana', '', '', 0, 0);
+    INSERT INTO offer_generations (offerId, number, offerExport, pageCount, radioScript, createdAt)
+      VALUES
+        (1, 1, '{}', 1, '{"version":1,"offerName":"Semana","blocks":[],"list":[]}', 0),
+        (1, 2, '{}', 1, NULL, 0);
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  expect(
+    sqlite
+      .prepare('SELECT blocks, priceMarkers FROM radio_script_template')
+      .get()
+  ).toEqual({
+    blocks: '[{"type":"products","pageCount":1}]',
+    priceMarkers: '["somente"]'
+  })
+  expect(
+    sqlite
+      .prepare('SELECT radioScript FROM offer_generations ORDER BY number')
+      .all()
+  ).toEqual([{ radioScript: null }, { radioScript: null }])
+})

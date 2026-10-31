@@ -88,6 +88,15 @@ describe('spellNumbers', () => {
 })
 
 describe('suggestVoiceText', () => {
+  test('leaves out a name or brand with no letters or digits', () => {
+    expect(
+      suggestVoiceText({ name: '-', brand: 'Presunto', unit: 'Kg' }, [])
+    ).toBe('Presunto Kg')
+    expect(
+      suggestVoiceText({ name: 'Presunto', brand: '—', unit: null }, [])
+    ).toBe('Presunto')
+  })
+
   test('joins name, brand and unit, with numbers spelled out', () => {
     expect(
       suggestVoiceText({ name: 'Arroz', brand: 'Tio João', unit: '5 kg' }, [])

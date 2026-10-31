@@ -1,8 +1,11 @@
+import type { RadioScript } from '@/domain/radio-script'
+
 export type OfferGeneration = {
   id: number
   offerId: number
   number: number
   pageCount: number
+  radioScript: RadioScript | null
   createdAt: Date
 }
 

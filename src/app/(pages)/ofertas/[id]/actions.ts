@@ -5,6 +5,7 @@ import { refresh } from 'next/cache'
 import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
 import { isOfferContent } from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
+import { getRadioScriptWarning } from '@/domain/radio-script'
 import { database } from '@/infra/database/client'
 import { saveOffer } from '@/infra/offer'
 import {
@@ -25,7 +26,8 @@ export type SaveOfferResult =
   { status: 'saved' } | { status: 'error'; message: string }
 
 export type GenerateOfferResult =
-  { status: 'generated'; number: number } | { status: 'error'; message: string }
+  | { status: 'generated'; number: number; warning?: string }
+  | { status: 'error'; message: string }
 
 export type DeleteGenerationResult =
   { status: 'deleted' } | { status: 'error'; message: string }
@@ -97,7 +99,13 @@ export const generateOfferAction = async (
     const generation = await createOfferGeneration(database, id, offerRenderer)
     if (!generation) return { status: 'error', message: MISSING_OFFER_MESSAGE }
     refresh()
-    return { status: 'generated', number: generation.number }
+    return {
+      status: 'generated',
+      number: generation.number,
+      warning: generation.radioScript
+        ? getRadioScriptWarning(generation.radioScript)
+        : undefined
+    }
   } catch {
     return {
       status: 'error',
