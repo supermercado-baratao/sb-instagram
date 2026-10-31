@@ -185,6 +185,13 @@ export const OfferEditor = ({
         toast.error(result.message, { duration: Infinity })
         return
       }
+      if (result.warning) {
+        // Stays until closed, like an error, since the radio ad needs fixing (WCAG 2.2.1)
+        toast.warning(`Geração ${result.number} pronta. ${result.warning}`, {
+          duration: Infinity
+        })
+        return
+      }
       toast.success(`Geração ${result.number} pronta.`)
     })
   }

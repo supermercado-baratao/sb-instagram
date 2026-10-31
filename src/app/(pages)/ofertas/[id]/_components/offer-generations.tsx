@@ -22,7 +22,8 @@ import {
 import type { OfferGeneration } from '@/domain/offer-generation'
 import {
   getRadioListMarkdown,
-  getRadioScriptMarkdown
+  getRadioScriptMarkdown,
+  getRadioScriptWarning
 } from '@/domain/radio-script'
 
 import {
@@ -112,20 +113,22 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
           <>
             <RadioTextDialog
               title="Roteiro do comercial"
-              description="Um bloco por página, com os textos do roteiro salvos em Configurações › Comercial."
+              description="Os blocos salvos em Configurações › Comercial, com os produtos de cada página e os preços por extenso."
               copiedMessage="Roteiro do comercial copiado."
               icon={Megaphone}
               generationNumber={generation.number}
               text={getRadioScriptMarkdown(generation.radioScript)}
+              warning={getRadioScriptWarning(generation.radioScript)}
               href={getGenerationHref(generation, 'roteiro.md')}
             />
             <RadioTextDialog
               title="Lista da rádio"
-              description="Os produtos de cada bloco, numerados em sequência, com o texto da locução e o preço."
+              description="Os produtos do comercial, numerados em sequência, com o texto da locução e o preço."
               copiedMessage="Lista da rádio copiada."
               icon={ListOrdered}
               generationNumber={generation.number}
               text={getRadioListMarkdown(generation.radioScript)}
+              warning={getRadioScriptWarning(generation.radioScript)}
               href={getGenerationHref(generation, 'lista.md')}
             />
           </>

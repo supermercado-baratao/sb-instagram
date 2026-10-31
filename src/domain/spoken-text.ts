@@ -201,14 +201,19 @@ export const spellNumbers = (text: string) =>
       spellParsed(parseNumber(number), 'masculine')
     )
 
+// A store may fill the name or the brand with a placeholder ("-") when the other one says it all,
+// which the voice would read out
+const hasSpokenText = (text: string | null): text is string =>
+  text !== null && /[\p{L}\p{N}]/u.test(text)
+
 // The brand often repeats inside the name ("Café Pilão"), and saying it twice sounds like a mistake
 export const suggestVoiceText = (
   { name, brand, unit }: ProductDetails,
   pronunciations: Pronunciation[]
 ) => {
-  const words = [name]
+  const words = hasSpokenText(name) ? [name] : []
   if (
-    brand &&
+    hasSpokenText(brand) &&
     !normalizeSearchText(name).includes(normalizeSearchText(brand))
   ) {
     words.push(brand)

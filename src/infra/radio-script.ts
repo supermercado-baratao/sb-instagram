@@ -12,10 +12,7 @@ export const findRadioScriptTemplate = (
 ): RadioScriptTemplate =>
   database
     .select({
-      opening: radioScriptTemplate.opening,
-      beforeBlock: radioScriptTemplate.beforeBlock,
-      afterBlock: radioScriptTemplate.afterBlock,
-      closing: radioScriptTemplate.closing,
+      blocks: radioScriptTemplate.blocks,
       priceMarkers: radioScriptTemplate.priceMarkers
     })
     .from(radioScriptTemplate)

@@ -127,10 +127,10 @@ describe('createOfferGeneration', () => {
   test('records the radio ad script with the saved template and dictionary', async () => {
     const { database, directory } = await setup()
     saveRadioScriptTemplate(database, {
-      opening: 'Atenção!',
-      beforeBlock: '',
-      afterBlock: '',
-      closing: '',
+      blocks: [
+        { type: 'text', text: 'Atenção!' },
+        { type: 'products', pageCount: 1 }
+      ],
       priceMarkers: ['somente']
     })
     savePronunciations(database, [{ term: 'Moça', spoken: 'Mossa' }])
@@ -146,20 +146,19 @@ describe('createOfferGeneration', () => {
     expect(
       findOfferGeneration(database, offerId, generation?.id ?? 0)?.radioScript
     ).toEqual({
-      version: 1,
+      version: 2,
       offerName: 'Nova oferta',
-      blocks: [
-        'Atenção!\n\nLeite Condensado Mossa trezentos e noventa e cinco gramas, somente sete e noventa e nove.'
-      ],
+      script:
+        'Atenção!\n\n- Leite Condensado Mossa trezentos e noventa e cinco gramas, somente: sete e noventa e nove',
       list: [
-        [
-          {
-            number: 1,
-            text: 'Leite Condensado Mossa trezentos e noventa e cinco gramas',
-            price: '7,99'
-          }
-        ]
-      ]
+        {
+          number: 1,
+          text: 'Leite Condensado Mossa trezentos e noventa e cinco gramas',
+          price: '7,99'
+        }
+      ],
+      unusedPages: [],
+      missingPageCount: 0
     })
   })
 

@@ -1,8 +1,10 @@
 'use client'
 
-import { Copy, Download, type LucideIcon } from 'lucide-react'
+import { cn } from 'cn'
+import { CircleAlert, Copy, Download, type LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { Alert, AlertDescription } from '@/app/components/ui/shadcn/alert'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import {
   Dialog,
@@ -21,6 +23,7 @@ type RadioTextDialogProps = {
   icon: LucideIcon
   generationNumber: number
   text: string
+  warning?: string
   href: string
 }
 
@@ -31,6 +34,7 @@ export const RadioTextDialog = ({
   icon: Icon,
   generationNumber,
   text,
+  warning,
   href
 }: RadioTextDialogProps) => {
   const copy = async () => {
@@ -52,13 +56,28 @@ export const RadioTextDialog = ({
         {title}
         <span className="sr-only"> da geração {generationNumber}</span>
       </DialogTrigger>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
+      <DialogContent
+        className={cn(
+          'max-h-[calc(100dvh-2rem)] sm:max-w-2xl',
+          warning
+            ? 'grid-rows-[auto_auto_minmax(0,1fr)_auto]'
+            : 'grid-rows-[auto_minmax(0,1fr)_auto]'
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {title} da geração {generationNumber}
           </DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {/* Shown with the dialog, not changed while it is open, so it isn't a live region; the
+            generation toast already announced it */}
+        {warning && (
+          <Alert role={undefined}>
+            <CircleAlert aria-hidden />
+            <AlertDescription>{warning}</AlertDescription>
+          </Alert>
+        )}
         {/* Scrollable, so it takes the keyboard focus to scroll (WCAG 2.1.1) */}
         <pre
           role="region"

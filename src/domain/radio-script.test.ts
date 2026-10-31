@@ -10,8 +10,10 @@ import {
   getRadioListMarkdown,
   getRadioScript,
   getRadioScriptMarkdown,
-  INITIAL_RADIO_SCRIPT_TEMPLATE,
+  getRadioScriptTemplateError,
+  getRadioScriptWarning,
   normalizeRadioScriptTemplate,
+  type RadioScriptBlock,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
 
@@ -47,55 +49,72 @@ const offer = (...pages: ReturnType<typeof page>[]) => ({
   pages
 })
 
-const template: RadioScriptTemplate = {
-  opening: '[animado] Atenção!',
-  beforeBlock: 'Confira:',
-  afterBlock: 'Aceitamos cartões.',
-  closing: 'Até lá!',
+const text = (value: string): RadioScriptBlock => ({
+  type: 'text',
+  text: value
+})
+
+const products = (pageCount = 1): RadioScriptBlock => ({
+  type: 'products',
+  pageCount
+})
+
+const sequence = (...blocks: RadioScriptBlock[]): RadioScriptTemplate => ({
+  blocks,
   priceMarkers: ['por apenas', 'somente']
-}
+})
 
 describe('getRadioScript', () => {
-  test('writes one block per page, with the opening first and the closing last', () => {
+  test('writes the text blocks as they are, around the products of each page', () => {
     const script = getRadioScript(
       offer(page(['Arroz', 2990]), page(['Café', 1075])),
-      template,
+      sequence(
+        text('[animado] Atenção!'),
+        products(),
+        text('Confira:'),
+        products(),
+        text('Até lá!')
+      ),
       []
     )
 
-    expect(script.blocks).toEqual([
-      '[animado] Atenção!\n\nConfira:\n\nArroz, por apenas vinte e nove e noventa.\n\nAceitamos cartões.',
-      'Confira:\n\nCafé, por apenas dez e setenta e cinco.\n\nAceitamos cartões.\n\nAté lá!'
-    ])
+    expect(script.script).toBe(
+      '[animado] Atenção!\n\n- Arroz, por apenas: vinte e nove e noventa\n\nConfira:\n\n- Café, por apenas: dez e setenta e cinco\n\nAté lá!'
+    )
   })
 
-  test('cycles the price markers and restarts them in each block', () => {
+  test('cycles the price markers and restarts them in each products block', () => {
     const script = getRadioScript(
       offer(page(['A', 100], ['B', 200], ['C', 300]), page(['D', 400])),
-      {
-        ...template,
-        opening: '',
-        beforeBlock: '',
-        afterBlock: '',
-        closing: ''
-      },
+      sequence(products(), products()),
       []
     )
 
-    expect(script.blocks).toEqual([
-      'A, por apenas um real.\nB, somente dois reais.\nC, por apenas três reais.',
-      'D, por apenas quatro reais.'
-    ])
+    expect(script.script).toBe(
+      '- A, por apenas: um real\n- B, somente: dois reais\n- C, por apenas: três reais\n\n- D, por apenas: quatro reais'
+    )
+  })
+
+  test('joins the pages of a block with more than one, keeping the marker cycle', () => {
+    const script = getRadioScript(
+      offer(page(['A', 100]), page(['B', 200]), page(['C', 300])),
+      sequence(products(2), text('Pausa.'), products()),
+      []
+    )
+
+    expect(script.script).toBe(
+      '- A, por apenas: um real\n- B, somente: dois reais\n\nPausa.\n\n- C, por apenas: três reais'
+    )
   })
 
   test('says only the price when there are no markers', () => {
     const script = getRadioScript(
       offer(page(['Arroz', 2990])),
-      { ...INITIAL_RADIO_SCRIPT_TEMPLATE, priceMarkers: [' '] },
+      { blocks: [products()], priceMarkers: [' '] },
       []
     )
 
-    expect(script.blocks).toEqual(['Arroz, vinte e nove e noventa.'])
+    expect(script.script).toBe('- Arroz: vinte e nove e noventa')
   })
 
   test('numbers the list across blocks and skips pages without products', () => {
@@ -105,54 +124,115 @@ describe('getRadioScript', () => {
         page(),
         page(['Café', 1075])
       ),
-      template,
+      sequence(products(), products()),
       []
     )
 
     expect(script.list).toEqual([
-      [
-        { number: 1, text: 'Arroz', price: '29,90' },
-        { number: 2, text: 'Feijão', price: '8,99' }
-      ],
-      [{ number: 3, text: 'Café', price: '10,75' }]
+      { number: 1, text: 'Arroz', price: '29,90' },
+      { number: 2, text: 'Feijão', price: '8,99' },
+      { number: 3, text: 'Café', price: '10,75' }
     ])
-    expect(script.blocks).toHaveLength(2)
+    expect(script.unusedPages).toEqual([])
+    expect(script.missingPageCount).toBe(0)
+  })
+
+  test('reports the pages no block took, by their number in the offer', () => {
+    const script = getRadioScript(
+      offer(page(['A', 100]), page(), page(['B', 200]), page(['C', 300])),
+      sequence(products()),
+      []
+    )
+
+    expect(script.unusedPages).toEqual([3, 4])
+    expect(script.list.map(({ text }) => text)).toEqual(['A'])
+  })
+
+  test('leaves out the products blocks past the last page and counts the missing pages', () => {
+    const script = getRadioScript(
+      offer(page(['A', 100])),
+      sequence(products(2), text('Meio.'), products(), text('Fim.')),
+      []
+    )
+
+    expect(script.script).toBe('- A, por apenas: um real\n\nMeio.\n\nFim.')
+    expect(script.missingPageCount).toBe(2)
   })
 
   test('leaves out the slots past the layout', () => {
     const fourProducts = page(['A', 100], ['B', 200], ['C', 300], ['D', 400])
     const content = offer({ ...fourProducts, layout: 3 })
-    const [items] = getRadioScript(content, template, []).list
+    const { list } = getRadioScript(content, sequence(products()), [])
 
-    expect(items.map(({ text }) => text)).toEqual(['A', 'B', 'C'])
+    expect(list.map(({ text }) => text)).toEqual(['A', 'B', 'C'])
   })
 
   test('suggests the voice text of a product without one, with the dictionary', () => {
     const script = getRadioScript(
       offer(page(['Biscoito', 450, null])),
-      template,
+      sequence(products()),
       [{ term: 'Biscoito', spoken: 'Biscoitu' }]
     )
 
-    expect(script.list[0][0].text).toBe('Biscoitu')
+    expect(script.list[0].text).toBe('Biscoitu')
+  })
+})
+
+describe('getRadioScriptWarning', () => {
+  test('says nothing when every page has a block', () => {
+    expect(
+      getRadioScriptWarning({ unusedPages: [], missingPageCount: 0 })
+    ).toBeUndefined()
+  })
+
+  test('names the pages left out and the missing pages', () => {
+    expect(
+      getRadioScriptWarning({ unusedPages: [4, 5, 6], missingPageCount: 1 })
+    ).toBe(
+      'As páginas 4, 5 e 6 ficaram fora do comercial. Faltou 1 página para os blocos de produtos do comercial. Ajuste os blocos em Configurações › Comercial.'
+    )
+    expect(
+      getRadioScriptWarning({ unusedPages: [2], missingPageCount: 0 })
+    ).toBe(
+      'A página 2 ficou fora do comercial. Ajuste os blocos em Configurações › Comercial.'
+    )
+  })
+})
+
+describe('getRadioScriptTemplateError', () => {
+  test('points to a products block with an invalid page count', () => {
+    const zeroPages = sequence(text('Oi'), products(0))
+    const fractionalPages = sequence(products(1.5))
+
+    expect(getRadioScriptTemplateError(zeroPages)).toEqual({
+      message: 'Informe de 1 a 20 páginas.',
+      index: 1
+    })
+    expect(getRadioScriptTemplateError(fractionalPages)?.index).toBe(0)
+  })
+
+  test('asks for at least one products block', () => {
+    const onlyText = sequence(text('Oi'))
+    const withProducts = sequence(products())
+
+    expect(getRadioScriptTemplateError(onlyText)).toEqual({
+      message: 'Adicione ao menos um bloco de produtos.'
+    })
+    expect(getRadioScriptTemplateError(withProducts)).toBeUndefined()
   })
 })
 
 describe('normalizeRadioScriptTemplate', () => {
-  test('trims the texts and drops blank markers', () => {
+  test('trims the texts and drops blank text blocks and markers', () => {
+    const blocks = [text(' Oi '), text('\n'), products(2), text('Tchau\n')]
+
     expect(
       normalizeRadioScriptTemplate({
-        opening: ' Oi ',
-        beforeBlock: '',
-        afterBlock: '\n',
-        closing: 'Tchau\n',
+        blocks,
         priceMarkers: [' por   apenas ', '', 'somente']
       })
     ).toEqual({
-      opening: 'Oi',
-      beforeBlock: '',
-      afterBlock: '',
-      closing: 'Tchau',
+      blocks: [text('Oi'), products(2), text('Tchau')],
       priceMarkers: ['por apenas', 'somente']
     })
   })
@@ -161,19 +241,19 @@ describe('normalizeRadioScriptTemplate', () => {
 describe('markdown', () => {
   const script = getRadioScript(
     offer(page(['Arroz', 2990]), page(['Café', 1075])),
-    { ...template, opening: '', afterBlock: '', closing: '' },
+    sequence(text('Confira:'), products(), products()),
     []
   )
 
-  test('heads each block of the script', () => {
-    expect(getRadioScriptMarkdown({ ...script, offerName: 'Semana' })).toBe(
-      '# Roteiro do comercial: Semana\n\n## Bloco 1\n\nConfira:\n\nArroz, por apenas vinte e nove e noventa.\n\n## Bloco 2\n\nConfira:\n\nCafé, por apenas dez e setenta e cinco.\n'
+  test('writes the script with no headings', () => {
+    expect(getRadioScriptMarkdown(script)).toBe(
+      'Confira:\n\n- Arroz, por apenas: vinte e nove e noventa\n\n- Café, por apenas: dez e setenta e cinco\n'
     )
   })
 
-  test('keeps the list numbering across blocks', () => {
-    expect(getRadioListMarkdown({ ...script, offerName: 'Semana' })).toBe(
-      '# Lista da rádio: Semana\n\n## Bloco 1\n\n1. Arroz: R$ 29,90\n\n## Bloco 2\n\n2. Café: R$ 10,75\n'
+  test('numbers the list across blocks, with the price in digits', () => {
+    expect(getRadioListMarkdown(script)).toBe(
+      '1. Arroz: R$ 29,90\n2. Café: R$ 10,75\n'
     )
   })
 })

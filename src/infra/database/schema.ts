@@ -10,7 +10,7 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
-import type { RadioScript } from '@/domain/radio-script'
+import type { RadioScript, RadioScriptBlock } from '@/domain/radio-script'
 
 export const products = sqliteTable(
   'products',
@@ -180,10 +180,7 @@ export const radioScriptTemplate = sqliteTable(
   'radio_script_template',
   {
     id: integer().primaryKey(),
-    opening: text().notNull(),
-    beforeBlock: text().notNull(),
-    afterBlock: text().notNull(),
-    closing: text().notNull(),
+    blocks: text({ mode: 'json' }).$type<RadioScriptBlock[]>().notNull(),
     priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull()
   },
   (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]

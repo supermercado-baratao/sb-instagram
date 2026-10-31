@@ -8,6 +8,7 @@ import {
   type PronunciationError
 } from '@/domain/pronunciation'
 import {
+  getRadioScriptTemplateError,
   isRadioScriptTemplate,
   normalizeRadioScriptTemplate,
   type RadioScriptTemplate
@@ -22,7 +23,11 @@ export type SaveVoiceSettingsResult =
       pronunciations: Pronunciation[]
       radioScript: RadioScriptTemplate
     }
-  | ({ status: 'error' } & Partial<PronunciationError> & { message: string })
+  | ({ status: 'error' } & Partial<PronunciationError> & {
+        message: string
+        radioScriptError?: boolean
+        radioScriptIndex?: number
+      })
 
 export const saveVoiceSettingsAction = async (
   content: string
@@ -45,6 +50,15 @@ export const saveVoiceSettingsAction = async (
     return {
       status: 'error',
       message: 'Não foi possível salvar. Recarregue a página e tente de novo.'
+    }
+  }
+  const radioScriptError = getRadioScriptTemplateError(radioScript)
+  if (radioScriptError) {
+    return {
+      status: 'error',
+      message: radioScriptError.message,
+      radioScriptError: true,
+      radioScriptIndex: radioScriptError.index
     }
   }
   const error = getPronunciationsError(pronunciations)
