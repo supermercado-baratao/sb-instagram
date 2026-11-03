@@ -21,22 +21,11 @@ export type OfferPage = {
 }
 
 export type OfferContent = {
-  name: string
   // ISO date (YYYY-MM-DD), the value of a date input
   validUntil: string | null
   highlightTitle: string
   highlightMessage: string
   pages: OfferPage[]
-}
-
-export type SavedOffer = OfferContent & { id: number }
-
-export type OfferSummary = {
-  id: number
-  name: string
-  validUntil: string | null
-  pageCount: number
-  updatedAt: Date
 }
 
 export const createOfferPage = (templateId: string): OfferPage => ({
@@ -46,14 +35,11 @@ export const createOfferPage = (templateId: string): OfferPage => ({
 })
 
 export const createOfferContent = (templateId: string): OfferContent => ({
-  name: 'Nova oferta',
   validUntil: null,
   highlightTitle: 'Ofertas da semana',
   highlightMessage: 'Só nesta loja',
   pages: [createOfferPage(templateId)]
 })
-
-export const getCopyName = (name: string) => `${name} (cópia)`
 
 export const placeSlots = (
   items: (OfferItem & { position: number })[]
@@ -178,8 +164,6 @@ const isPage = (value: unknown): value is OfferPage =>
 // A Server Action is a public endpoint, so the editor's content is checked again on the server
 export const isOfferContent = (value: unknown): value is OfferContent =>
   isRecord(value) &&
-  typeof value.name === 'string' &&
-  value.name.trim() !== '' &&
   (value.validUntil === null ||
     (typeof value.validUntil === 'string' &&
       ISO_DATE_PATTERN.test(value.validUntil))) &&
@@ -189,8 +173,36 @@ export const isOfferContent = (value: unknown): value is OfferContent =>
   value.pages.length > 0 &&
   value.pages.every(isPage)
 
-// A product placed on a page starts without a price, which the poster would print as R$ 0,00
+// A product placed on a page starts without a price, which the poster would print as R$ 0,00. A
+// slot past the layout has no price field to fill, and asks again if the layout grows back
 export const findPageWithoutPrice = (pages: OfferPage[]) =>
   pages.findIndex((page) =>
-    page.slots.some((slot) => slot !== null && slot.priceInCents === 0)
+    page.slots
+      .slice(0, page.layout)
+      .some((slot) => slot !== null && slot.priceInCents === 0)
   )
+
+const mapSlots = (
+  pages: OfferPage[],
+  map: (slot: OfferItem) => OfferSlot
+): OfferPage[] =>
+  pages.map((page) => ({
+    ...page,
+    slots: page.slots.map((slot) => slot && map(slot))
+  }))
+
+// Counts the slots past the layout too, since clearing them keeps old data from coming back
+export const countProducts = (pages: OfferPage[]) =>
+  pages.flatMap((page) => page.slots).filter((slot) => slot !== null).length
+
+export const clearOfferProducts = (content: OfferContent): OfferContent => ({
+  ...content,
+  validUntil: null,
+  pages: mapSlots(content.pages, () => null)
+})
+
+export const clearOfferPrices = (content: OfferContent): OfferContent => ({
+  ...content,
+  validUntil: null,
+  pages: mapSlots(content.pages, (slot) => ({ ...slot, priceInCents: 0 }))
+})

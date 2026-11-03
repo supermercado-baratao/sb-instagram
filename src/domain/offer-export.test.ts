@@ -41,8 +41,7 @@ describe('getOfferExport', () => {
     }
 
     expect(getOfferExport(content)).toEqual({
-      version: 1,
-      name: 'Nova oferta',
+      version: 2,
       validUntil: '2026-10-24',
       highlightTitle: 'Ofertas da semana',
       highlightMessage: 'Só nesta loja',

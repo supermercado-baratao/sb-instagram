@@ -19,6 +19,7 @@ import {
   getGenerationHref,
   getGenerationPageHref
 } from '@/app/helpers/offer-generation'
+import { formatValidUntil } from '@/domain/offer'
 import type { OfferGeneration } from '@/domain/offer-generation'
 import {
   getRadioListMarkdown,
@@ -37,6 +38,7 @@ const describePages = (pageCount: number) =>
   pageCount === 1 ? '1 página' : `${pageCount} páginas`
 
 const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
+  const validUntil = formatValidUntil(generation.validUntil)
   const pageNumbers = Array.from(
     { length: generation.pageCount },
     (_, index) => index + 1
@@ -45,7 +47,10 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
     <Card size="sm">
       <CardHeader>
         <CardTitle>
-          <h3>Geração {generation.number}</h3>
+          <h3>
+            Geração {generation.number}
+            {validUntil && ` · válida até ${validUntil}`}
+          </h3>
         </CardTitle>
         <CardDescription>
           {describePages(generation.pageCount)}

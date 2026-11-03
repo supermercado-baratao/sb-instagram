@@ -54,7 +54,7 @@ const getMergeError = (error: unknown): ActionError => {
 }
 
 export type MergePreviewResult =
-  ActionError | { status: 'ok'; codes: string[]; offers: string[] }
+  ActionError | { status: 'ok'; codes: string[]; changesOffer: boolean }
 
 export const previewMergeAction = async (
   input: MergeInput
@@ -64,8 +64,8 @@ export const previewMergeAction = async (
   }
 
   try {
-    const { codes, offers } = previewMerge(database, input)
-    return { status: 'ok', codes, offers }
+    const { codes, changesOffer } = previewMerge(database, input)
+    return { status: 'ok', codes, changesOffer }
   } catch (error) {
     return getMergeError(error)
   }

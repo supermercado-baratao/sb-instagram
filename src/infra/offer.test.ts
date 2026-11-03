@@ -8,16 +8,14 @@ import { createOfferContent, type OfferContent } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
-import { offerPageItems, productCodes, products } from '@/infra/database/schema'
-
 import {
-  createOffer,
-  deleteOffer,
-  duplicateOffer,
-  findOffer,
-  listOffers,
-  saveOffer
-} from './offer'
+  offerPageItems,
+  offers,
+  productCodes,
+  products
+} from '@/infra/database/schema'
+
+import { findOffer, findOrCreateOffer, saveOffer } from './offer'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
@@ -53,84 +51,50 @@ const withProduct = (): OfferContent => {
   return content
 }
 
-describe('createOffer and findOffer', () => {
+describe('saveOffer and findOffer', () => {
   test('keep pages in order and each product in its slot', () => {
     const database = setup()
     const content = withProduct()
 
-    const id = createOffer(database, content)
+    saveOffer(database, content)
 
-    expect(findOffer(database, id)).toEqual({ id, ...content })
+    expect(findOffer(database)).toEqual(content)
   })
 
-  test('findOffer returns nothing for an unknown id', () => {
-    expect(findOffer(setup(), 1)).toBe(undefined)
+  test('findOffer returns nothing before the first save', () => {
+    expect(findOffer(setup())).toBe(undefined)
   })
-})
 
-describe('saveOffer', () => {
-  test('replaces the texts, pages and items', () => {
+  test('saving again replaces the texts, pages and items of the single offer', () => {
     const database = setup()
-    const id = createOffer(database, withProduct())
+    saveOffer(database, withProduct())
     const changed = withProduct()
-    changed.name = 'Feirão'
     changed.validUntil = '2026-10-31'
     changed.pages.reverse()
     changed.pages[1].slots = changed.pages[1].slots.toReversed()
 
-    expect(saveOffer(database, id, changed)).toBe(true)
-    expect(findOffer(database, id)).toEqual({ id, ...changed })
+    saveOffer(database, changed)
+
+    expect(findOffer(database)).toEqual(changed)
+    expect(database.select().from(offers).all()).toHaveLength(1)
     expect(database.select().from(offerPageItems).all()).toHaveLength(1)
   })
-
-  test('returns false for an unknown id', () => {
-    expect(saveOffer(setup(), 1, withProduct())).toBe(false)
-  })
 })
 
-describe('duplicateOffer', () => {
-  test('copies the offer under a new name', () => {
+describe('findOrCreateOffer', () => {
+  test('creates the offer once, on the given template', () => {
     const database = setup()
-    const id = createOffer(database, withProduct())
 
-    const copyId = duplicateOffer(database, id)
-
-    expect(copyId).not.toBe(id)
-    expect(findOffer(database, copyId!)).toEqual({
-      ...withProduct(),
-      id: copyId,
-      name: 'Nova oferta (cópia)'
-    })
+    const created = findOrCreateOffer(database, 'mercado')
+    expect(created).toEqual(createOfferContent('mercado'))
+    expect(findOrCreateOffer(database, 'acougue')).toEqual(created)
+    expect(database.select().from(offers).all()).toHaveLength(1)
   })
 
-  test('returns nothing for an unknown id', () => {
-    expect(duplicateOffer(setup(), 1)).toBe(undefined)
-  })
-})
-
-describe('listOffers', () => {
-  test('counts the pages of each offer, most recent first', () => {
+  test('keeps the saved offer', () => {
     const database = setup()
-    const first = createOffer(database, withProduct())
-    const second = createOffer(database, createOfferContent('mercado'))
+    saveOffer(database, withProduct())
 
-    expect(
-      listOffers(database).map(({ id, pageCount }) => ({ id, pageCount }))
-    ).toEqual([
-      { id: second, pageCount: 1 },
-      { id: first, pageCount: 2 }
-    ])
-  })
-})
-
-describe('deleteOffer', () => {
-  test('removes the offer with its pages and items', async () => {
-    const database = setup()
-    const id = createOffer(database, withProduct())
-
-    await deleteOffer(database, id)
-
-    expect(listOffers(database)).toEqual([])
-    expect(database.select().from(offerPageItems).all()).toEqual([])
+    expect(findOrCreateOffer(database, 'mercado')).toEqual(withProduct())
   })
 })

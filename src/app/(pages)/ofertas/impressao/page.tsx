@@ -27,10 +27,9 @@ const printScale = getPosterFitScale({
 })
 
 // Printed to PDF by the renderer, one saved page per A4 sheet, so it has no header or controls
-const OfferPrint = async ({ params }: PageProps<'/ofertas/[id]/impressao'>) => {
-  const { id } = await params
+const OfferPrint = () => {
   const settings = findBrandSettings(database)
-  const offer = findOffer(database, Number(id))
+  const offer = findOffer(database)
   if (!settings || !offer) notFound()
 
   const brand = getPosterBrand(settings.brand)

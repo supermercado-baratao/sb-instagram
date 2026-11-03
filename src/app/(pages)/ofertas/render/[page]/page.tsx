@@ -17,10 +17,10 @@ export const metadata: Metadata = {
 // Captured by the PNG route at the poster's real size, so it has no zoom or controls around it
 const OfferPageRender = async ({
   params
-}: PageProps<'/ofertas/[id]/render/[page]'>) => {
-  const { id, page: pageNumber } = await params
+}: PageProps<'/ofertas/render/[page]'>) => {
+  const { page: pageNumber } = await params
   const settings = findBrandSettings(database)
-  const offer = findOffer(database, Number(id))
+  const offer = findOffer(database)
   const page = offer?.pages[Number(pageNumber) - 1]
   const template =
     settings && page && getPageTemplate(settings.templates, page.templateId)

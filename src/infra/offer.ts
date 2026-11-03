@@ -1,75 +1,39 @@
-import { rm } from 'node:fs/promises'
-
-import { count, desc, eq } from 'drizzle-orm'
-
 import {
-  getCopyName,
+  createOfferContent,
   type OfferContent,
   type OfferPage,
-  type OfferSummary,
-  placeSlots,
-  type SavedOffer
+  placeSlots
 } from '@/domain/offer'
 import { DEFAULT_POSTER_LAYOUT, isPosterLayout } from '@/domain/poster'
 import type { Database } from '@/infra/database/relations'
-import {
-  offerGenerations,
-  offerPageItems,
-  offerPages,
-  offers
-} from '@/infra/database/schema'
-import {
-  generationsDirectory,
-  getGenerationFolder
-} from '@/infra/generations-directory'
+import { offerPageItems, offerPages, offers } from '@/infra/database/schema'
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 
-export const listOffers = (database: Database): OfferSummary[] =>
-  database
-    .select({
-      id: offers.id,
-      name: offers.name,
-      validUntil: offers.validUntil,
-      pageCount: count(offerPages.id),
-      updatedAt: offers.updatedAt
-    })
-    .from(offers)
-    .leftJoin(offerPages, eq(offerPages.offerId, offers.id))
-    .groupBy(offers.id)
-    .orderBy(desc(offers.updatedAt), desc(offers.id))
-    .all()
+export const OFFER_ID = 1
 
-export const findOffer = (
-  database: Database,
-  id: number
-): SavedOffer | undefined => {
-  const offer = database.query.offers
-    .findFirst({
-      where: { id },
+export const findOffer = (database: Database): OfferContent | undefined => {
+  const offer = database.query.offers.findFirst().sync()
+  if (!offer) return undefined
+
+  const pages = database.query.offerPages
+    .findMany({
+      orderBy: { position: 'asc' },
       with: {
-        pages: {
-          orderBy: { position: 'asc' },
+        items: {
           with: {
-            items: {
-              with: {
-                product: { with: { codes: { orderBy: { code: 'asc' } } } }
-              }
-            }
+            product: { with: { codes: { orderBy: { code: 'asc' } } } }
           }
         }
       }
     })
     .sync()
-  if (!offer) return undefined
 
   return {
-    id: offer.id,
-    name: offer.name,
     validUntil: offer.validUntil,
     highlightTitle: offer.highlightTitle,
     highlightMessage: offer.highlightMessage,
-    pages: offer.pages.map((page) => ({
+    pages: pages.map((page) => ({
       templateId: page.templateId,
       layout: isPosterLayout(page.layout) ? page.layout : DEFAULT_POSTER_LAYOUT,
       slots: placeSlots(
@@ -82,23 +46,11 @@ export const findOffer = (
   }
 }
 
-const getOfferFields = (content: OfferContent) => ({
-  name: content.name,
-  validUntil: content.validUntil,
-  highlightTitle: content.highlightTitle,
-  highlightMessage: content.highlightMessage
-})
-
-const insertPages = (
-  transaction: Transaction,
-  offerId: number,
-  pages: OfferPage[]
-) => {
+const insertPages = (transaction: Transaction, pages: OfferPage[]) => {
   for (const [position, page] of pages.entries()) {
     const { id: pageId } = transaction
       .insert(offerPages)
       .values({
-        offerId,
         position,
         templateId: page.templateId,
         layout: page.layout
@@ -122,63 +74,32 @@ const insertPages = (
   }
 }
 
-export const createOffer = (database: Database, content: OfferContent) =>
+// Pages are rewritten as a whole, so reordering never trips over the unique position
+export const saveOffer = (database: Database, content: OfferContent) =>
   database.transaction((transaction) => {
-    const { id } = transaction
+    const fields = {
+      validUntil: content.validUntil,
+      highlightTitle: content.highlightTitle,
+      highlightMessage: content.highlightMessage
+    }
+    transaction
       .insert(offers)
-      .values(getOfferFields(content))
-      .returning({ id: offers.id })
-      .get()
-    insertPages(transaction, id, content.pages)
-    return id
-  })
-
-// Pages are rewritten as a whole, so reordering never trips over the unique position per offer
-export const saveOffer = (
-  database: Database,
-  id: number,
-  content: OfferContent
-) =>
-  database.transaction((transaction) => {
-    const { changes } = transaction
-      .update(offers)
-      .set(getOfferFields(content))
-      .where(eq(offers.id, id))
+      .values({ id: OFFER_ID, ...fields })
+      .onConflictDoUpdate({ target: offers.id, set: fields })
       .run()
-    if (changes === 0) return false
-
-    transaction.delete(offerPages).where(eq(offerPages.offerId, id)).run()
-    insertPages(transaction, id, content.pages)
-    return true
+    transaction.delete(offerPages).run()
+    insertPages(transaction, content.pages)
   })
 
-export const duplicateOffer = (database: Database, id: number) => {
-  const offer = findOffer(database, id)
-  if (!offer) return
-  return createOffer(database, { ...offer, name: getCopyName(offer.name) })
-}
-
-// The generations' rows go with the offer (cascade), but their files must be removed by hand
-export const deleteOffer = async (
+// A new instance has no offer until its brand exists, since a page needs a template
+export const findOrCreateOffer = (
   database: Database,
-  id: number,
-  { generations = generationsDirectory }: { generations?: string } = {}
-) => {
-  const generationIds = database.transaction((transaction) => {
-    const rows = transaction
-      .select({ id: offerGenerations.id })
-      .from(offerGenerations)
-      .where(eq(offerGenerations.offerId, id))
-      .all()
-    transaction.delete(offers).where(eq(offers.id, id)).run()
-    return rows.map((row) => row.id)
-  })
-  await Promise.all(
-    generationIds.map((generationId) =>
-      rm(getGenerationFolder(generationId, generations), {
-        recursive: true,
-        force: true
-      })
-    )
-  )
+  templateId: string
+): OfferContent => {
+  const offer = findOffer(database)
+  if (offer) return offer
+
+  const content = createOfferContent(templateId)
+  saveOffer(database, content)
+  return content
 }

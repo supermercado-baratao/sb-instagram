@@ -5,6 +5,8 @@ export type OfferGeneration = {
   offerId: number
   number: number
   pageCount: number
+  // Read from the stored export, so a generation keeps the validity it was generated with
+  validUntil: string | null
   radioScript: RadioScript | null
   createdAt: Date
 }

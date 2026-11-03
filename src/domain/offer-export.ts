@@ -9,8 +9,7 @@ export type OfferExportProduct = {
 }
 
 export type OfferExport = {
-  version: 1
-  name: string
+  version: 2
   validUntil: string | null
   highlightTitle: string
   highlightMessage: string
@@ -19,8 +18,7 @@ export type OfferExport = {
 
 // Slots past the layout keep their products when the layout shrinks, but the poster doesn't show them
 export const getOfferExport = (content: OfferContent): OfferExport => ({
-  version: 1,
-  name: content.name,
+  version: 2,
   validUntil: content.validUntil,
   highlightTitle: content.highlightTitle,
   highlightMessage: content.highlightMessage,

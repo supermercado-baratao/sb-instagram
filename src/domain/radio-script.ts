@@ -21,7 +21,6 @@ export type RadioListItem = { number: number; text: string; price: string }
 
 export type RadioScript = {
   version: 2
-  offerName: string
   script: string
   list: RadioListItem[]
   // Offer page numbers (1-based) that no products block took
@@ -151,7 +150,6 @@ export const getRadioScript = (
 
   return {
     version: 2,
-    offerName: content.name,
     script: parts.join('\n\n'),
     list,
     unusedPages: pages.slice(nextPage).map(({ number }) => number),

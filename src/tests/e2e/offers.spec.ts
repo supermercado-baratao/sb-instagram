@@ -5,6 +5,8 @@ import { unzipSync } from 'fflate'
 
 import { POSTER_SIZE } from '@/domain/poster'
 
+import { openEmptyOffer } from './offer-helpers'
+
 test('fills an offer page, saves it, generates it and keeps the generation when a product changes', async ({
   page
 }) => {
@@ -25,11 +27,9 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão carioca salvo')).toBeVisible()
 
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  await openEmptyOffer(page)
 
-  await page.getByLabel('Nome da oferta').fill(`Oferta ${code}`)
+  await page.getByLabel('Válida até').fill('2026-11-12')
   await page.getByLabel('Produto 1', { exact: true }).fill(code)
   await page.getByLabel('Produto 1', { exact: true }).press('Enter')
   const price = page.getByLabel('Preço de Feijão carioca (R$)')
@@ -46,12 +46,22 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await expect(price).toHaveValue('7,89')
 
   await page.getByRole('button', { name: 'Gerar' }).click()
-  await expect(page.getByText('Geração 1 pronta.')).toBeVisible()
-  const generation = page.getByRole('listitem').filter({
-    has: page.getByRole('heading', { name: 'Geração 1' })
-  })
+  await expect(page.getByText(/Geração \d+ pronta\./)).toBeVisible()
+  // A reused e2e server keeps the generations of a previous run, so the newest one is picked
+  const generation = page
+    .getByRole('listitem')
+    .filter({
+      has: page.getByRole('heading', {
+        name: /Geração \d+ · válida até 12\/11\/2026/
+      })
+    })
+    .first()
+  const heading = await generation.getByRole('heading').textContent()
+  const number = /\d+/.exec(heading ?? '')?.[0]
   await expect(
-    generation.getByRole('img', { name: /Página 1 da geração 1/ })
+    generation.getByRole('img', {
+      name: new RegExp(`Página 1 da geração ${number}`)
+    })
   ).toBeVisible()
 
   // The generation keeps what was generated, so a product changed later never reaches it
@@ -114,10 +124,10 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   ])
 
   await generation
-    .getByRole('button', { name: 'Roteiro do comercial da geração 1' })
+    .getByRole('button', { name: `Roteiro do comercial da geração ${number}` })
     .click()
   const scriptDialog = page.getByRole('dialog', {
-    name: 'Roteiro do comercial da geração 1'
+    name: `Roteiro do comercial da geração ${number}`
   })
   // A reused e2e server keeps the blocks of a previous run, so only the product line is fixed
   await expect(
@@ -125,13 +135,14 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   ).toContainText(/- Feijão carioca(, .+)?: sete e oitenta e nove/)
   await scriptDialog.press('Escape')
 
-  await generation.getByRole('button', { name: 'Excluir a geração 1' }).click()
+  await generation
+    .getByRole('button', { name: `Excluir a geração ${number}` })
+    .click()
   await page
-    .getByRole('alertdialog', { name: 'Excluir a geração 1?' })
+    .getByRole('alertdialog', { name: `Excluir a geração ${number}?` })
     .getByRole('button', { name: 'Excluir' })
     .click()
-  await expect(page.getByText('Geração 1 excluída.')).toBeVisible()
-  await expect(page.getByText('Nenhuma geração ainda.')).toBeVisible()
+  await expect(page.getByText(`Geração ${number} excluída.`)).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Gerações' })).toBeFocused()
 })
 
@@ -139,9 +150,7 @@ test('registers a missing product from an offer slot', async ({ page }) => {
   const code = `E2E-SLOT-${Date.now()}`
   const slotCode = page.getByLabel('Produto 1', { exact: true })
 
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  await openEmptyOffer(page)
 
   await slotCode.fill(code)
   await slotCode.press('Enter')
@@ -177,9 +186,7 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  await openEmptyOffer(page)
 
   const slotCode = page.getByLabel('Produto 1', { exact: true })
   await slotCode.fill(`SABAO EM PO ${stamp}`)
@@ -218,9 +225,7 @@ test('edits a product placed in an offer slot', async ({ page }) => {
   await createDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Café torrado salvo')).toBeVisible()
 
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  await openEmptyOffer(page)
 
   await page.getByLabel('Produto 1', { exact: true }).fill(code)
   await page.getByLabel('Produto 1', { exact: true }).press('Enter')
@@ -245,16 +250,57 @@ test('edits a product placed in an offer slot', async ({ page }) => {
   ).toBeFocused()
 })
 
+test('clears the prices or the products of the offer', async ({ page }) => {
+  const code = `E2E-CLEAR-${Date.now()}`
+  const productName = 'Óleo de soja'
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(productName)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${productName} salvo`)).toBeVisible()
+
+  await openEmptyOffer(page)
+  await page.getByLabel('Válida até').fill('2026-11-12')
+  await page.getByLabel('Produto 1', { exact: true }).fill(code)
+  await page.getByLabel('Produto 1', { exact: true }).press('Enter')
+  const price = page.getByLabel(`Preço de ${productName} (R$)`)
+  await price.fill('8,49')
+
+  await page.getByRole('button', { name: 'Limpar preços' }).click()
+  const pricesDialog = page.getByRole('alertdialog', {
+    name: 'Limpar os preços da oferta?'
+  })
+  await expect(pricesDialog).toContainText('O produto continua nas páginas')
+  await pricesDialog.getByRole('button', { name: 'Limpar preços' }).click()
+  await expect(price).toHaveValue('')
+  await expect(price).toBeFocused()
+  await expect(page.getByLabel('Válida até')).toHaveValue('')
+
+  await page.getByRole('button', { name: 'Limpar produtos' }).click()
+  const productsDialog = page.getByRole('alertdialog', {
+    name: 'Limpar os produtos da oferta?'
+  })
+  await expect(productsDialog).toContainText(
+    'O produto sai de todas as páginas'
+  )
+  await productsDialog.getByRole('button', { name: 'Limpar produtos' }).click()
+  await expect(price).toBeHidden()
+  await expect(page.getByLabel('Produto 1', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
+})
+
 test('asks before leaving the offer editor with unsaved changes', async ({
   page
 }) => {
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
-  const editorUrl = page.url()
+  await openEmptyOffer(page)
 
-  const name = page.getByLabel('Nome da oferta')
-  await name.fill('Oferta não salva')
+  const highlight = page.getByLabel('Título do destaque')
+  await highlight.fill('Oferta não salva')
   await page
     .getByRole('navigation', { name: 'Principal' })
     .getByRole('link', { name: 'Produtos' })
@@ -264,13 +310,13 @@ test('asks before leaving the offer editor with unsaved changes', async ({
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Continuar editando' }).click()
   await expect(dialog).toBeHidden()
-  await expect(page).toHaveURL(editorUrl)
-  await expect(name).toHaveValue('Oferta não salva')
+  await expect(page).toHaveURL('/ofertas')
+  await expect(highlight).toHaveValue('Oferta não salva')
 
   await page
     .getByRole('navigation', { name: 'Principal' })
-    .getByRole('link', { name: 'Ofertas' })
+    .getByRole('link', { name: 'Produtos' })
     .click()
   await dialog.getByRole('button', { name: 'Sair sem salvar' }).click()
-  await expect(page).toHaveURL(/\/ofertas$/)
+  await expect(page).toHaveURL('/produtos')
 })
