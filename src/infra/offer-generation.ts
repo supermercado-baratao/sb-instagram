@@ -9,7 +9,7 @@ import {
 } from 'node:fs/promises'
 import path from 'node:path'
 
-import { and, desc, eq, max } from 'drizzle-orm'
+import { and, desc, eq, max, sql } from 'drizzle-orm'
 
 import { getOfferExport } from '@/domain/offer-export'
 import {
@@ -24,13 +24,13 @@ import {
   generationsDirectory,
   getGenerationFolder
 } from '@/infra/generations-directory'
-import { findOffer } from '@/infra/offer'
+import { findOffer, OFFER_ID } from '@/infra/offer'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
 
 export type OfferRenderer = {
-  renderPage: (offerId: number, pageNumber: number) => Promise<Uint8Array>
-  renderPdf: (offerId: number) => Promise<Uint8Array>
+  renderPage: (pageNumber: number) => Promise<Uint8Array>
+  renderPdf: () => Promise<Uint8Array>
 }
 
 type GenerationOptions = { directory?: string }
@@ -42,6 +42,9 @@ const generationColumns = {
   offerId: offerGenerations.offerId,
   number: offerGenerations.number,
   pageCount: offerGenerations.pageCount,
+  validUntil: sql<
+    string | null
+  >`json_extract(${offerGenerations.offerExport}, '$.validUntil')`,
   radioScript: offerGenerations.radioScript,
   createdAt: offerGenerations.createdAt
 }
@@ -93,11 +96,10 @@ export const findOfferGenerationExport = (
 // exists, so a failure halfway never leaves a generation with missing files
 export const createOfferGeneration = async (
   database: Database,
-  offerId: number,
   renderer: OfferRenderer,
   { directory = generationsDirectory }: GenerationOptions = {}
 ): Promise<OfferGeneration | undefined> => {
-  const offer = findOffer(database, offerId)
+  const offer = findOffer(database)
   if (!offer) return undefined
 
   const temporary = path.join(directory, `${TEMPORARY_PREFIX}${randomUUID()}`)
@@ -108,24 +110,24 @@ export const createOfferGeneration = async (
       const pageNumber = index + 1
       await writeFile(
         path.join(temporary, getGenerationPageFileName(pageNumber)),
-        await renderer.renderPage(offerId, pageNumber)
+        await renderer.renderPage(pageNumber)
       )
     }
     await writeFile(
       path.join(temporary, GENERATION_PDF_FILE_NAME),
-      await renderer.renderPdf(offerId)
+      await renderer.renderPdf()
     )
 
     const generation = database.transaction((transaction) => {
       const last = transaction
         .select({ number: max(offerGenerations.number) })
         .from(offerGenerations)
-        .where(eq(offerGenerations.offerId, offerId))
+        .where(eq(offerGenerations.offerId, OFFER_ID))
         .get()
       return transaction
         .insert(offerGenerations)
         .values({
-          offerId,
+          offerId: OFFER_ID,
           number: (last?.number ?? 0) + 1,
           // Indented, since the store opens the file to read or edit it by hand
           offerExport: JSON.stringify(getOfferExport(offer), null, 2),

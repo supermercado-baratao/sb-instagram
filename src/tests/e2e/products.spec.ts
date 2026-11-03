@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { openEmptyOffer } from './offer-helpers'
+
 // A 1x1 red PNG, enough for the server to decode and resize
 const PHOTO = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
@@ -223,9 +225,7 @@ test('chooses between a single product and a group with the same code', async ({
     new RegExp(`${fennel}.*${lavender}`)
   )
 
-  await page.goto('/ofertas')
-  await page.getByRole('button', { name: 'Nova oferta', exact: true }).click()
-  await expect(page).toHaveURL(/\/ofertas\/\d+$/)
+  await openEmptyOffer(page)
   const slotCode = page.getByLabel('Produto 1', { exact: true })
   await slotCode.fill(lavender)
   await slotCode.press('Enter')

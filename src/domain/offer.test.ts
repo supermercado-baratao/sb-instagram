@@ -2,6 +2,9 @@ import { describe, expect, test } from 'vitest'
 
 import {
   addPage,
+  clearOfferPrices,
+  clearOfferProducts,
+  countProducts,
   createOfferContent,
   createOfferPage,
   findPageWithoutPrice,
@@ -10,6 +13,7 @@ import {
   isOfferContent,
   movePage,
   moveSlot,
+  type OfferContent,
   type OfferItem,
   parsePrice,
   placeSlots,
@@ -219,7 +223,6 @@ describe('isOfferContent', () => {
   })
 
   test.each([
-    ['an empty name', { ...content, name: '  ' }],
     ['a validity outside ISO', { ...content, validUntil: '20/10/2026' }],
     ['no page', { ...content, pages: [] }],
     [
@@ -280,5 +283,45 @@ describe('findPageWithoutPrice', () => {
     const pages = [setSlot(createOfferPage('a'), 0, item)]
 
     expect(findPageWithoutPrice(pages)).toBe(-1)
+  })
+})
+
+const filled = (): OfferContent => {
+  const content = createOfferContent('mercado')
+  // The layout hides the second product, which would come back if the layout grew again
+  content.pages[0].layout = 3
+  content.pages[0].slots[0] = item
+  content.pages[0].slots[5] = item
+  return { ...content, validUntil: '2026-11-12', highlightTitle: 'Feirão' }
+}
+
+describe('clearing the offer', () => {
+  test('clearOfferProducts empties every slot and the validity, keeping the rest', () => {
+    const cleared = clearOfferProducts(filled())
+
+    expect(countProducts(cleared.pages)).toBe(0)
+    expect(cleared.validUntil).toBe(null)
+    expect(cleared.highlightTitle).toBe('Feirão')
+    expect(cleared.pages[0].layout).toBe(3)
+  })
+
+  test('clearOfferPrices keeps the products without price or validity', () => {
+    const cleared = clearOfferPrices(filled())
+
+    expect(cleared.pages[0].slots[0]).toEqual({ ...item, priceInCents: 0 })
+    expect(cleared.pages[0].slots[5]).toEqual({ ...item, priceInCents: 0 })
+    expect(cleared.pages[0].slots[1]).toBe(null)
+    expect(cleared.validUntil).toBe(null)
+  })
+
+  test('findPageWithoutPrice ignores a product the layout hides', () => {
+    const { pages } = clearOfferPrices(filled())
+
+    expect(findPageWithoutPrice(pages)).toBe(0)
+    expect(
+      findPageWithoutPrice([
+        { ...pages[0], slots: pages[0].slots.with(0, null) }
+      ])
+    ).toBe(-1)
   })
 })

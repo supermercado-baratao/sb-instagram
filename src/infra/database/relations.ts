@@ -4,9 +4,6 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infra/database/schema'
 
 export const relations = defineRelations(schema, (r) => ({
-  offers: {
-    pages: r.many.offerPages({ from: r.offers.id, to: r.offerPages.offerId })
-  },
   offerPages: {
     items: r.many.offerPageItems({
       from: r.offerPages.id,

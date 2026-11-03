@@ -48,39 +48,28 @@ export const productCodes = sqliteTable(
   ]
 )
 
-export const offers = sqliteTable('offers', {
-  id: integer().primaryKey({ autoIncrement: true }),
-  name: text().notNull(),
-  // ISO date (YYYY-MM-DD), formatted for the poster only when it is rendered
-  validUntil: text(),
-  highlightTitle: text().notNull(),
-  highlightMessage: text().notNull(),
-  createdAt: integer({ mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer({ mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date())
-    .$onUpdateFn(() => new Date())
-})
+// One row per instance, since the store only works on its current offer (#80)
+export const offers = sqliteTable(
+  'offers',
+  {
+    id: integer().primaryKey(),
+    // ISO date (YYYY-MM-DD), formatted for the poster only when it is rendered
+    validUntil: text(),
+    highlightTitle: text().notNull(),
+    highlightMessage: text().notNull()
+  },
+  (table) => [check('offers_single_row', sql`${table.id} = 1`)]
+)
 
 export const offerPages = sqliteTable(
   'offer_pages',
   {
     id: integer().primaryKey({ autoIncrement: true }),
-    offerId: integer()
-      .notNull()
-      .references(() => offers.id, { onDelete: 'cascade' }),
     position: integer().notNull(),
     templateId: text().notNull(),
     layout: integer().notNull()
   },
-  (table) => [
-    uniqueIndex('offer_pages_offer_id_position_unique').on(
-      table.offerId,
-      table.position
-    )
-  ]
+  (table) => [uniqueIndex('offer_pages_position_unique').on(table.position)]
 )
 
 // An empty slot has no row, so a page keeps the position of each product

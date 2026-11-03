@@ -674,22 +674,20 @@ describe('searchProducts', () => {
   })
 })
 
-const addOffer = (
+const addPages = (
   database: Awaited<ReturnType<typeof setup>>['database'],
-  name: string,
   productIds: string[]
 ) => {
-  const offer = database
+  database
     .insert(offers)
-    .values({ name, highlightTitle: '', highlightMessage: '' })
-    .returning()
-    .get()
-  for (const [position, productId] of productIds.entries()) {
+    .values({ id: 1, highlightTitle: '', highlightMessage: '' })
+    .onConflictDoNothing()
+    .run()
+  for (const productId of productIds) {
     const page = database
       .insert(offerPages)
       .values({
-        offerId: offer.id,
-        position,
+        position: database.$count(offerPages),
         templateId: 'mercado',
         layout: 4
       })
@@ -731,18 +729,15 @@ describe('deleteProduct', () => {
     expect(database.select().from(products).all()).toEqual([])
   })
 
-  test('refuses a product used in offers and names each offer once', async () => {
+  test('refuses a product used in the offer', async () => {
     const { database, photos, addProduct, readPhoto } = await setup()
     const product = addProduct([EAN], 'Leite', { photo: `${EAN}.png` })
     const other = addProduct(['1234'], 'Picanha')
     await writeFile(path.join(photos, `${EAN}.png`), 'image')
-    addOffer(database, 'Semana', [product.id, product.id])
-    addOffer(database, 'Açougue', [other.id])
-    addOffer(database, 'Fim de semana', [other.id, product.id])
+    addPages(database, [other.id, product.id])
 
     expect(await deleteProduct(database, product.id, { photos })).toEqual({
-      status: 'in-use',
-      offers: ['Fim de semana', 'Semana']
+      status: 'in-use'
     })
     expect(database.select().from(products).all()).toHaveLength(2)
     expect(await readPhoto(`${EAN}.png`)).toBe('image')
@@ -819,7 +814,7 @@ describe('mergeProducts', () => {
     const kept = addProduct(['2001'], 'Sabonete lavanda')
     const merged = addProduct(['2002'], 'Sabonete erva-doce')
     const other = addProduct(['3001'], 'Picanha')
-    addOffer(database, 'Semana', [merged.id, other.id])
+    addPages(database, [merged.id, other.id])
     const [first, second] = database.select().from(offerPages).all()
     database
       .insert(offerPageItems)
@@ -893,17 +888,17 @@ describe('mergeProducts', () => {
 })
 
 describe('previewMerge', () => {
-  test('lists the codes the kept product gains and the offers that change', async () => {
+  test('lists the codes the kept product gains and whether the offer changes', async () => {
     const { database, addProduct } = await setup()
     const kept = addProduct(['2001', '2002'], 'Sabonete')
     const merged = addProduct(['2002', '2003'], 'Sabonete erva-doce')
     const other = addProduct(['3001'], 'Picanha')
-    addOffer(database, 'Semana', [merged.id])
-    addOffer(database, 'Açougue', [other.id, kept.id])
+    addPages(database, [merged.id])
+    addPages(database, [other.id, kept.id])
 
     expect(
       previewMerge(database, { keepId: kept.id, mergedIds: [merged.id] })
-    ).toEqual({ kept, merged: [merged], codes: ['2003'], offers: ['Semana'] })
+    ).toEqual({ kept, merged: [merged], codes: ['2003'], changesOffer: true })
   })
 })
 

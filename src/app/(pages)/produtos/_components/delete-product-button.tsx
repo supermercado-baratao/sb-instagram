@@ -15,7 +15,6 @@ import {
   AlertDialogTrigger
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
-import { formatQuotedList } from '@/app/helpers/list-format'
 import type { Product } from '@/domain/product'
 
 import { deleteProductAction } from '../actions'
@@ -31,13 +30,6 @@ type DeleteProductButtonProps = {
 // The deleted row takes the trigger with it, so focus would fall back to <body>
 const getFinalFocus = () =>
   document.querySelector<HTMLElement>(`#${PRODUCTS_HEADING_ID}`)
-
-const getInUseMessage = (offers: string[]) => {
-  const names = formatQuotedList(offers)
-  return offers.length === 1
-    ? `Este produto está na oferta ${names}. Tire-o dela antes de excluir.`
-    : `Este produto está nas ofertas ${names}. Tire-o delas antes de excluir.`
-}
 
 export const DeleteProductButton = ({
   product,
@@ -64,7 +56,7 @@ export const DeleteProductButton = ({
       }
       setRefusal(
         result.status === 'in-use'
-          ? getInUseMessage(result.offers)
+          ? 'Este produto está na oferta atual. Tire-o dela antes de excluir.'
           : result.message
       )
     })

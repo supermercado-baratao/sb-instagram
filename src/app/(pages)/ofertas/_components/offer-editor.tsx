@@ -1,13 +1,12 @@
 'use client'
 
 import { cn } from 'cn'
-import { ArrowLeft, CircleAlert, Images, Plus, Save } from 'lucide-react'
+import { CircleAlert, Eraser, Images, Plus, Save } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
-import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
-import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
+import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldGroup, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
@@ -20,6 +19,9 @@ import {
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
+  clearOfferPrices,
+  clearOfferProducts,
+  countProducts,
   findPageWithoutPrice,
   movePage,
   type OfferContent,
@@ -32,6 +34,7 @@ import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 import { generateOfferAction, saveOfferAction } from '../actions'
+import { ClearOfferButton } from './clear-offer-button'
 import { OfferGenerations } from './offer-generations'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
@@ -39,7 +42,6 @@ import { PosterStage } from './poster-stage'
 import { PRICE_MISSING_ATTRIBUTE } from './price-field'
 
 type OfferEditorProps = {
-  id: number
   offer: OfferContent
   brand: Brand
   templates: PosterTemplate[]
@@ -50,15 +52,22 @@ type OfferEditorProps = {
 type Status = {
   kind: 'error' | 'info'
   message: string
-  field?: 'name'
   // A new id remounts the message, so the same text twice in a row is announced again
   id: number
 }
 
 const getTabId = (key: number) => `page-tab-${key}`
 
+const describeKept = (count: number) =>
+  count === 1 ? 'O produto continua' : `Os ${count} produtos continuam`
+
+const describeRemoved = (count: number) =>
+  count === 1 ? 'O produto sai' : `Os ${count} produtos saem`
+
+const CLEAR_NOTE =
+  'A limpeza só vale depois de salvar a oferta, e as gerações já feitas não mudam.'
+
 export const OfferEditor = ({
-  id,
   offer,
   brand,
   templates,
@@ -75,12 +84,15 @@ export const OfferEditor = ({
   const [status, setStatus] = useState<Status>()
   // A photo keeps its URL when it changes, so an edited product needs a new one to reload it
   const [photoVersion, setPhotoVersion] = useState<number>()
+  // The price fields keep what was typed, so clearing the offer remounts them with the new content
+  const [clearCount, setClearCount] = useState(0)
   const [saving, startSave] = useTransition()
   const [generating, startGenerate] = useTransition()
   const dirty = content !== saved
 
   const selectedIndex = Math.max(pageKeys.indexOf(selectedKey), 0)
   const selectedPage = content.pages[selectedIndex]
+  const productCount = countProducts(content.pages)
 
   useUnsavedChangesWarning(dirty)
 
@@ -135,16 +147,13 @@ export const OfferEditor = ({
     document.querySelector<HTMLElement>(`#${getTabId(nextKey)}`)?.focus()
   }
 
+  const clear = (next: OfferContent, message: string) => {
+    setContent(next)
+    setClearCount(clearCount + 1)
+    show({ kind: 'info', message })
+  }
+
   const save = () => {
-    if (content.name.trim() === '') {
-      show({
-        kind: 'error',
-        message: 'Dê um nome para a oferta.',
-        field: 'name'
-      })
-      document.querySelector<HTMLElement>('#offer-name')?.focus()
-      return
-    }
     const pageWithoutPrice = findPageWithoutPrice(content.pages)
     if (pageWithoutPrice !== -1) {
       flushSync(() => {
@@ -162,7 +171,7 @@ export const OfferEditor = ({
 
     const snapshot = content
     startSave(async () => {
-      const result = await saveOfferAction(id, snapshot)
+      const result = await saveOfferAction(snapshot)
       if (result.status === 'error') {
         setStatus(undefined)
         // An error stays until it is closed, so it isn't missed (WCAG 2.2.1)
@@ -178,7 +187,7 @@ export const OfferEditor = ({
   const generate = () => {
     show({ kind: 'info', message: 'Gerando as páginas…' })
     startGenerate(async () => {
-      const result = await generateOfferAction(id)
+      const result = await generateOfferAction()
       setStatus(undefined)
       toast.dismiss()
       if (result.status === 'error') {
@@ -199,21 +208,10 @@ export const OfferEditor = ({
   return (
     <main className="flex w-full flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
       <header className="flex flex-col gap-4">
-        <GuardedLink
-          href="/ofertas"
-          className={buttonVariants({
-            variant: 'ghost',
-            size: 'sm',
-            className: 'self-start'
-          })}
-        >
-          <ArrowLeft data-icon="inline-start" aria-hidden />
-          Ofertas
-        </GuardedLink>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="text-2xl font-semibold tracking-tight wrap-break-word">
-              {content.name.trim() || 'Oferta sem nome'}
+              Oferta atual
             </h1>
             <p className="text-sm text-muted-foreground">
               {dirty ? 'Alterações não salvas' : 'Tudo salvo'}
@@ -284,15 +282,6 @@ export const OfferEditor = ({
               </p>
             </div>
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
-              <Field data-invalid={status?.field === 'name' ? true : undefined}>
-                <FieldLabel htmlFor="offer-name">Nome da oferta</FieldLabel>
-                <Input
-                  id="offer-name"
-                  aria-invalid={status?.field === 'name' ? true : undefined}
-                  value={content.name}
-                  onChange={(event) => update({ name: event.target.value })}
-                />
-              </Field>
               <Field>
                 <FieldLabel htmlFor="offer-valid-until">Válida até</FieldLabel>
                 <Input
@@ -316,7 +305,7 @@ export const OfferEditor = ({
                   }
                 />
               </Field>
-              <Field>
+              <Field className="sm:col-span-2">
                 <FieldLabel htmlFor="offer-highlight-message">
                   Mensagem do destaque
                 </FieldLabel>
@@ -344,10 +333,48 @@ export const OfferEditor = ({
                   Bipe ou digite o código e aperte Enter para colocar o produto.
                 </p>
               </div>
-              <Button variant="outline" onClick={addNewPage}>
-                <Plus data-icon="inline-start" aria-hidden />
-                Adicionar página
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <ClearOfferButton
+                  label="Limpar preços"
+                  icon={Eraser}
+                  title="Limpar os preços da oferta?"
+                  description={`${describeKept(productCount)} nas páginas, sem preço, e a validade da oferta é apagada. Será preciso digitar os preços de novo para salvar. ${CLEAR_NOTE}`}
+                  disabled={productCount === 0}
+                  getNextField={() =>
+                    document.querySelector<HTMLElement>(
+                      `[${CSS.escape(PRICE_MISSING_ATTRIBUTE)}]`
+                    )
+                  }
+                  onConfirm={() =>
+                    clear(
+                      clearOfferPrices(content),
+                      'Preços e validade limpos. Digite os novos preços e salve.'
+                    )
+                  }
+                />
+                <ClearOfferButton
+                  label="Limpar produtos"
+                  icon={Eraser}
+                  title="Limpar os produtos da oferta?"
+                  description={`${describeRemoved(productCount)} de todas as páginas, com os preços, e a validade da oferta é apagada. As páginas, os modelos de arte e os textos do destaque continuam. ${CLEAR_NOTE}`}
+                  disabled={productCount === 0}
+                  getNextField={() =>
+                    document.querySelector<HTMLElement>(
+                      `#page-${selectedIndex}-slot-0-code`
+                    )
+                  }
+                  onConfirm={() =>
+                    clear(
+                      clearOfferProducts(content),
+                      'Produtos, preços e validade limpos. Coloque os novos produtos e salve.'
+                    )
+                  }
+                />
+                <Button variant="outline" onClick={addNewPage}>
+                  <Plus data-icon="inline-start" aria-hidden />
+                  Adicionar página
+                </Button>
+              </div>
             </div>
             <Tabs
               value={selectedKey}
@@ -366,7 +393,10 @@ export const OfferEditor = ({
               </TabsList>
               {/* Only the selected panel is mounted, so moving its page never re-inserts the
                   focused button's DOM node, which would blur it */}
-              <TabsContent key={selectedKey} value={selectedKey}>
+              <TabsContent
+                key={`${selectedKey}-${clearCount}`}
+                value={selectedKey}
+              >
                 <PagePanel
                   index={selectedIndex}
                   pageCount={content.pages.length}

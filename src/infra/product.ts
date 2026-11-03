@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { and, asc, eq, exists, inArray, type SQL, sql } from 'drizzle-orm'
+import { and, eq, exists, inArray, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
@@ -31,13 +31,7 @@ import {
   findCatalogProduct,
   listCatalogEntries
 } from '@/infra/catalog/product'
-import {
-  offerPageItems,
-  offerPages,
-  offers,
-  productCodes,
-  products
-} from '@/infra/database/schema'
+import { offerPageItems, productCodes, products } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
 import {
   copyEanImage,
@@ -391,24 +385,17 @@ export const searchProducts = (
   return attachCodes(database, rows)
 }
 
-const findOffersUsingProducts = (database: Database, ids: string[]) =>
+const isInOffer = (database: Database, ids: string[]) =>
   database
-    .selectDistinct({ id: offers.id, name: offers.name })
+    .select({ productId: offerPageItems.productId })
     .from(offerPageItems)
-    .innerJoin(offerPages, eq(offerPages.id, offerPageItems.pageId))
-    .innerJoin(offers, eq(offers.id, offerPages.offerId))
     .where(inArray(offerPageItems.productId, ids))
-    .orderBy(asc(offers.name), asc(offers.id))
-    .all()
-    .map(({ name }) => name)
+    .limit(1)
+    .get() !== undefined
 
-export const findOffersUsingProduct = (database: Database, id: string) =>
-  findOffersUsingProducts(database, [id])
+export type DeleteProductResult = { status: 'deleted' } | { status: 'in-use' }
 
-export type DeleteProductResult =
-  { status: 'deleted' } | { status: 'in-use'; offers: string[] }
-
-// Offers are left untouched: whoever deletes the product takes it out of them first (#28)
+// The offer is left untouched: whoever deletes the product takes it out of the offer first (#28)
 export const deleteProduct = async (
   database: Database,
   id: string,
@@ -416,8 +403,7 @@ export const deleteProduct = async (
 ): Promise<DeleteProductResult> => {
   if (!isValidProductId(id)) throw new Error(`Invalid product id: ${id}`)
 
-  const offerNames = findOffersUsingProduct(database, id)
-  if (offerNames.length > 0) return { status: 'in-use', offers: offerNames }
+  if (isInOffer(database, [id])) return { status: 'in-use' }
 
   const product = findProductById(database, id)
   database.delete(products).where(eq(products.id, id)).run()
@@ -435,8 +421,8 @@ export type MergePreview = {
   merged: Product[]
   // Codes the kept product gains
   codes: string[]
-  // Offers whose items move to the kept product
-  offers: string[]
+  // Whether items of the offer move to the kept product
+  changesOffer: boolean
 }
 
 const loadMerge = (
@@ -474,7 +460,7 @@ export const previewMerge = (
     kept,
     merged,
     codes: codes.filter((code) => !kept.codes.includes(code)),
-    offers: findOffersUsingProducts(database, input.mergedIds)
+    changesOffer: isInOffer(database, input.mergedIds)
   }
 }
 

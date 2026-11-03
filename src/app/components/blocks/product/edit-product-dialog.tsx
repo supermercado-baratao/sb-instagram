@@ -62,7 +62,7 @@ export const EditProductDialog = ({
         <DialogHeader>
           <DialogTitle>Editar produto</DialogTitle>
           <DialogDescription>
-            As alterações valem para todas as ofertas que usam este produto.
+            As alterações valem para toda a oferta e para o cadastro do produto.
           </DialogDescription>
         </DialogHeader>
         {/* The popup unmounts when closed, so every opening starts from the current product */}

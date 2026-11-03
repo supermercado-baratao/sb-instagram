@@ -141,3 +141,89 @@ test('radio-script-blocks resets the saved template and drops the first script f
       .all()
   ).toEqual([{ radioScript: null }, { radioScript: null }])
 })
+
+test('single-offer keeps the latest offer and every generation of the others', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_single-offer')
+  })
+
+  const product = '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d'
+  sqlite.exec(`
+    INSERT INTO products (id, name) VALUES ('${product}', 'Leite');
+    INSERT INTO offers (id, name, validUntil, highlightTitle, highlightMessage, createdAt, updatedAt) VALUES
+      (5, 'Antiga', '2026-10-01', 'Velho', '', 0, 100),
+      (7, 'Atual', '2026-11-12', 'Feirão', 'Só hoje', 0, 200);
+    INSERT INTO offer_pages (id, offerId, position, templateId, layout) VALUES
+      (10, 5, 0, 'mercado', 9),
+      (20, 7, 0, 'mercado', 4),
+      (21, 7, 1, 'acougue', 3);
+    INSERT INTO offer_page_items (pageId, position, productId, priceInCents) VALUES
+      (10, 0, '${product}', 100),
+      (21, 2, '${product}', 799);
+    INSERT INTO offer_generations (id, offerId, number, offerExport, pageCount, createdAt) VALUES
+      (1, 7, 1, '{"validUntil":"2026-11-12"}', 2, 300),
+      (2, 5, 1, '{"validUntil":"2026-10-01"}', 1, 100),
+      (3, 5, 2, '{"validUntil":"2026-10-01"}', 1, 200),
+      (4, 7, 2, '{}', 2, 400);
+    DELETE FROM offer_generations WHERE id = 4;
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  expect(sqlite.prepare('SELECT * FROM offers').all()).toEqual([
+    {
+      id: 1,
+      validUntil: '2026-11-12',
+      highlightTitle: 'Feirão',
+      highlightMessage: 'Só hoje'
+    }
+  ])
+  expect(
+    sqlite.prepare('SELECT * FROM offer_pages ORDER BY position').all()
+  ).toEqual([
+    { id: 20, position: 0, templateId: 'mercado', layout: 4 },
+    { id: 21, position: 1, templateId: 'acougue', layout: 3 }
+  ])
+  expect(sqlite.prepare('SELECT * FROM offer_page_items').all()).toEqual([
+    { pageId: 21, position: 2, productId: product, priceInCents: 799 }
+  ])
+  // The ids name the folders of the files, so they stay, and the numbers follow the dates
+  expect(
+    sqlite
+      .prepare(
+        'SELECT id, offerId, number, createdAt FROM offer_generations ORDER BY number'
+      )
+      .all()
+  ).toEqual([
+    { id: 2, offerId: 1, number: 1, createdAt: 100 },
+    { id: 3, offerId: 1, number: 2, createdAt: 200 },
+    { id: 1, offerId: 1, number: 3, createdAt: 300 }
+  ])
+  expect(sqlite.pragma('foreign_key_check')).toEqual([])
+  expect(() =>
+    sqlite.exec(
+      "INSERT INTO offers (id, highlightTitle, highlightMessage) VALUES (2, '', '')"
+    )
+  ).toThrow()
+
+  // The id of the deleted generation must not come back
+  const { lastInsertRowid } = sqlite
+    .prepare(
+      "INSERT INTO offer_generations (offerId, number, offerExport, pageCount, createdAt) VALUES (1, 4, '{}', 1, 500)"
+    )
+    .run()
+  expect(lastInsertRowid).toBe(5)
+})
+
+test('single-offer starts an instance without offers empty', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, { migrationsFolder })
+
+  expect(sqlite.prepare('SELECT * FROM offers').all()).toEqual([])
+  expect(sqlite.prepare('SELECT * FROM offer_generations').all()).toEqual([])
+})

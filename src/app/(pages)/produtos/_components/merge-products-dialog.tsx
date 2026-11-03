@@ -17,7 +17,6 @@ import {
   RadioGroup,
   RadioGroupItem
 } from '@/app/components/ui/shadcn/radio-group'
-import { formatQuotedList } from '@/app/helpers/list-format'
 import type { Product } from '@/domain/product'
 
 import {
@@ -39,14 +38,6 @@ const getMergeInput = (products: Product[], keepId: string) => ({
   keepId,
   mergedIds: products.map(({ id }) => id).filter((id) => id !== keepId)
 })
-
-const getOffersMessage = (offers: string[]) => {
-  if (offers.length === 0) return 'Nenhuma oferta muda.'
-  const names = formatQuotedList(offers)
-  return offers.length === 1
-    ? `A oferta ${names} passa a usar o produto que fica.`
-    : `As ofertas ${names} passam a usar o produto que fica.`
-}
 
 // Remounted (by key) on every opening, so each one starts from the first product
 export const MergeProductsDialog = ({
@@ -180,7 +171,9 @@ export const MergeProductsDialog = ({
                     : `Códigos que passam para ele: ${preview.codes.join(', ')}.`}
                 </p>
                 <p className="text-muted-foreground">
-                  {getOffersMessage(preview.offers)}
+                  {preview.changesOffer
+                    ? 'A oferta atual passa a usar o produto que fica.'
+                    : 'A oferta atual não muda.'}
                 </p>
               </>
             )
