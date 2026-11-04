@@ -1,4 +1,4 @@
-import { getRadioScriptMarkdown } from '@/domain/radio-script'
+import { getRadioListMarkdown } from '@/domain/radio-script'
 
 import {
   findGenerationByParams,
@@ -7,15 +7,15 @@ import {
 
 export const GET = async (
   _request: Request,
-  { params }: RouteContext<'/ofertas/[id]/geracoes/[generation]/roteiro.md'>
+  { params }: RouteContext<'/geracoes/[id]/lista.md'>
 ) => {
   const generation = await findGenerationByParams(params)
   if (!generation?.radioScript) return new Response(null, { status: 404 })
 
-  return new Response(getRadioScriptMarkdown(generation.radioScript), {
+  return new Response(getRadioListMarkdown(generation.radioScript), {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
-      'Content-Disposition': `attachment; filename="oferta-${generation.offerId}-geracao-${generation.number}-roteiro.md"`,
+      'Content-Disposition': `attachment; filename="geracao-${generation.number}-lista.md"`,
       'Cache-Control': IMMUTABLE_CACHE_CONTROL
     }
   })

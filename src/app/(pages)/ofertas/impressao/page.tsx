@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 
 import { Poster } from '@/app/components/blocks/poster'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
@@ -27,7 +28,8 @@ const printScale = getPosterFitScale({
 })
 
 // Printed to PDF by the renderer, one saved page per A4 sheet, so it has no header or controls
-const OfferPrint = () => {
+const OfferPrint = async () => {
+  await connection()
   const settings = findBrandSettings(database)
   const offer = findOffer(database)
   if (!settings || !offer) notFound()

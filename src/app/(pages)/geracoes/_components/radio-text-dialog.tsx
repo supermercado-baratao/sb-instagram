@@ -1,7 +1,8 @@
 'use client'
 
 import { cn } from 'cn'
-import { CircleAlert, Copy, Download, type LucideIcon } from 'lucide-react'
+import { CircleAlert, Copy, Download } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Alert, AlertDescription } from '@/app/components/ui/shadcn/alert'
@@ -20,7 +21,7 @@ type RadioTextDialogProps = {
   title: string
   description: string
   copiedMessage: string
-  icon: LucideIcon
+  icon: ReactNode
   generationNumber: number
   text: string
   warning?: string
@@ -31,7 +32,7 @@ export const RadioTextDialog = ({
   title,
   description,
   copiedMessage,
-  icon: Icon,
+  icon,
   generationNumber,
   text,
   warning,
@@ -52,7 +53,7 @@ export const RadioTextDialog = ({
   return (
     <Dialog>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        <Icon data-icon="inline-start" aria-hidden />
+        {icon}
         {title}
         <span className="sr-only"> da geração {generationNumber}</span>
       </DialogTrigger>

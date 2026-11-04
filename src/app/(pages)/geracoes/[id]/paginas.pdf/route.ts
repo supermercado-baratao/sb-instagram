@@ -1,5 +1,5 @@
-import { GENERATION_PDF_FILE_NAME } from '@/domain/offer-generation'
-import { readGenerationFile } from '@/infra/offer-generation'
+import { GENERATION_PDF_FILE_NAME } from '@/domain/generation'
+import { readGenerationFile } from '@/infra/generation'
 
 import {
   findGenerationByParams,
@@ -8,7 +8,7 @@ import {
 
 export const GET = async (
   _request: Request,
-  { params }: RouteContext<'/ofertas/[id]/geracoes/[generation]/paginas.pdf'>
+  { params }: RouteContext<'/geracoes/[id]/paginas.pdf'>
 ) => {
   const generation = await findGenerationByParams(params)
   const pdf = generation
@@ -20,7 +20,7 @@ export const GET = async (
     headers: {
       'Content-Type': 'application/pdf',
       // Inline, so the browser opens its PDF viewer, which prints it
-      'Content-Disposition': `inline; filename="oferta-${generation.offerId}-geracao-${generation.number}.pdf"`,
+      'Content-Disposition': `inline; filename="geracao-${generation.number}.pdf"`,
       'Cache-Control': IMMUTABLE_CACHE_CONTROL
     }
   })

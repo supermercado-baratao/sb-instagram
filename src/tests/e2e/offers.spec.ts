@@ -29,11 +29,12 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
 
   await openEmptyOffer(page)
 
-  await page.getByLabel('Válida até').fill('2026-11-12')
   await page.getByLabel('Produto 1', { exact: true }).fill(code)
   await page.getByLabel('Produto 1', { exact: true }).press('Enter')
   const price = page.getByLabel('Preço de Feijão carioca (R$)')
   await expect(price).toBeFocused()
+  // Only now: a product placed proves the page is hydrated, or the filled date would be lost
+  await page.getByLabel('Válida até').fill('2026-11-12')
 
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Falta o preço')).toBeVisible()
@@ -44,9 +45,18 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
 
   await page.reload()
   await expect(price).toHaveValue('7,89')
+  await expect(page.getByLabel('Válida até')).toHaveValue('2026-11-12')
 
   await page.getByRole('button', { name: 'Gerar' }).click()
   await expect(page.getByText(/Geração \d+ pronta\./)).toBeVisible()
+  // Edits made after generating must still ask before the toast's link leaves the page
+  await page.getByLabel('Título do destaque').fill('Editado depois de gerar')
+  await page.getByRole('link', { name: 'Ver gerações' }).click()
+  await page
+    .getByRole('alertdialog', { name: 'Sair sem salvar?' })
+    .getByRole('button', { name: 'Sair sem salvar' })
+    .click()
+  await expect(page).toHaveURL('/geracoes')
   // A reused e2e server keeps the generations of a previous run, so the newest one is picked
   const generation = page
     .getByRole('listitem')
@@ -65,12 +75,14 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   ).toBeVisible()
 
   // The generation keeps what was generated, so a product changed later never reaches it
+  await page.goto('/ofertas')
   await page.getByRole('button', { name: 'Editar Feijão carioca' }).click()
   const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
   await editDialog.getByLabel('Nome').fill('Feijão preto')
   await editDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão preto atualizado.')).toBeVisible()
 
+  await page.goto('/geracoes')
   const downloadEvent = page.waitForEvent('download')
   await generation.getByRole('link', { name: 'Baixar páginas (PNG)' }).click()
   const download = await downloadEvent
@@ -143,7 +155,9 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
     .getByRole('button', { name: 'Excluir' })
     .click()
   await expect(page.getByText(`Geração ${number} excluída.`)).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Gerações' })).toBeFocused()
+  await expect(
+    page.getByRole('heading', { name: 'Gerações', level: 1 })
+  ).toBeFocused()
 })
 
 test('registers a missing product from an offer slot', async ({ page }) => {
@@ -265,11 +279,11 @@ test('clears the prices or the products of the offer', async ({ page }) => {
   await expect(page.getByText(`${productName} salvo`)).toBeVisible()
 
   await openEmptyOffer(page)
-  await page.getByLabel('Válida até').fill('2026-11-12')
   await page.getByLabel('Produto 1', { exact: true }).fill(code)
   await page.getByLabel('Produto 1', { exact: true }).press('Enter')
   const price = page.getByLabel(`Preço de ${productName} (R$)`)
   await price.fill('8,49')
+  await page.getByLabel('Válida até').fill('2026-11-12')
 
   await page.getByRole('button', { name: 'Limpar preços' }).click()
   const pricesDialog = page.getByRole('alertdialog', {

@@ -136,9 +136,7 @@ test('radio-script-blocks resets the saved template and drops the first script f
     priceMarkers: '["somente"]'
   })
   expect(
-    sqlite
-      .prepare('SELECT radioScript FROM offer_generations ORDER BY number')
-      .all()
+    sqlite.prepare('SELECT radioScript FROM generations ORDER BY number').all()
   ).toEqual([{ radioScript: null }, { radioScript: null }])
 })
 
@@ -171,7 +169,9 @@ test('single-offer keeps the latest offer and every generation of the others', a
     DELETE FROM offer_generations WHERE id = 4;
   `)
 
-  migrate(database, { migrationsFolder })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_independent-generations')
+  })
 
   expect(sqlite.prepare('SELECT * FROM offers').all()).toEqual([
     {
@@ -218,12 +218,53 @@ test('single-offer keeps the latest offer and every generation of the others', a
   expect(lastInsertRowid).toBe(5)
 })
 
-test('single-offer starts an instance without offers empty', async () => {
+test('independent-generations keeps every generation and its id sequence', async () => {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
   const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_independent-generations')
+  })
+
+  sqlite.exec(`
+    INSERT INTO offers (id, highlightTitle, highlightMessage) VALUES (1, '', '');
+    INSERT INTO offer_generations (id, offerId, number, offerExport, pageCount, radioScript, createdAt) VALUES
+      (2, 1, 1, '{"validUntil":"2026-10-01"}', 1, NULL, 100),
+      (5, 1, 2, '{"validUntil":"2026-11-12"}', 2, '{"version":2}', 200),
+      (6, 1, 3, '{}', 1, NULL, 300);
+    DELETE FROM offer_generations WHERE id = 6;
+  `)
+
   migrate(database, { migrationsFolder })
 
-  expect(sqlite.prepare('SELECT * FROM offers').all()).toEqual([])
-  expect(sqlite.prepare('SELECT * FROM offer_generations').all()).toEqual([])
+  expect(sqlite.prepare('SELECT * FROM generations ORDER BY id').all()).toEqual(
+    [
+      {
+        id: 2,
+        number: 1,
+        offerExport: '{"validUntil":"2026-10-01"}',
+        pageCount: 1,
+        radioScript: null,
+        createdAt: 100
+      },
+      {
+        id: 5,
+        number: 2,
+        offerExport: '{"validUntil":"2026-11-12"}',
+        pageCount: 2,
+        radioScript: '{"version":2}',
+        createdAt: 200
+      }
+    ]
+  )
+
+  // The generations no longer depend on the offer, and the deleted id must not come back
+  sqlite.exec('DELETE FROM offers')
+  expect(sqlite.prepare('SELECT id FROM generations').all()).toHaveLength(2)
+  const { lastInsertRowid } = sqlite
+    .prepare(
+      "INSERT INTO generations (number, offerExport, pageCount, createdAt) VALUES (3, '{}', 1, 500)"
+    )
+    .run()
+  expect(lastInsertRowid).toBe(7)
 })

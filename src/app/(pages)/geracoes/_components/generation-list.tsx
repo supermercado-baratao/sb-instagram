@@ -18,26 +18,23 @@ import {
 import {
   getGenerationHref,
   getGenerationPageHref
-} from '@/app/helpers/offer-generation'
+} from '@/app/helpers/generation'
+import type { Generation } from '@/domain/generation'
 import { formatValidUntil } from '@/domain/offer'
-import type { OfferGeneration } from '@/domain/offer-generation'
 import {
   getRadioListMarkdown,
   getRadioScriptMarkdown,
   getRadioScriptWarning
 } from '@/domain/radio-script'
 
-import {
-  DeleteGenerationButton,
-  GENERATIONS_HEADING_ID
-} from './delete-generation-button'
+import { DeleteGenerationButton } from './delete-generation-button'
 import { GeneratedAt } from './generated-at'
 import { RadioTextDialog } from './radio-text-dialog'
 
 const describePages = (pageCount: number) =>
   pageCount === 1 ? '1 página' : `${pageCount} páginas`
 
-const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
+const GenerationCard = ({ generation }: { generation: Generation }) => {
   const validUntil = formatValidUntil(generation.validUntil)
   const pageNumbers = Array.from(
     { length: generation.pageCount },
@@ -47,10 +44,10 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
     <Card size="sm">
       <CardHeader>
         <CardTitle>
-          <h3>
+          <h2>
             Geração {generation.number}
             {validUntil && ` · válida até ${validUntil}`}
-          </h3>
+          </h2>
         </CardTitle>
         <CardDescription>
           {describePages(generation.pageCount)}
@@ -120,7 +117,7 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
               title="Roteiro do comercial"
               description="Os blocos salvos em Configurações › Comercial, com os produtos de cada página e os preços por extenso."
               copiedMessage="Roteiro do comercial copiado."
-              icon={Megaphone}
+              icon={<Megaphone data-icon="inline-start" aria-hidden />}
               generationNumber={generation.number}
               text={getRadioScriptMarkdown(generation.radioScript)}
               warning={getRadioScriptWarning(generation.radioScript)}
@@ -130,7 +127,7 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
               title="Lista da rádio"
               description="Os produtos do comercial, numerados em sequência, com o texto da locução e o preço."
               copiedMessage="Lista da rádio copiada."
-              icon={ListOrdered}
+              icon={<ListOrdered data-icon="inline-start" aria-hidden />}
               generationNumber={generation.number}
               text={getRadioListMarkdown(generation.radioScript)}
               warning={getRadioScriptWarning(generation.radioScript)}
@@ -144,40 +141,21 @@ const GenerationCard = ({ generation }: { generation: OfferGeneration }) => {
   )
 }
 
-export const OfferGenerations = ({
+export const GenerationList = ({
   generations
 }: {
-  generations: OfferGeneration[]
-}) => (
-  <section
-    aria-labelledby={GENERATIONS_HEADING_ID}
-    className="flex flex-col gap-4"
-  >
-    <div className="flex flex-col gap-1">
-      <h2
-        id={GENERATIONS_HEADING_ID}
-        tabIndex={-1}
-        className="text-lg font-semibold outline-none"
-      >
-        Gerações
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Cada geração guarda as páginas como estavam ao gerar. Mudar um produto
-        ou a marca depois não altera as gerações.
-      </p>
-    </div>
-    {generations.length === 0 ? (
-      <p className="text-sm text-muted-foreground">
-        Nenhuma geração ainda. Salve a oferta e clique em Gerar.
-      </p>
-    ) : (
-      <ol className="flex flex-col gap-4">
-        {generations.map((generation) => (
-          <li key={generation.id}>
-            <GenerationCard generation={generation} />
-          </li>
-        ))}
-      </ol>
-    )}
-  </section>
-)
+  generations: Generation[]
+}) =>
+  generations.length === 0 ? (
+    <p className="text-sm text-muted-foreground">
+      Nenhuma geração ainda. Salve a oferta e clique em Gerar.
+    </p>
+  ) : (
+    <ol className="flex flex-col gap-4">
+      {generations.map((generation) => (
+        <li key={generation.id}>
+          <GenerationCard generation={generation} />
+        </li>
+      ))}
+    </ol>
+  )

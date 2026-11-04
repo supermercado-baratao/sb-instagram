@@ -1,5 +1,5 @@
 import { database } from '@/infra/database/client'
-import { findOfferGenerationExport } from '@/infra/offer-generation'
+import { findGenerationExport } from '@/infra/generation'
 
 import {
   findGenerationByParams,
@@ -8,18 +8,17 @@ import {
 
 export const GET = async (
   _request: Request,
-  { params }: RouteContext<'/ofertas/[id]/geracoes/[generation]/ofertas.json'>
+  { params }: RouteContext<'/geracoes/[id]/ofertas.json'>
 ) => {
   const generation = await findGenerationByParams(params)
   const offerExport =
-    generation &&
-    findOfferGenerationExport(database, generation.offerId, generation.id)
+    generation && findGenerationExport(database, generation.id)
   if (!generation || !offerExport) return new Response(null, { status: 404 })
 
   return new Response(offerExport, {
     headers: {
       'Content-Type': 'application/json',
-      'Content-Disposition': `attachment; filename="oferta-${generation.offerId}-geracao-${generation.number}-produtos.json"`,
+      'Content-Disposition': `attachment; filename="geracao-${generation.number}-produtos.json"`,
       'Cache-Control': IMMUTABLE_CACHE_CONTROL
     }
   })

@@ -1,11 +1,11 @@
 import { cn } from 'cn'
 import type { ReactNode } from 'react'
 
-import { NavigationGuardProvider } from '@/app/components/providers/navigation-guard'
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
 import { SETTINGS_PATH } from '@/app/helpers/brand-settings'
+import { GENERATIONS_PATH } from '@/app/helpers/generation'
 import type { StoreBrand } from '@/domain/brand'
 
 import { NavLink } from './_components/nav-link'
@@ -23,7 +23,7 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
   const logoUrl = getLogoUrl(brand)
 
   return (
-    <NavigationGuardProvider>
+    <>
       <a
         href={`#${CONTENT_ID}`}
         className={buttonVariants({
@@ -56,12 +56,15 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
             )}
           </GuardedLink>
           <nav aria-label="Principal">
-            <ul className="flex gap-1">
+            <ul className="flex flex-wrap gap-1">
               <li>
                 <NavLink href="/ofertas">Ofertas</NavLink>
               </li>
               <li>
                 <NavLink href="/produtos">Produtos</NavLink>
+              </li>
+              <li>
+                <NavLink href={GENERATIONS_PATH}>Gerações</NavLink>
               </li>
               <li>
                 <NavLink href={SETTINGS_PATH}>Configurações</NavLink>
@@ -77,6 +80,6 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
       >
         {children}
       </div>
-    </NavigationGuardProvider>
+    </>
   )
 }
