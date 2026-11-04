@@ -1,7 +1,7 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -16,11 +16,10 @@ import {
   AlertDialogTrigger
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
-import type { OfferGeneration } from '@/domain/offer-generation'
+import { GENERATIONS_HEADING_ID } from '@/app/helpers/generation'
+import type { Generation } from '@/domain/generation'
 
-import { deleteOfferGenerationAction } from '../actions'
-
-export const GENERATIONS_HEADING_ID = 'offer-generations-heading'
+import { deleteGenerationAction } from '../actions'
 
 // The deleted card takes the trigger with it, so focus would fall back to <body>
 const getFinalFocus = () =>
@@ -29,23 +28,22 @@ const getFinalFocus = () =>
 export const DeleteGenerationButton = ({
   generation
 }: {
-  generation: OfferGeneration
+  generation: Generation
 }) => {
   const [open, setOpen] = useState(false)
   const [deleting, startDelete] = useTransition()
+  const deleted = useRef(false)
 
   const confirm = () =>
     startDelete(async () => {
-      const result = await deleteOfferGenerationAction(
-        generation.offerId,
-        generation.id
-      )
+      const result = await deleteGenerationAction(generation.id)
       setOpen(false)
       toast.dismiss()
       if (result.status === 'error') {
         toast.error(result.message, { duration: Infinity })
         return
       }
+      deleted.current = true
       getFinalFocus()?.focus()
       toast.success(`Geração ${generation.number} excluída.`)
     })
@@ -63,7 +61,9 @@ export const DeleteGenerationButton = ({
         <Trash2 data-icon="inline-start" aria-hidden />
         Excluir
       </AlertDialogTrigger>
-      <AlertDialogContent finalFocus={getFinalFocus}>
+      <AlertDialogContent
+        finalFocus={() => (deleted.current ? getFinalFocus() : true)}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>
             Excluir a geração {generation.number}?

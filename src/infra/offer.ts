@@ -10,7 +10,7 @@ import { offerPageItems, offerPages, offers } from '@/infra/database/schema'
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 
-export const OFFER_ID = 1
+const OFFER_ID = 1
 
 export const findOffer = (database: Database): OfferContent | undefined => {
   const offer = database.query.offers.findFirst().sync()

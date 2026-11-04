@@ -1,7 +1,7 @@
 import { zipSync } from 'fflate'
 
-import { getGenerationPageFileName } from '@/domain/offer-generation'
-import { readGenerationFile } from '@/infra/offer-generation'
+import { getGenerationPageFileName } from '@/domain/generation'
+import { readGenerationFile } from '@/infra/generation'
 
 import {
   findGenerationByParams,
@@ -10,7 +10,7 @@ import {
 
 export const GET = async (
   _request: Request,
-  { params }: RouteContext<'/ofertas/[id]/geracoes/[generation]/paginas.zip'>
+  { params }: RouteContext<'/geracoes/[id]/paginas.zip'>
 ) => {
   const generation = await findGenerationByParams(params)
   if (!generation) return new Response(null, { status: 404 })
@@ -29,7 +29,7 @@ export const GET = async (
   return new Response(new Uint8Array(zip), {
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="oferta-${generation.offerId}-geracao-${generation.number}.zip"`,
+      'Content-Disposition': `attachment; filename="geracao-${generation.number}.zip"`,
       'Cache-Control': IMMUTABLE_CACHE_CONTROL
     }
   })

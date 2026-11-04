@@ -1,8 +1,8 @@
 import {
   getGenerationPageFileName,
   isGenerationPageNumber
-} from '@/domain/offer-generation'
-import { readGenerationFile } from '@/infra/offer-generation'
+} from '@/domain/generation'
+import { readGenerationFile } from '@/infra/generation'
 
 import {
   findGenerationByParams,
@@ -11,7 +11,7 @@ import {
 
 export const GET = async (
   _request: Request,
-  { params }: RouteContext<'/ofertas/[id]/geracoes/[generation]/pagina/[page]'>
+  { params }: RouteContext<'/geracoes/[id]/pagina/[page]'>
 ) => {
   const generation = await findGenerationByParams(params)
   const { page } = await params

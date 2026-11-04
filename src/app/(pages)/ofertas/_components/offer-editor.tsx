@@ -6,7 +6,8 @@ import { useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
-import { Button } from '@/app/components/ui/shadcn/button'
+import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
+import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Field, FieldGroup, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
@@ -16,6 +17,7 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
+import { GENERATIONS_PATH } from '@/app/helpers/generation'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
@@ -29,13 +31,11 @@ import {
   removePage,
   replaceProduct
 } from '@/domain/offer'
-import type { OfferGeneration } from '@/domain/offer-generation'
 import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 import { generateOfferAction, saveOfferAction } from '../actions'
 import { ClearOfferButton } from './clear-offer-button'
-import { OfferGenerations } from './offer-generations'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
 import { PosterStage } from './poster-stage'
@@ -46,7 +46,6 @@ type OfferEditorProps = {
   brand: Brand
   templates: PosterTemplate[]
   noEanImages: string[]
-  generations: OfferGeneration[]
 }
 
 type Status = {
@@ -55,6 +54,20 @@ type Status = {
   // A new id remounts the message, so the same text twice in a row is announced again
   id: number
 }
+
+const viewGenerations = (
+  <GuardedLink
+    href={GENERATIONS_PATH}
+    className={buttonVariants({
+      variant: 'outline',
+      size: 'sm',
+      className: 'ml-auto shrink-0'
+    })}
+    onClick={() => toast.dismiss()}
+  >
+    Ver gerações
+  </GuardedLink>
+)
 
 const getTabId = (key: number) => `page-tab-${key}`
 
@@ -71,8 +84,7 @@ export const OfferEditor = ({
   offer,
   brand,
   templates,
-  noEanImages,
-  generations
+  noEanImages
 }: OfferEditorProps) => {
   const [content, setContent] = useState(offer)
   const [saved, setSaved] = useState(offer)
@@ -197,11 +209,16 @@ export const OfferEditor = ({
       if (result.warning) {
         // Stays until closed, like an error, since the radio ad needs fixing (WCAG 2.2.1)
         toast.warning(`Geração ${result.number} pronta. ${result.warning}`, {
-          duration: Infinity
+          duration: Infinity,
+          action: viewGenerations
         })
         return
       }
-      toast.success(`Geração ${result.number} pronta.`)
+      // Longer than the default, so there is time to reach its action
+      toast.success(`Geração ${result.number} pronta.`, {
+        duration: 10_000,
+        action: viewGenerations
+      })
     })
   }
 
@@ -413,8 +430,6 @@ export const OfferEditor = ({
               </TabsContent>
             </Tabs>
           </section>
-
-          <OfferGenerations generations={generations} />
         </div>
 
         <aside

@@ -9,22 +9,22 @@ import {
 } from 'node:fs/promises'
 import path from 'node:path'
 
-import { and, desc, eq, max, sql } from 'drizzle-orm'
+import { desc, eq, max, sql } from 'drizzle-orm'
 
-import { getOfferExport } from '@/domain/offer-export'
 import {
+  type Generation,
   GENERATION_PDF_FILE_NAME,
-  getGenerationPageFileName,
-  type OfferGeneration
-} from '@/domain/offer-generation'
+  getGenerationPageFileName
+} from '@/domain/generation'
+import { getOfferExport } from '@/domain/offer-export'
 import { getRadioScript } from '@/domain/radio-script'
 import type { Database } from '@/infra/database/relations'
-import { offerGenerations } from '@/infra/database/schema'
+import { generations } from '@/infra/database/schema'
 import {
   generationsDirectory,
   getGenerationFolder
 } from '@/infra/generations-directory'
-import { findOffer, OFFER_ID } from '@/infra/offer'
+import { findOffer } from '@/infra/offer'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
 
@@ -38,67 +38,47 @@ type GenerationOptions = { directory?: string }
 const TEMPORARY_PREFIX = '.tmp-'
 
 const generationColumns = {
-  id: offerGenerations.id,
-  offerId: offerGenerations.offerId,
-  number: offerGenerations.number,
-  pageCount: offerGenerations.pageCount,
+  id: generations.id,
+  number: generations.number,
+  pageCount: generations.pageCount,
   validUntil: sql<
     string | null
-  >`json_extract(${offerGenerations.offerExport}, '$.validUntil')`,
-  radioScript: offerGenerations.radioScript,
-  createdAt: offerGenerations.createdAt
+  >`json_extract(${generations.offerExport}, '$.validUntil')`,
+  radioScript: generations.radioScript,
+  createdAt: generations.createdAt
 }
 
-export const listOfferGenerations = (
-  database: Database,
-  offerId: number
-): OfferGeneration[] =>
+export const listGenerations = (database: Database): Generation[] =>
   database
     .select(generationColumns)
-    .from(offerGenerations)
-    .where(eq(offerGenerations.offerId, offerId))
-    .orderBy(desc(offerGenerations.number))
+    .from(generations)
+    .orderBy(desc(generations.number))
     .all()
 
-export const findOfferGeneration = (
+export const findGeneration = (
   database: Database,
-  offerId: number,
-  generationId: number
-): OfferGeneration | undefined =>
+  id: number
+): Generation | undefined =>
   database
     .select(generationColumns)
-    .from(offerGenerations)
-    .where(
-      and(
-        eq(offerGenerations.id, generationId),
-        eq(offerGenerations.offerId, offerId)
-      )
-    )
+    .from(generations)
+    .where(eq(generations.id, id))
     .get()
 
-export const findOfferGenerationExport = (
-  database: Database,
-  offerId: number,
-  generationId: number
-) =>
+export const findGenerationExport = (database: Database, id: number) =>
   database
-    .select({ offerExport: offerGenerations.offerExport })
-    .from(offerGenerations)
-    .where(
-      and(
-        eq(offerGenerations.id, generationId),
-        eq(offerGenerations.offerId, offerId)
-      )
-    )
+    .select({ offerExport: generations.offerExport })
+    .from(generations)
+    .where(eq(generations.id, id))
     .get()?.offerExport
 
 // The files are rendered into a temporary folder and only take the generation's id once its row
 // exists, so a failure halfway never leaves a generation with missing files
-export const createOfferGeneration = async (
+export const createGeneration = async (
   database: Database,
   renderer: OfferRenderer,
   { directory = generationsDirectory }: GenerationOptions = {}
-): Promise<OfferGeneration | undefined> => {
+): Promise<Generation | undefined> => {
   const offer = findOffer(database)
   if (!offer) return undefined
 
@@ -120,14 +100,12 @@ export const createOfferGeneration = async (
 
     const generation = database.transaction((transaction) => {
       const last = transaction
-        .select({ number: max(offerGenerations.number) })
-        .from(offerGenerations)
-        .where(eq(offerGenerations.offerId, OFFER_ID))
+        .select({ number: max(generations.number) })
+        .from(generations)
         .get()
       return transaction
-        .insert(offerGenerations)
+        .insert(generations)
         .values({
-          offerId: OFFER_ID,
           number: (last?.number ?? 0) + 1,
           // Indented, since the store opens the file to read or edit it by hand
           offerExport: JSON.stringify(getOfferExport(offer), null, 2),
@@ -146,8 +124,8 @@ export const createOfferGeneration = async (
       await rename(temporary, getGenerationFolder(generation.id, directory))
     } catch (error) {
       database
-        .delete(offerGenerations)
-        .where(eq(offerGenerations.id, generation.id))
+        .delete(generations)
+        .where(eq(generations.id, generation.id))
         .run()
       throw error
     }
@@ -173,23 +151,17 @@ export const readGenerationFile = async (
   }
 }
 
-export const deleteOfferGeneration = async (
+export const deleteGeneration = async (
   database: Database,
-  offerId: number,
-  generationId: number,
+  id: number,
   { directory = generationsDirectory }: GenerationOptions = {}
 ) => {
   const { changes } = database
-    .delete(offerGenerations)
-    .where(
-      and(
-        eq(offerGenerations.id, generationId),
-        eq(offerGenerations.offerId, offerId)
-      )
-    )
+    .delete(generations)
+    .where(eq(generations.id, id))
     .run()
   if (changes === 0) return false
-  await rm(getGenerationFolder(generationId, directory), {
+  await rm(getGenerationFolder(id, directory), {
     recursive: true,
     force: true
   })
