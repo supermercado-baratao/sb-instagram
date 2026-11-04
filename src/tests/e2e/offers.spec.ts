@@ -213,13 +213,106 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   await expect(page.getByLabel(`Preço de ${name} (R$)`)).toBeFocused()
 
   // With suggestions open but none highlighted, Enter still looks up the exact code, like a scan
-  const secondSlot = page.getByLabel('Produto 2', { exact: true })
-  await secondSlot.fill(code)
+  await page.getByRole('button', { name: `Tirar ${name} da página` }).click()
+  await slotCode.fill(code)
   await expect(
     page.getByRole('option', { name: new RegExp(name) })
   ).toBeVisible()
+  await slotCode.press('Enter')
+  await expect(page.getByLabel(`Preço de ${name} (R$)`)).toBeFocused()
+
+  // The same product doesn't go in twice on a page
+  const secondSlot = page.getByLabel('Produto 2', { exact: true })
+  await secondSlot.fill(code)
   await secondSlot.press('Enter')
-  await expect(page.getByLabel(`Preço de ${name} (R$)`).nth(1)).toBeFocused()
+  await expect(page.getByText(`${name} já está nesta página.`)).toBeVisible()
+  await expect(page.getByLabel(`Preço de ${name} (R$)`)).toHaveCount(1)
+})
+
+test('moves products between the pages of the offer', async ({ page }) => {
+  test.slow()
+  const stamp = Date.now()
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+  const names = ['Arroz', 'Feijão', 'Macarrão', 'Açúcar'].map(
+    (name) => `${name} ${stamp}`
+  )
+  const [rice, beans, pasta] = names
+
+  await page.goto('/produtos')
+  for (const [index, name] of names.entries()) {
+    await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+    await productCode.fill(`E2E-MOVE-${stamp}-${index}`)
+    await productCode.press('Enter')
+    await dialog.getByLabel('Nome').fill(name)
+    await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+    await expect(page.getByText(`${name} salvo`)).toBeVisible()
+  }
+
+  const place = async (position: number, index: number, price: string) => {
+    const slot = page.getByLabel(`Produto ${position}`, { exact: true })
+    await slot.fill(`E2E-MOVE-${stamp}-${index}`)
+    await slot.press('Enter')
+    await page.getByLabel(`Preço de ${names[index]} (R$)`).fill(price)
+  }
+  const openMoveMenu = (name: string) =>
+    page
+      .getByRole('button', { name: `Mover ${name} para outra página` })
+      .click()
+
+  await openEmptyOffer(page)
+  await place(1, 0, '10,00')
+  await place(2, 1, '20,00')
+
+  await page.getByRole('button', { name: 'Adicionar página' }).click()
+  const layout = page.getByRole('group', { name: 'Produtos na página' })
+  await layout.getByRole('button', { name: '3' }).click()
+  await place(1, 2, '30,00')
+  await place(2, 3, '40,00')
+
+  await page.getByRole('tab', { name: 'Página 1' }).click()
+
+  // Goes with its price to the first empty slot of the page, and the editor stays on this page
+  await openMoveMenu(rice)
+  await page.getByRole('menuitem', { name: 'Página 2' }).click()
+  await expect(page.getByRole('tab', { name: 'Página 1' })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  )
+  await expect(page.getByText(`${rice} movido para a página 2.`)).toBeVisible()
+  await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
+
+  // The full page asks: first a trade, which keeps both prices
+  await openMoveMenu(beans)
+  await page.getByRole('menuitem', { name: 'Página 2 (cheia)' }).click()
+  const full = page.getByRole('dialog', { name: 'A página 2 está cheia' })
+  // The menu returns the focus when it unmounts, after its exit animation, so this waits for that
+  await expect(page.locator('[data-slot="dropdown-menu-content"]')).toHaveCount(
+    0
+  )
+  await expect(full.locator(':focus')).toHaveCount(1)
+  await full.getByRole('button', { name: new RegExp(pasta) }).click()
+  await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
+  await expect(
+    page.getByRole('button', { name: `Mover ${pasta} para outra página` })
+  ).toBeFocused()
+
+  // Then a new page, past the last one
+  await openMoveMenu(pasta)
+  await page.getByRole('menuitem', { name: 'Página 2 (cheia)' }).click()
+  await full.getByRole('button', { name: 'Criar página nova' }).click()
+  await expect(page.getByRole('tab', { name: 'Página 3' })).toBeVisible()
+  await expect(page.getByLabel('Produto 2', { exact: true })).toBeFocused()
+
+  await page.getByRole('button', { name: 'Salvar' }).click()
+  await expect(page.getByText('Oferta salva.')).toBeVisible()
+
+  await page.reload()
+  await page.getByRole('tab', { name: 'Página 2' }).click()
+  await expect(page.getByLabel(`Preço de ${rice} (R$)`)).toHaveValue('10,00')
+  await expect(page.getByLabel(`Preço de ${beans} (R$)`)).toHaveValue('20,00')
+  await page.getByRole('tab', { name: 'Página 3' }).click()
+  await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
 })
 
 test('edits a product placed in an offer slot', async ({ page }) => {

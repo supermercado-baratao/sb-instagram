@@ -25,17 +25,22 @@ import {
   clearOfferProducts,
   countProducts,
   findPageWithoutPrice,
+  getPageConflict,
   movePage,
+  moveSlotToNewPage,
+  moveSlotToPage,
   type OfferContent,
   type OfferPage,
   removePage,
-  replaceProduct
+  replaceProduct,
+  setSlot
 } from '@/domain/offer'
 import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 import { generateOfferAction, saveOfferAction } from './actions'
 import { ClearOfferButton } from './clear-offer-button'
+import type { MoveTarget } from './move-product-button'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
 import { PosterStage } from './poster-stage'
@@ -144,6 +149,59 @@ export const OfferEditor = ({
     setPageKeys(movePage(pageKeys, selectedIndex, to))
     // The focused button stays put while the tab labels renumber
     show({ kind: 'info', message: `Página movida para a posição ${to + 1}.` })
+  }
+
+  const moveProduct = (position: number, target: MoveTarget) => {
+    const from = { page: selectedIndex, position }
+    const moved = selectedPage.slots[position]
+    if (!moved) return
+    const { name } = moved.product
+
+    // A toast, since a slot can be too far down the page to see the header's status line
+    const notify = (message: string, warnedPage?: number) => {
+      toast.dismiss()
+      if (warnedPage === undefined) {
+        toast.info(message)
+        return
+      }
+      toast.warning(
+        `${message} A página ${warnedPage + 1} já tem outro produto com um código em comum.`,
+        { duration: 10_000 }
+      )
+    }
+
+    if (target.kind === 'new-page') {
+      update({
+        pages: moveSlotToNewPage(content.pages, from, templates[0]?.id ?? '')
+      })
+      setPageKeys([...pageKeys, Math.max(...pageKeys) + 1])
+      notify(`${name} movido para a nova página ${content.pages.length + 1}.`)
+      return
+    }
+
+    const { to } = target
+    const other = content.pages[to.page].slots[to.position]
+    const pages = moveSlotToPage(content.pages, from, to)
+    update({ pages })
+    // Reads the pages after the move, when the product that left no longer counts as a conflict
+    const withoutMoved = setSlot(pages[to.page], to.position, null)
+    const warnsTarget =
+      getPageConflict(withoutMoved, moved.product) === 'shared-code'
+    if (!other) {
+      notify(
+        `${name} movido para a página ${to.page + 1}.`,
+        warnsTarget ? to.page : undefined
+      )
+      return
+    }
+    const withoutOther = setSlot(pages[from.page], position, null)
+    const warnsSource =
+      getPageConflict(withoutOther, other.product) === 'shared-code'
+    const warnedPage = warnsSource ? from.page : to.page
+    notify(
+      `${name} movido para a página ${to.page + 1}, e ${other.product.name} veio para esta página.`,
+      warnsTarget || warnsSource ? warnedPage : undefined
+    )
   }
 
   const removeSelectedPage = () => {
@@ -417,8 +475,7 @@ export const OfferEditor = ({
               >
                 <PagePanel
                   index={selectedIndex}
-                  pageCount={content.pages.length}
-                  page={selectedPage}
+                  pages={content.pages}
                   templates={templates}
                   noEanImages={noEanImages}
                   photoVersion={photoVersion}
@@ -426,6 +483,7 @@ export const OfferEditor = ({
                   onProductSaved={updateProduct}
                   onNotice={(message) => show({ kind: 'info', message })}
                   onMove={moveSelectedPage}
+                  onMoveProduct={moveProduct}
                   onRemove={removeSelectedPage}
                 />
               </TabsContent>

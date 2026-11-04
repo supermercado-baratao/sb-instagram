@@ -26,13 +26,13 @@ import {
 } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
+import type { MoveTarget } from './move-product-button'
 import { RemovePageButton } from './remove-page-button'
 import { SlotField } from './slot-field'
 
 type PagePanelProps = {
   index: number
-  pageCount: number
-  page: OfferPage
+  pages: OfferPage[]
   templates: PosterTemplate[]
   noEanImages: string[]
   photoVersion?: number
@@ -40,13 +40,13 @@ type PagePanelProps = {
   onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
   onMove: (to: number) => void
+  onMoveProduct: (position: number, target: MoveTarget) => void
   onRemove: () => void
 }
 
 export const PagePanel = ({
   index,
-  pageCount,
-  page,
+  pages,
   templates,
   noEanImages,
   photoVersion,
@@ -54,9 +54,12 @@ export const PagePanel = ({
   onProductSaved,
   onNotice,
   onMove,
+  onMoveProduct,
   onRemove
 }: PagePanelProps) => {
   const id = `page-${index}`
+  const page = pages[index]
+  const pageCount = pages.length
   const template = getPageTemplate(templates, page.templateId)
   // Each slot keeps its key when it moves, so a price being typed moves with its product
   const [slotKeys, setSlotKeys] = useState(() =>
@@ -167,12 +170,15 @@ export const PagePanel = ({
               id={`${id}-slot-${position}`}
               position={position}
               slot={slot}
+              pages={pages}
+              pageIndex={index}
               noEanImages={noEanImages}
               photoVersion={photoVersion}
               canMoveBefore={position > 0}
               canMoveAfter={position < page.layout - 1}
               onChange={(next) => onChange(setSlot(page, position, next))}
               onMove={(to) => moveSlotTo(position, to)}
+              onMoveToPage={(target) => onMoveProduct(position, target)}
               onProductSaved={onProductSaved}
               onNotice={onNotice}
             />

@@ -2,17 +2,22 @@ import { describe, expect, test } from 'vitest'
 
 import {
   addPage,
+  canSwapSlots,
   clearOfferPrices,
   clearOfferProducts,
   countProducts,
   createOfferContent,
   createOfferPage,
+  findEmptySlot,
   findPageWithoutPrice,
   formatPrice,
   formatValidUntil,
+  getPageConflict,
   isOfferContent,
   movePage,
   moveSlot,
+  moveSlotToNewPage,
+  moveSlotToPage,
   type OfferContent,
   type OfferItem,
   parsePrice,
@@ -149,6 +154,159 @@ describe('moveSlot', () => {
   test('ignores a move past the slots the layout shows', () => {
     const small = { ...page, layout: 3 as const }
     expect(moveSlot(small, 2, 3)).toBe(small)
+  })
+})
+
+const productWith = (id: string, ...codes: string[]) => ({
+  product: { ...item.product, id, codes },
+  priceInCents: 500
+})
+
+const pageWith = (...items: OfferItem[]) => ({
+  ...createOfferPage('mercado'),
+  slots: placeSlots(items.map((slot, position) => ({ ...slot, position })))
+})
+
+describe('moving a product between pages', () => {
+  const lavender = productWith('lavender', '111')
+  const rose = productWith('rose', '222')
+  const group = productWith('group', '111', '222')
+
+  describe('getPageConflict', () => {
+    test('finds a product with exactly the same codes, in any order', () => {
+      const page = pageWith(group)
+      const product = { ...group.product, id: 'x', codes: ['222', '111'] }
+      expect(getPageConflict(page, product)).toBe('same-product')
+    })
+
+    test('tells a product that only shares a code, like a group and its variation', () => {
+      expect(getPageConflict(pageWith(group), lavender.product)).toBe(
+        'shared-code'
+      )
+      expect(getPageConflict(pageWith(lavender), group.product)).toBe(
+        'shared-code'
+      )
+    })
+
+    test('lets separate variations of a product share the page', () => {
+      expect(getPageConflict(pageWith(lavender), rose.product)).toBeNull()
+    })
+
+    test('looks at the slots past the layout', () => {
+      const page = {
+        ...setSlot(createOfferPage('m'), 8, rose),
+        layout: 3 as const
+      }
+      expect(getPageConflict(page, rose.product)).toBe('same-product')
+    })
+  })
+
+  describe('findEmptySlot', () => {
+    test('finds the first empty slot', () => {
+      const page = setSlot(pageWith(lavender, rose), 0, null)
+      expect(findEmptySlot(page)).toBe(0)
+    })
+
+    test('ignores an empty slot past the layout', () => {
+      const page = {
+        ...pageWith(lavender, rose, group),
+        layout: 3 as const
+      }
+      expect(findEmptySlot(page)).toBe(-1)
+    })
+  })
+
+  describe('moveSlotToPage', () => {
+    test('moves the product and its price into an empty slot', () => {
+      const pages = [pageWith(lavender), pageWith(rose)]
+      const moved = moveSlotToPage(
+        pages,
+        { page: 0, position: 0 },
+        { page: 1, position: 1 }
+      )
+      expect(moved[0].slots[0]).toBeNull()
+      expect(moved[1].slots[0]).toEqual(rose)
+      expect(moved[1].slots[1]).toEqual(lavender)
+    })
+
+    test('trades places with the product in the slot', () => {
+      const pages = [pageWith(lavender), pageWith(rose)]
+      const moved = moveSlotToPage(
+        pages,
+        { page: 0, position: 0 },
+        { page: 1, position: 0 }
+      )
+      expect(moved[0].slots[0]).toEqual(rose)
+      expect(moved[1].slots[0]).toEqual(lavender)
+    })
+
+    test('ignores a move within the same page', () => {
+      const pages = [pageWith(lavender, rose)]
+      expect(
+        moveSlotToPage(
+          pages,
+          { page: 0, position: 0 },
+          { page: 0, position: 1 }
+        )
+      ).toBe(pages)
+    })
+  })
+
+  describe('moveSlotToNewPage', () => {
+    test('adds a page like the last one holding only the product', () => {
+      const last = {
+        ...pageWith(rose),
+        templateId: 'festa',
+        layout: 4 as const
+      }
+      const moved = moveSlotToNewPage(
+        [pageWith(lavender), last],
+        { page: 0, position: 0 },
+        'mercado'
+      )
+      expect(moved).toHaveLength(3)
+      expect(moved[0].slots[0]).toBeNull()
+      expect(moved[1]).toBe(last)
+      expect(moved[2].templateId).toBe('festa')
+      expect(moved[2].layout).toBe(4)
+      expect(moved[2].slots[0]).toEqual(lavender)
+      expect(moved[2].slots.filter(Boolean)).toHaveLength(1)
+    })
+  })
+
+  describe('canSwapSlots', () => {
+    const from = { page: 0, position: 0 }
+    const to = { page: 1, position: 0 }
+
+    test('allows different products', () => {
+      expect(canSwapSlots([pageWith(lavender), pageWith(rose)], from, to)).toBe(
+        true
+      )
+    })
+
+    test('refuses trading a product for itself', () => {
+      expect(
+        canSwapSlots([pageWith(lavender), pageWith(lavender)], from, to)
+      ).toBe(false)
+    })
+
+    test('refuses bringing a product its page already has', () => {
+      expect(
+        canSwapSlots([pageWith(lavender, rose), pageWith(rose)], from, to)
+      ).toBe(false)
+    })
+
+    test('refuses taking a product to a page that already has it', () => {
+      expect(
+        canSwapSlots([pageWith(lavender), pageWith(rose, lavender)], from, to)
+      ).toBe(false)
+    })
+
+    test('allows trading a group for one of its variations', () => {
+      expect(canSwapSlots([pageWith(group), pageWith(rose)], from, to)).toBe(
+        true
+      )
+    })
   })
 })
 
