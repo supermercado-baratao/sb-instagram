@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
+import { toast } from 'sonner'
 
 import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
 import { EditProductDialog } from '@/app/components/blocks/product/edit-product-dialog'
@@ -27,16 +28,19 @@ import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
 import { useProductSuggestions } from '@/app/hooks/use-product-suggestions'
-import type { OfferSlot } from '@/domain/offer'
+import { getPageConflict, type OfferPage, type OfferSlot } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 
 import { lookupSlotProduct } from './actions'
+import { MoveProductButton, type MoveTarget } from './move-product-button'
 import { PriceField } from './price-field'
 
 type SlotFieldProps = {
   id: string
   position: number
   slot: OfferSlot
+  pages: OfferPage[]
+  pageIndex: number
   noEanImages: string[]
   photoVersion?: number
   // How far the slot can move, given the slots the page layout shows
@@ -44,6 +48,7 @@ type SlotFieldProps = {
   canMoveAfter: boolean
   onChange: (slot: OfferSlot) => void
   onMove: (to: number) => void
+  onMoveToPage: (target: MoveTarget) => void
   onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
 }
@@ -55,12 +60,15 @@ export const SlotField = ({
   id,
   position,
   slot,
+  pages,
+  pageIndex,
   noEanImages,
   photoVersion,
   canMoveBefore,
   canMoveAfter,
   onChange,
   onMove,
+  onMoveToPage,
   onProductSaved,
   onNotice
 }: SlotFieldProps) => {
@@ -77,15 +85,44 @@ export const SlotField = ({
   const labelId = `${id}-label`
   const priceId = `${id}-price`
 
+  // Returns whether the product went in, since a product the page already has stays out
   const placeProduct = (product: Product) => {
     suggestions.close()
     suggestions.setQuery('')
+    const conflict = getPageConflict(pages[pageIndex], product)
+    if (conflict === 'same-product') {
+      setError({
+        kind: 'message',
+        message: `${product.name} já está nesta página.`
+      })
+      return false
+    }
     setError(undefined)
     onChange({ product, priceInCents: 0 })
+    if (conflict === 'shared-code') {
+      toast.dismiss()
+      toast.warning(
+        `A página ${pageIndex + 1} já tem outro produto com um código de ${product.name}.`,
+        { duration: 10_000 }
+      )
+    }
+    return true
   }
 
+  // The price only exists once the product went in
   const getPriceInput = () =>
-    document.querySelector<HTMLElement>(`#${CSS.escape(priceId)}`)
+    document.querySelector<HTMLElement>(`#${CSS.escape(priceId)}`) ??
+    codeInput.current
+
+  const moveToPage = (target: MoveTarget) => {
+    // The product that comes in a trade must not take the focus from a scan that is long gone
+    setFocusPrice(false)
+    const emptiesSlot =
+      target.kind === 'new-page' ||
+      pages[target.to.page].slots[target.to.position] === null
+    flushSync(() => onMoveToPage(target))
+    if (emptiesSlot) codeInput.current?.focus()
+  }
 
   const dialog = (
     <>
@@ -98,7 +135,7 @@ export const SlotField = ({
           setFocusPrice(false)
           placeProduct(product)
         }}
-        getFocusAfterChoice={() => getPriceInput() ?? codeInput.current}
+        getFocusAfterChoice={getPriceInput}
       />
       <CreateProductDialog
         open={creating !== undefined}
@@ -110,8 +147,8 @@ export const SlotField = ({
         onSaved={(product, outcome) => {
           // The dialog moves the focus to the price once it closes
           setFocusPrice(false)
-          placeProduct(product)
-          if (outcome === 'unchanged') {
+          const placed = placeProduct(product)
+          if (placed && outcome === 'unchanged') {
             onNotice(
               `${product.name} já estava cadastrado, e nenhum dado mudou.`
             )
@@ -143,8 +180,7 @@ export const SlotField = ({
       const result = await lookupSlotProduct(code)
       if (result.status === 'found') {
         // A scan fills the slot and the price is the next thing to type
-        setFocusPrice(true)
-        placeProduct(result.product)
+        setFocusPrice(placeProduct(result.product))
         return
       }
       if (result.status === 'choose') {
@@ -190,8 +226,7 @@ export const SlotField = ({
                   )
                   if (!product) return
                   // Like a scan, the price is the next thing to type
-                  setFocusPrice(true)
-                  placeProduct(product)
+                  setFocusPrice(placeProduct(product))
                 }}
                 open={suggestions.open}
                 onOpenChange={suggestions.onOpenChange}
@@ -328,7 +363,7 @@ export const SlotField = ({
           autoFocus={focusPrice}
           onChange={(cents) => onChange({ product, priceInCents: cents })}
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             id={`${id}-move-before`}
             variant="outline"
@@ -353,6 +388,13 @@ export const SlotField = ({
             Depois
             <ArrowRight data-icon="inline-end" aria-hidden />
           </Button>
+          <MoveProductButton
+            id={`${id}-move-page`}
+            product={product}
+            pages={pages}
+            from={{ page: pageIndex, position }}
+            onMove={moveToPage}
+          />
         </div>
       </div>
       {dialog}

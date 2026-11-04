@@ -4,7 +4,12 @@ import {
   PAGE_PRODUCT_COUNT,
   type PosterLayout
 } from '@/domain/poster'
-import { isValidCode, isValidProductId, type Product } from '@/domain/product'
+import {
+  isSameCodeSet,
+  isValidCode,
+  isValidProductId,
+  type Product
+} from '@/domain/product'
 
 export type OfferItem = {
   product: Product
@@ -103,6 +108,76 @@ export const moveSlot = (
     ...page,
     slots: page.slots.with(from, page.slots[to]).with(to, page.slots[from])
   }
+}
+
+export type SlotLocation = {
+  page: number
+  position: number
+}
+
+export type PageConflict = 'same-product' | 'shared-code' | null
+
+// Compares the whole set of codes: variations of a product are registered apart (#55), so a single
+// fragrance and a group holding it only share a code, and the store may place both on purpose.
+// Looks past the layout too, since a hidden slot comes back if the layout grows
+export const getPageConflict = (
+  page: OfferPage,
+  product: Product
+): PageConflict => {
+  const placed = page.slots.flatMap((slot) => (slot ? [slot.product] : []))
+  if (placed.some(({ codes }) => isSameCodeSet(codes, product.codes))) {
+    return 'same-product'
+  }
+  return placed.some(({ codes }) =>
+    codes.some((code) => product.codes.includes(code))
+  )
+    ? 'shared-code'
+    : null
+}
+
+// A hidden slot isn't free: the layout may grow and bring its product back
+export const findEmptySlot = (page: OfferPage) =>
+  page.slots.slice(0, page.layout).indexOf(null)
+
+// Swaps, so moving into an empty slot and trading places with a product are the same operation
+export const moveSlotToPage = (
+  pages: OfferPage[],
+  from: SlotLocation,
+  to: SlotLocation
+): OfferPage[] => {
+  if (from.page === to.page) return pages
+  const source = pages[from.page]
+  const target = pages[to.page]
+  return pages
+    .with(from.page, setSlot(source, from.position, target.slots[to.position]))
+    .with(to.page, setSlot(target, to.position, source.slots[from.position]))
+}
+
+export const moveSlotToNewPage = (
+  pages: OfferPage[],
+  from: SlotLocation,
+  templateId: string
+): OfferPage[] =>
+  moveSlotToPage(addPage(pages, templateId), from, {
+    page: pages.length,
+    position: 0
+  })
+
+// Each product must not already be on the page it goes to. Checking the pages as they are also
+// refuses trading a product for itself
+export const canSwapSlots = (
+  pages: OfferPage[],
+  from: SlotLocation,
+  to: SlotLocation
+) => {
+  const moved = pages[from.page].slots[from.position]
+  const other = pages[to.page].slots[to.position]
+  return (
+    moved !== null &&
+    other !== null &&
+    getPageConflict(pages[to.page], moved.product) !== 'same-product' &&
+    getPageConflict(pages[from.page], other.product) !== 'same-product'
+  )
 }
 
 export const replaceProduct = (
