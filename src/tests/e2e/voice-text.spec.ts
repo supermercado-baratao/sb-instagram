@@ -4,7 +4,7 @@ test('saves the radio ad settings and suggests the voice text through the dictio
   page
 }) => {
   test.slow()
-  await page.goto('/configuracoes/comercial')
+  await page.goto('/?aba=comercial')
   // A reused e2e server keeps the dictionary and the blocks of a previous run
   const removeButtons = page.getByRole('button', { name: /^Remover / })
   while ((await removeButtons.count()) > 0) await removeButtons.first().click()

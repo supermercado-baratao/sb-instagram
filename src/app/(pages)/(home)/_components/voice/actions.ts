@@ -1,5 +1,7 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+
 import {
   getPronunciationsError,
   isPronunciationList,
@@ -70,6 +72,8 @@ export const saveVoiceSettingsAction = async (
     savePronunciations(transaction, normalized)
     saveRadioScriptTemplate(transaction, template)
   })
+  // A tab keeps its old content for the browser's Back button, and saving that again would undo this
+  revalidatePath('/')
   return {
     status: 'saved',
     pronunciations: normalized,

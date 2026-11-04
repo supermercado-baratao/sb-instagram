@@ -2,13 +2,7 @@
 
 import { cn } from 'cn'
 import { CircleAlert, Plus, Save, Trash2 } from 'lucide-react'
-import {
-  type FormEvent,
-  type ReactNode,
-  useRef,
-  useState,
-  useTransition
-} from 'react'
+import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
@@ -34,7 +28,7 @@ import {
   type RadioScriptTemplate
 } from '@/domain/radio-script'
 
-import { saveVoiceSettingsAction } from '../actions'
+import { saveVoiceSettingsAction } from './actions'
 import {
   ADD_PRODUCTS_BUTTON_ID,
   getBlockInputId,
@@ -44,7 +38,6 @@ import {
 } from './radio-script-blocks-field'
 
 type VoiceSettingsFormProps = {
-  nav: ReactNode
   initialPronunciations: Pronunciation[]
   initialRadioScript: RadioScriptTemplate
 }
@@ -68,7 +61,6 @@ const getRowLabel = ({ term }: Pronunciation, index: number) =>
   term.trim() || `Novo termo ${index + 1}`
 
 export const VoiceSettingsForm = ({
-  nav,
   initialPronunciations,
   initialRadioScript
 }: VoiceSettingsFormProps) => {
@@ -218,8 +210,7 @@ export const VoiceSettingsForm = ({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
-      {nav}
+    <div className="flex w-full max-w-7xl flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Comercial</h1>
         <p className="text-muted-foreground">
@@ -408,6 +399,6 @@ export const VoiceSettingsForm = ({
           </Button>
         </div>
       </form>
-    </main>
+    </div>
   )
 }

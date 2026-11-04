@@ -75,7 +75,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   ).toBeVisible()
 
   // The generation keeps what was generated, so a product changed later never reaches it
-  await page.goto('/ofertas')
+  await page.goto('/')
   await page.getByRole('button', { name: 'Editar Feijão carioca' }).click()
   const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
   await editDialog.getByLabel('Nome').fill('Feijão preto')
@@ -324,7 +324,7 @@ test('asks before leaving the offer editor with unsaved changes', async ({
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: 'Continuar editando' }).click()
   await expect(dialog).toBeHidden()
-  await expect(page).toHaveURL('/ofertas')
+  await expect(page).toHaveURL('/')
   await expect(highlight).toHaveValue('Oferta não salva')
 
   await page

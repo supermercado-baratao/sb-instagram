@@ -1,34 +1,7 @@
-import type { Metadata } from 'next'
-import { connection } from 'next/server'
+import { redirect } from 'next/navigation'
 
-import { AppLayout } from '@/app/components/layouts/app'
-import {
-  requireBrandSettings,
-  VOICE_SETTINGS_PATH
-} from '@/app/helpers/brand-settings'
-import { database } from '@/infra/database/client'
-import { listPronunciations } from '@/infra/pronunciation'
-import { findRadioScriptTemplate } from '@/infra/radio-script'
+import { getHomeTabHref } from '@/app/helpers/home-tabs'
 
-import { SettingsNav } from '../_components/settings-nav'
-import { VoiceSettingsForm } from './_components/voice-settings-form'
+const OldVoiceSettingsPage = () => redirect(getHomeTabHref('comercial'))
 
-export const metadata: Metadata = { title: 'Comercial' }
-
-const VoiceSettingsPage = async () => {
-  // Renders per request, so `next build` never opens the database
-  await connection()
-  const { brand } = requireBrandSettings()
-
-  return (
-    <AppLayout brand={brand}>
-      <VoiceSettingsForm
-        nav={<SettingsNav current={VOICE_SETTINGS_PATH} />}
-        initialPronunciations={listPronunciations(database)}
-        initialRadioScript={findRadioScriptTemplate(database)}
-      />
-    </AppLayout>
-  )
-}
-
-export default VoiceSettingsPage
+export default OldVoiceSettingsPage

@@ -30,7 +30,7 @@ import { useProductSuggestions } from '@/app/hooks/use-product-suggestions'
 import type { OfferSlot } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 
-import { lookupSlotProduct } from '../actions'
+import { lookupSlotProduct } from './actions'
 import { PriceField } from './price-field'
 
 type SlotFieldProps = {

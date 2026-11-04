@@ -34,7 +34,7 @@ import {
 import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
-import { generateOfferAction, saveOfferAction } from '../actions'
+import { generateOfferAction, saveOfferAction } from './actions'
 import { ClearOfferButton } from './clear-offer-button'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
@@ -223,7 +223,7 @@ export const OfferEditor = ({
   }
 
   return (
-    <main className="flex w-full flex-1 flex-col gap-8 px-4 py-10 sm:px-6">
+    <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
@@ -413,6 +413,7 @@ export const OfferEditor = ({
               <TabsContent
                 key={`${selectedKey}-${clearCount}`}
                 value={selectedKey}
+                tabIndex={-1}
               >
                 <PagePanel
                   index={selectedIndex}
@@ -458,6 +459,6 @@ export const OfferEditor = ({
           />
         </aside>
       </div>
-    </main>
+    </div>
   )
 }

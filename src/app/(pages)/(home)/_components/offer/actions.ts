@@ -1,5 +1,7 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
+
 import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
 import { isOfferContent } from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
@@ -63,6 +65,8 @@ export const saveOfferAction = async (
 
   try {
     saveOffer(database, content)
+    // A tab keeps its old content for the browser's Back button, and saving that again would undo this
+    revalidatePath('/')
     return { status: 'saved' }
   } catch {
     // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)

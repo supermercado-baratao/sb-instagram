@@ -1,6 +1,6 @@
 'use server'
 
-import { refresh } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { getLogoUrl } from '@/app/helpers/brand-poster'
@@ -99,10 +99,11 @@ export const saveBrandSettingsAction = async (
   if (removeLogo) await deleteLogo()
 
   // The first setup came from a page that needed the brand, so it goes on to the offers
-  if (!current) redirect('/ofertas')
+  if (!current) redirect('/')
 
-  // The header shows the brand name and logo
-  refresh()
+  // The header of every page shows the brand name and logo, and a tab keeps its old content for the
+  // browser's Back button, where saving it again would undo this
+  revalidatePath('/', 'layout')
 
   // New templates got their ids on the server, so the form takes them back to keep them on the
   // next save
