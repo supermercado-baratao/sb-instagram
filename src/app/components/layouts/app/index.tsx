@@ -4,7 +4,6 @@ import type { ReactNode } from 'react'
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
-import { SETTINGS_PATH } from '@/app/helpers/brand-settings'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
 import type { StoreBrand } from '@/domain/brand'
 
@@ -41,7 +40,7 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
           )}
         >
           <GuardedLink
-            href="/ofertas"
+            href="/"
             className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {logoUrl ? (
@@ -58,16 +57,13 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
           <nav aria-label="Principal">
             <ul className="flex flex-wrap gap-1">
               <li>
-                <NavLink href="/ofertas">Ofertas</NavLink>
+                <NavLink href="/">Ofertas</NavLink>
               </li>
               <li>
                 <NavLink href="/produtos">Produtos</NavLink>
               </li>
               <li>
                 <NavLink href={GENERATIONS_PATH}>Gerações</NavLink>
-              </li>
-              <li>
-                <NavLink href={SETTINGS_PATH}>Configurações</NavLink>
               </li>
             </ul>
           </nav>

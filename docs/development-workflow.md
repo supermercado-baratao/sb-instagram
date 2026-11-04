@@ -91,7 +91,7 @@ Open a pull request against `main` (`gh pr create` or the GitHub UI):
 
 - **Title:** a short summary of the change.
 - **Body:** a `Summary` (what changed and why), a `Test plan` (what was checked) and `Closes #<issue>` so that merging closes the issue.
-- **CI** (`.github/workflows/ci.yml`) runs commitlint over the PR's commits, type-check, ESLint, Prettier, unit tests and E2E tests. Everything must be green.
+- **CI** (`.github/workflows/ci.yml`) runs commitlint over the PR's commits, type-check, ESLint, Prettier, unit tests, the catalog check, the production build and E2E tests. Everything must be green.
 
 ## 9. Merge and close
 

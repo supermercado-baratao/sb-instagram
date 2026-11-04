@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 
 // Every test shares the instance's single offer, so each one starts by emptying what it left
 export const openEmptyOffer = async (page: Page) => {
-  await page.goto('/ofertas')
+  await page.goto('/')
   const clear = page.getByRole('button', { name: 'Limpar produtos' })
   await expect(page.getByLabel('Válida até')).toBeVisible()
   if (await clear.isDisabled()) return
