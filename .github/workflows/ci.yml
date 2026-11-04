@@ -39,6 +39,9 @@ jobs:
       - name: Catalog
         run: pnpm catalog:check
 
+      - name: Build
+        run: pnpm build
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 

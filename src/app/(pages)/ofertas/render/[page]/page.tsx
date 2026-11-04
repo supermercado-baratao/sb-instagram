@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { connection } from 'next/server'
 
 import { Poster } from '@/app/components/blocks/poster'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
 const OfferPageRender = async ({
   params
 }: PageProps<'/ofertas/render/[page]'>) => {
+  await connection()
   const { page: pageNumber } = await params
   const settings = findBrandSettings(database)
   const offer = findOffer(database)

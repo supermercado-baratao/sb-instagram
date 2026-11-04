@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
@@ -13,6 +14,7 @@ import { OfferEditor } from './_components/offer-editor'
 export const metadata: Metadata = { title: 'Oferta' }
 
 const OfferPage = async () => {
+  await connection()
   const { brand, templates } = requireBrandSettings()
   const offer = findOrCreateOffer(database, templates[0].id)
   const noEanImages = await listNoEanImages()
