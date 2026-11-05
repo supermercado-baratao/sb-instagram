@@ -2,9 +2,10 @@
 
 import { cn } from 'cn'
 import { CircleAlert, Copy, Download } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useRef } from 'react'
 import { toast } from 'sonner'
 
+import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { Alert, AlertDescription } from '@/app/components/ui/shadcn/alert'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import {
@@ -16,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/app/components/ui/shadcn/dialog'
+import { getHomeTabHref } from '@/app/helpers/home-tabs'
 
 type RadioTextDialogProps = {
   title: string
@@ -38,6 +40,8 @@ export const RadioTextDialog = ({
   warning,
   href
 }: RadioTextDialogProps) => {
+  const textReference = useRef<HTMLPreElement>(null)
+
   const copy = async () => {
     toast.dismiss()
     try {
@@ -58,6 +62,8 @@ export const RadioTextDialog = ({
         <span className="sr-only"> da geração {generationNumber}</span>
       </DialogTrigger>
       <DialogContent
+        // The warning's link comes first, and would otherwise take the arrow keys that scroll the text
+        initialFocus={textReference}
         className={cn(
           'max-h-[calc(100dvh-2rem)] sm:max-w-2xl',
           warning
@@ -76,11 +82,20 @@ export const RadioTextDialog = ({
         {warning && (
           <Alert role={undefined}>
             <CircleAlert aria-hidden />
-            <AlertDescription>{warning}</AlertDescription>
+            <AlertDescription>
+              {warning}{' '}
+              <GuardedLink
+                href={getHomeTabHref('comercial')}
+                className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Ajustar comercial
+              </GuardedLink>
+            </AlertDescription>
           </Alert>
         )}
         {/* Scrollable, so it takes the keyboard focus to scroll (WCAG 2.1.1) */}
         <pre
+          ref={textReference}
           role="region"
           tabIndex={0}
           aria-label={title}

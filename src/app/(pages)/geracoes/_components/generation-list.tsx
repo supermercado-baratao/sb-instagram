@@ -115,7 +115,7 @@ const GenerationCard = ({ generation }: { generation: Generation }) => {
           <>
             <RadioTextDialog
               title="Roteiro do comercial"
-              description="Os blocos salvos em Configurações › Comercial, com os produtos de cada página e os preços por extenso."
+              description="Os blocos salvos na aba Comercial, com os produtos de cada página e os preços por extenso."
               copiedMessage="Roteiro do comercial copiado."
               icon={<Megaphone data-icon="inline-start" aria-hidden />}
               generationNumber={generation.number}

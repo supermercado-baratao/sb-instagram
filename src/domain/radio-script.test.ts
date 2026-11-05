@@ -185,16 +185,29 @@ describe('getRadioScriptWarning', () => {
     ).toBeUndefined()
   })
 
-  test('names the pages left out and the missing pages', () => {
-    expect(
-      getRadioScriptWarning({ unusedPages: [4, 5, 6], missingPageCount: 1 })
-    ).toBe(
-      'As páginas 4, 5 e 6 ficaram fora do comercial. Faltou 1 página para os blocos de produtos do comercial. Ajuste os blocos em Configurações › Comercial.'
-    )
+  test('names the pages left out of the script and the list', () => {
     expect(
       getRadioScriptWarning({ unusedPages: [2], missingPageCount: 0 })
     ).toBe(
-      'A página 2 ficou fora do comercial. Ajuste os blocos em Configurações › Comercial.'
+      'As imagens e o PDF estão completos, mas o roteiro e a lista da rádio ficaram sem a página 2. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+    )
+    expect(
+      getRadioScriptWarning({ unusedPages: [4, 5, 6], missingPageCount: 0 })
+    ).toBe(
+      'As imagens e o PDF estão completos, mas o roteiro e a lista da rádio ficaram sem as páginas 4, 5 e 6. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+    )
+  })
+
+  test('counts the pages the blocks lacked without calling them left out', () => {
+    expect(
+      getRadioScriptWarning({ unusedPages: [], missingPageCount: 1 })
+    ).toBe(
+      'As imagens e o PDF estão completos, mas faltou 1 página para os blocos de produtos do comercial. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+    )
+    expect(
+      getRadioScriptWarning({ unusedPages: [], missingPageCount: 2 })
+    ).toBe(
+      'As imagens e o PDF estão completos, mas faltaram 2 páginas para os blocos de produtos do comercial. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
     )
   })
 })
