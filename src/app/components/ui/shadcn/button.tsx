@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from 'cn'
 
 // focusableWhenDisabled sets aria-disabled instead of disabled, so the disabled look keys off data-disabled too
-const buttonVariants = cva(
+const baseButtonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -40,6 +40,11 @@ const buttonVariants = cva(
   }
 )
 
+// Merged here, because cva only joins the classes: in a link styled as a button, the base
+// `border-transparent` would beat the outline's `border-border`, which comes first in the CSS
+const buttonVariants = (props?: Parameters<typeof baseButtonVariants>[0]) =>
+  cn(baseButtonVariants(props))
+
 const Button = ({
   className,
   variant = 'default',
@@ -48,7 +53,7 @@ const Button = ({
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) => (
   <ButtonPrimitive
     data-slot="button"
-    className={cn(buttonVariants({ variant, size, className }))}
+    className={buttonVariants({ variant, size, className })}
     {...props}
   />
 )

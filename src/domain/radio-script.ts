@@ -166,25 +166,26 @@ export const getRadioScriptWarning = ({
   unusedPages,
   missingPageCount
 }: Pick<RadioScript, 'unusedPages' | 'missingPageCount'>) => {
-  const warnings = []
+  const problems = []
   if (unusedPages.length === 1) {
-    warnings.push(`A página ${unusedPages[0]} ficou fora do comercial.`)
+    problems.push(
+      `o roteiro e a lista da rádio ficaram sem a página ${unusedPages[0]}`
+    )
   } else if (unusedPages.length > 1) {
-    warnings.push(
-      `As páginas ${joinNumbers(unusedPages)} ficaram fora do comercial.`
+    problems.push(
+      `o roteiro e a lista da rádio ficaram sem as páginas ${joinNumbers(unusedPages)}`
     )
   }
   if (missingPageCount === 1) {
-    warnings.push('Faltou 1 página para os blocos de produtos do comercial.')
+    problems.push('faltou 1 página para os blocos de produtos do comercial')
   } else if (missingPageCount > 1) {
-    warnings.push(
-      `Faltaram ${missingPageCount} páginas para os blocos de produtos do comercial.`
+    problems.push(
+      `faltaram ${missingPageCount} páginas para os blocos de produtos do comercial`
     )
   }
-  if (warnings.length === 0) return
-  return [...warnings, 'Ajuste os blocos em Configurações › Comercial.'].join(
-    ' '
-  )
+  if (problems.length === 0) return
+  // A store read the old warning as if the page itself hadn't been generated (#94)
+  return `As imagens e o PDF estão completos, mas ${problems.join(' e ')}. Ajuste os blocos de produtos na aba Comercial e gere de novo.`
 }
 
 // Plain text with no headings, so it is pasted as it is into the voice service and sent to the

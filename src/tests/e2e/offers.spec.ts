@@ -51,12 +51,24 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await expect(page.getByText(/Geração \d+ pronta\./)).toBeVisible()
   // Edits made after generating must still ask before the toast's link leaves the page
   await page.getByLabel('Título do destaque').fill('Editado depois de gerar')
-  await page.getByRole('link', { name: 'Ver gerações' }).click()
-  await page
-    .getByRole('alertdialog', { name: 'Sair sem salvar?' })
-    .getByRole('button', { name: 'Sair sem salvar' })
-    .click()
+  const viewGenerations = page.getByRole('link', { name: 'Ver gerações' })
+  const leaveDialog = page.getByRole('alertdialog', {
+    name: 'Sair sem salvar?'
+  })
+  const keepEditing = leaveDialog.getByRole('button', {
+    name: 'Continuar editando'
+  })
+  await viewGenerations.click()
+  await expect(keepEditing).toBeFocused()
+  // Staying on the page keeps the toast, which may hold a warning that stays until closed
+  await keepEditing.click()
+  await expect(leaveDialog).toBeHidden()
+  await expect(viewGenerations).toBeVisible()
+  await expect(page.getByLabel('Título do destaque')).toBeFocused()
+  await viewGenerations.click()
+  await leaveDialog.getByRole('button', { name: 'Sair sem salvar' }).click()
   await expect(page).toHaveURL('/geracoes')
+  await expect(viewGenerations).toBeHidden()
   // A reused e2e server keeps the generations of a previous run, so the newest one is picked
   const generation = page
     .getByRole('listitem')

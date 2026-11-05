@@ -18,6 +18,7 @@ import {
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
+import { getHomeTabHref } from '@/app/helpers/home-tabs'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
@@ -63,15 +64,28 @@ type Status = {
 const viewGenerations = (
   <GuardedLink
     href={GENERATIONS_PATH}
-    className={buttonVariants({
-      variant: 'outline',
-      size: 'sm',
-      className: 'ml-auto shrink-0'
-    })}
-    onClick={() => toast.dismiss()}
+    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+    onLeave={() => toast.dismiss()}
   >
     Ver gerações
   </GuardedLink>
+)
+
+const generationActions = (
+  <div className="ml-auto shrink-0">{viewGenerations}</div>
+)
+
+const generationWarningActions = (
+  <div className="flex w-full flex-wrap justify-end gap-2">
+    <GuardedLink
+      href={getHomeTabHref('comercial')}
+      className={buttonVariants({ variant: 'outline', size: 'sm' })}
+      onLeave={() => toast.dismiss()}
+    >
+      Ajustar comercial
+    </GuardedLink>
+    {viewGenerations}
+  </div>
 )
 
 const getTabId = (key: number) => `page-tab-${key}`
@@ -268,14 +282,16 @@ export const OfferEditor = ({
         // Stays until closed, like an error, since the radio ad needs fixing (WCAG 2.2.1)
         toast.warning(`Geração ${result.number} pronta. ${result.warning}`, {
           duration: Infinity,
-          action: viewGenerations
+          // On a line of their own, or the long message is squeezed beside two links
+          classNames: { toast: 'flex-wrap' },
+          action: generationWarningActions
         })
         return
       }
       // Longer than the default, so there is time to reach its action
       toast.success(`Geração ${result.number} pronta.`, {
         duration: 10_000,
-        action: viewGenerations
+        action: generationActions
       })
     })
   }
