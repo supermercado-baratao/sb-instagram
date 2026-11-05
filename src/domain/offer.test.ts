@@ -9,12 +9,15 @@ import {
   countProducts,
   createOfferContent,
   createOfferPage,
+  dropMissingProducts,
   findEmptySlot,
   findPageWithoutPrice,
   formatPrice,
   formatValidUntil,
   getPageConflict,
   isOfferContent,
+  isOfferSnapshot,
+  isSameOfferSnapshot,
   movePage,
   moveSlot,
   moveSlotToNewPage,
@@ -25,7 +28,8 @@ import {
   placeSlots,
   removePage,
   replaceProduct,
-  setSlot
+  setSlot,
+  toOfferSnapshot
 } from '@/domain/offer'
 import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
 
@@ -506,5 +510,67 @@ describe('clearing the offer', () => {
         { ...pages[0], slots: pages[0].slots.with(0, null) }
       ])
     ).toBe(-1)
+  })
+})
+
+describe('offer snapshots', () => {
+  test('toOfferSnapshot keeps each product by id in its position, past the layout too', () => {
+    const snapshot = toOfferSnapshot(filled())
+
+    expect(snapshot.pages[0].items).toEqual([
+      {
+        position: 0,
+        productId: item.product.id,
+        priceInCents: item.priceInCents
+      },
+      {
+        position: 5,
+        productId: item.product.id,
+        priceInCents: item.priceInCents
+      }
+    ])
+    expect(isOfferSnapshot(snapshot)).toBe(true)
+  })
+
+  test('isSameOfferSnapshot tells apart a change of price, position or text', () => {
+    const content = filled()
+    const snapshot = toOfferSnapshot(content)
+    const [page] = content.pages
+    const isSame = (other: OfferContent) =>
+      isSameOfferSnapshot(snapshot, toOfferSnapshot(other))
+
+    expect(isSame(filled())).toBe(true)
+    expect(isSame(clearOfferPrices(content))).toBe(false)
+    const reversed = { ...page, slots: page.slots.toReversed() }
+    expect(isSame({ ...content, pages: [reversed] })).toBe(false)
+    expect(isSame({ ...content, highlightTitle: 'Outro' })).toBe(false)
+  })
+
+  test('dropMissingProducts empties the slots of deleted products and counts them', () => {
+    const { snapshot, missingProductCount } = dropMissingProducts(
+      toOfferSnapshot(filled()),
+      new Set()
+    )
+
+    expect(missingProductCount).toBe(2)
+    expect(snapshot.pages[0].items).toEqual([])
+    expect(snapshot.validUntil).toBe('2026-11-12')
+  })
+
+  test('isOfferSnapshot refuses an offer with no pages or a slot past the page', () => {
+    const snapshot = toOfferSnapshot(filled())
+
+    expect(isOfferSnapshot({ ...snapshot, pages: [] })).toBe(false)
+    expect(
+      isOfferSnapshot({
+        ...snapshot,
+        pages: [
+          {
+            ...snapshot.pages[0],
+            items: [{ ...snapshot.pages[0].items[0], position: 9 }]
+          }
+        ]
+      })
+    ).toBe(false)
   })
 })

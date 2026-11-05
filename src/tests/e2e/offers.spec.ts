@@ -436,6 +436,60 @@ test('clears the prices or the products of the offer or of one page', async ({
   await expect(page.getByLabel('Válida até')).toHaveValue('2026-11-12')
 })
 
+test('restores the offer saved before a mistaken save, and restoring again undoes it', async ({
+  page
+}) => {
+  const code = `E2E-RESTORE-${Date.now()}`
+  const productName = `Arroz restaurado ${code}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(productName)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${productName} salvo`)).toBeVisible()
+
+  await openEmptyOffer(page)
+  await page.getByLabel('Produto 1', { exact: true }).fill(code)
+  await page.getByLabel('Produto 1', { exact: true }).press('Enter')
+  const price = page.getByLabel(`Preço de ${productName} (R$)`)
+  await price.fill('5,99')
+  await page.getByRole('button', { name: 'Salvar' }).click()
+  await expect(page.getByText('Oferta salva.')).toBeVisible()
+
+  await openEmptyOffer(page)
+  await expect(price).toBeHidden()
+
+  const restore = page.getByRole('button', {
+    name: 'Restaurar oferta anterior'
+  })
+  await restore.click()
+  const restoreDialog = page.getByRole('alertdialog', {
+    name: 'Restaurar a oferta anterior?'
+  })
+  await expect(restoreDialog).toContainText(' e 1 produto, com os preços')
+  await restoreDialog
+    .getByRole('button', { name: 'Restaurar oferta anterior' })
+    .click()
+  await expect(page.getByText('Oferta anterior restaurada.')).toBeVisible()
+  await expect(price).toHaveValue('5,99')
+  await expect(page.getByText('Tudo salvo')).toBeVisible()
+
+  await page.reload()
+  await expect(price).toHaveValue('5,99')
+
+  await restore.click()
+  await expect(restoreDialog).toContainText(' e 0 produtos, com os preços')
+  await restoreDialog
+    .getByRole('button', { name: 'Restaurar oferta anterior' })
+    .click()
+  await expect(price).toBeHidden()
+  await expect(page.getByLabel('Produto 1', { exact: true })).toHaveValue('')
+})
+
 test('asks before leaving the offer editor with unsaved changes', async ({
   page
 }) => {

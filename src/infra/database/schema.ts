@@ -10,6 +10,7 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
+import type { OfferSnapshot } from '@/domain/offer'
 import type { RadioScript, RadioScriptBlock } from '@/domain/radio-script'
 
 export const products = sqliteTable(
@@ -92,6 +93,19 @@ export const offerPageItems = sqliteTable(
       foreignColumns: [products.id]
     })
   ]
+)
+
+// The offer as it was before the last save that changed it, so a mistaken save can be undone
+// (#92). It points to products without a foreign key, so it never keeps a product from being
+// deleted
+export const offerBackup = sqliteTable(
+  'offer_backup',
+  {
+    id: integer().primaryKey(),
+    content: text({ mode: 'json' }).$type<OfferSnapshot>().notNull(),
+    replacedAt: integer({ mode: 'timestamp_ms' }).notNull()
+  },
+  (table) => [check('offer_backup_single_row', sql`${table.id} = 1`)]
 )
 
 // What an offer looked like when it was generated, so editing a product, the brand or the offer
