@@ -5,6 +5,7 @@ import {
   canSwapSlots,
   clearOfferPrices,
   clearOfferProducts,
+  clearPageProducts,
   countProducts,
   createOfferContent,
   createOfferPage,
@@ -461,6 +462,30 @@ describe('clearing the offer', () => {
     expect(cleared.validUntil).toBe(null)
     expect(cleared.highlightTitle).toBe('Feirão')
     expect(cleared.pages[0].layout).toBe(3)
+  })
+
+  test('clearPageProducts empties the slots past the layout too, keeping the page settings', () => {
+    const [page] = filled().pages
+    const cleared = clearPageProducts(page)
+
+    expect(countProducts([cleared])).toBe(0)
+    expect(cleared.layout).toBe(3)
+    expect(cleared.templateId).toBe(page.templateId)
+  })
+
+  test('clearing one page leaves the other pages and the offer texts intact', () => {
+    const content = filled()
+    const other = setSlot(createOfferPage('mercado'), 0, item)
+    const pages = [content.pages[0], other]
+    const cleared = {
+      ...content,
+      pages: pages.with(0, clearPageProducts(pages[0]))
+    }
+
+    expect(countProducts([cleared.pages[0]])).toBe(0)
+    expect(cleared.pages[1]).toBe(other)
+    expect(cleared.validUntil).toBe('2026-11-12')
+    expect(cleared.highlightTitle).toBe('Feirão')
   })
 
   test('clearOfferPrices keeps the products without price or validity', () => {

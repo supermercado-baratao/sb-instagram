@@ -276,6 +276,12 @@ export const clearOfferProducts = (content: OfferContent): OfferContent => ({
   pages: mapSlots(content.pages, () => null)
 })
 
+// Keeps the validity, which belongs to the whole offer and only a new week clears
+export const clearPageProducts = (page: OfferPage): OfferPage => ({
+  ...page,
+  slots: page.slots.map(() => null)
+})
+
 export const clearOfferPrices = (content: OfferContent): OfferContent => ({
   ...content,
   validUntil: null,

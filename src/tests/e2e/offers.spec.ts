@@ -369,7 +369,9 @@ test('edits a product placed in an offer slot', async ({ page }) => {
   ).toBeFocused()
 })
 
-test('clears the prices or the products of the offer', async ({ page }) => {
+test('clears the prices or the products of the offer or of one page', async ({
+  page
+}) => {
   const code = `E2E-CLEAR-${Date.now()}`
   const productName = 'Óleo de soja'
   const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
@@ -390,27 +392,48 @@ test('clears the prices or the products of the offer', async ({ page }) => {
   await price.fill('8,49')
   await page.getByLabel('Válida até').fill('2026-11-12')
 
-  await page.getByRole('button', { name: 'Limpar preços' }).click()
+  await page
+    .getByRole('button', { name: 'Limpar preços de todas as páginas' })
+    .click()
   const pricesDialog = page.getByRole('alertdialog', {
-    name: 'Limpar os preços da oferta?'
+    name: 'Limpar os preços de todas as páginas?'
   })
-  await expect(pricesDialog).toContainText('O produto continua nas páginas')
-  await pricesDialog.getByRole('button', { name: 'Limpar preços' }).click()
+  await expect(pricesDialog).toContainText('O produto continua na página')
+  await pricesDialog
+    .getByRole('button', { name: 'Limpar preços de todas as páginas' })
+    .click()
   await expect(price).toHaveValue('')
   await expect(price).toBeFocused()
   await expect(page.getByLabel('Válida até')).toHaveValue('')
 
-  await page.getByRole('button', { name: 'Limpar produtos' }).click()
+  await page
+    .getByRole('button', { name: 'Limpar produtos de todas as páginas' })
+    .click()
   const productsDialog = page.getByRole('alertdialog', {
-    name: 'Limpar os produtos da oferta?'
+    name: 'Limpar os produtos de todas as páginas?'
   })
-  await expect(productsDialog).toContainText(
-    'O produto sai de todas as páginas'
-  )
-  await productsDialog.getByRole('button', { name: 'Limpar produtos' }).click()
+  await expect(productsDialog).toContainText('O produto sai da página')
+  await productsDialog
+    .getByRole('button', { name: 'Limpar produtos de todas as páginas' })
+    .click()
   await expect(price).toBeHidden()
   await expect(page.getByLabel('Produto 1', { exact: true })).toHaveValue('')
   await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
+
+  await page.getByLabel('Produto 1', { exact: true }).fill(code)
+  await page.getByLabel('Produto 1', { exact: true }).press('Enter')
+  await page.getByLabel('Válida até').fill('2026-11-12')
+  await page.getByRole('button', { name: 'Limpar produtos da página' }).click()
+  const pageDialog = page.getByRole('alertdialog', {
+    name: 'Limpar os produtos da página 1?'
+  })
+  await expect(pageDialog).toContainText('O produto desta página sai')
+  await pageDialog
+    .getByRole('button', { name: 'Limpar produtos da página' })
+    .click()
+  await expect(price).toBeHidden()
+  await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
+  await expect(page.getByLabel('Válida até')).toHaveValue('2026-11-12')
 })
 
 test('asks before leaving the offer editor with unsaved changes', async ({
