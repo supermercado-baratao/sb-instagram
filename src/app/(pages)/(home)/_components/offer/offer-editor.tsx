@@ -65,7 +65,7 @@ const viewGenerations = (
   <GuardedLink
     href={GENERATIONS_PATH}
     className={buttonVariants({ variant: 'outline', size: 'sm' })}
-    onClick={() => toast.dismiss()}
+    onLeave={() => toast.dismiss()}
   >
     Ver gerações
   </GuardedLink>
@@ -80,7 +80,7 @@ const generationWarningActions = (
     <GuardedLink
       href={getHomeTabHref('comercial')}
       className={buttonVariants({ variant: 'outline', size: 'sm' })}
-      onClick={() => toast.dismiss()}
+      onLeave={() => toast.dismiss()}
     >
       Ajustar comercial
     </GuardedLink>

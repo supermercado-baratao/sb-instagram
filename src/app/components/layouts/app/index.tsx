@@ -41,7 +41,7 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
         >
           <GuardedLink
             href="/"
-            className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-muted-foreground"
           >
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- the logo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy

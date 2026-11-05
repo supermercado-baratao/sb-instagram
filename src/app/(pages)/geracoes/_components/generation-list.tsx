@@ -63,7 +63,7 @@ const GenerationCard = ({ generation }: { generation: Generation }) => {
                 href={getGenerationPageHref(generation, pageNumber)}
                 target="_blank"
                 rel="noopener"
-                className="block rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="block rounded-md outline-none focus-visible:ring-3 focus-visible:ring-muted-foreground"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- served by our own route, already at its final size, so next/image's optimizer adds nothing */}
                 <img

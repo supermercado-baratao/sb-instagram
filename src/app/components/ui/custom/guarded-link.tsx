@@ -10,22 +10,33 @@ type GuardedLinkProps = Omit<
   'href' | 'onNavigate' | 'replace' | 'scroll' | 'transitionTypes'
 > & {
   href: string
+  // Runs only once the navigation goes ahead, unlike `onClick`, which also fires when the guard
+  // then keeps the user on the page
+  onLeave?: () => void
 }
 
 // Next.js has no router-level hook to block navigation, so each internal link asks the guard
 // through `onNavigate` (node_modules/next/dist/docs/01-app/03-api-reference/02-components/link.md)
-export const GuardedLink = ({ href, ...props }: GuardedLinkProps) => {
+export const GuardedLink = ({ href, onLeave, ...props }: GuardedLinkProps) => {
   const guard = use(NavigationGuardContext)
 
   return (
     <Link
       href={href}
       onNavigate={(event) => {
-        if (!guard) return
         // The tabs at `/` differ only by query, so the path alone can't tell the current page
         const { pathname, search } = new URL(href, location.href)
-        if (pathname + search === location.pathname + location.search) return
-        if (!guard.requestNavigation(href)) event.preventDefault()
+        const isCurrentPage =
+          pathname + search === location.pathname + location.search
+        if (
+          guard &&
+          !isCurrentPage &&
+          !guard.requestNavigation(href, onLeave)
+        ) {
+          event.preventDefault()
+          return
+        }
+        onLeave?.()
       }}
       {...props}
     />

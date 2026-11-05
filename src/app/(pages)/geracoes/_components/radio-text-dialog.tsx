@@ -86,7 +86,7 @@ export const RadioTextDialog = ({
               {warning}{' '}
               <GuardedLink
                 href={getHomeTabHref('comercial')}
-                className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-muted-foreground"
               >
                 Ajustar comercial
               </GuardedLink>
@@ -99,7 +99,7 @@ export const RadioTextDialog = ({
           role="region"
           tabIndex={0}
           aria-label={title}
-          className="overflow-y-auto rounded-lg border border-border bg-muted p-4 font-sans text-sm whitespace-pre-wrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="overflow-y-auto rounded-lg border border-border bg-muted p-4 font-sans text-sm whitespace-pre-wrap outline-none focus-visible:ring-3 focus-visible:ring-muted-foreground"
         >
           {text}
         </pre>

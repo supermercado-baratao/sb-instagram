@@ -65,7 +65,7 @@ export const CatalogImagePicker = ({
               {visibleImages.map((name) => (
                 <label
                   key={name}
-                  className="relative flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-border p-2 text-center text-xs has-checked:border-primary has-checked:bg-muted has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+                  className="relative flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-border p-2 text-center text-xs has-checked:border-primary has-checked:bg-muted has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-muted-foreground"
                 >
                   <input
                     type="radio"
