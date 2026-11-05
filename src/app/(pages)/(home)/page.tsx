@@ -9,7 +9,7 @@ import type { BrandSettings } from '@/domain/brand'
 import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { findOrCreateOffer } from '@/infra/offer'
+import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
 import { listNoEanImages } from '@/infra/photo'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
@@ -37,6 +37,7 @@ const renderTab = async (id: HomeTabId, settings: BrandSettings) => {
       return (
         <OfferEditor
           offer={findOrCreateOffer(database, templates[0].id)}
+          backup={findOfferBackup(database)}
           brand={getPosterBrand(brand)}
           templates={templates}
           noEanImages={await listNoEanImages()}

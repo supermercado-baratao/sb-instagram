@@ -3,12 +3,21 @@
 import { revalidatePath } from 'next/cache'
 
 import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
-import { isOfferContent } from '@/domain/offer'
+import {
+  isOfferContent,
+  type OfferBackupSummary,
+  type OfferContent
+} from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
 import { getRadioScriptWarning } from '@/domain/radio-script'
 import { database } from '@/infra/database/client'
 import { createGeneration } from '@/infra/generation'
-import { saveOffer } from '@/infra/offer'
+import {
+  findOffer,
+  findOfferBackup,
+  restoreOfferBackup,
+  saveOffer
+} from '@/infra/offer'
 import { offerRenderer } from '@/infra/poster-renderer'
 import { findProductsByCode, saveProduct } from '@/infra/product'
 
@@ -20,7 +29,17 @@ export type SlotLookupResult =
   | { status: 'error'; message: string }
 
 export type SaveOfferResult =
-  { status: 'saved' } | { status: 'error'; message: string }
+  | { status: 'saved'; backup: OfferBackupSummary | undefined }
+  | { status: 'error'; message: string }
+
+export type RestoreOfferResult =
+  | {
+      status: 'restored'
+      content: OfferContent
+      backup: OfferBackupSummary | undefined
+      missingProductCount: number
+    }
+  | { status: 'error'; message: string }
 
 export type GenerateOfferResult =
   | { status: 'generated'; number: number; warning?: string }
@@ -67,12 +86,37 @@ export const saveOfferAction = async (
     saveOffer(database, content)
     // A tab keeps its old content for the browser's Back button, and saving that again would undo this
     revalidatePath('/')
-    return { status: 'saved' }
+    return { status: 'saved', backup: findOfferBackup(database) }
   } catch {
     // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
     return {
       status: 'error',
       message: 'Não foi possível salvar. Algum produto não está cadastrado.'
+    }
+  }
+}
+
+export const restoreOfferAction = async (): Promise<RestoreOfferResult> => {
+  try {
+    const restored = restoreOfferBackup(database)
+    const content = restored && findOffer(database)
+    if (!content) {
+      return {
+        status: 'error',
+        message: 'Não há uma versão anterior da oferta para restaurar.'
+      }
+    }
+    revalidatePath('/')
+    return {
+      status: 'restored',
+      content,
+      backup: findOfferBackup(database),
+      missingProductCount: restored.missingProductCount
+    }
+  } catch {
+    return {
+      status: 'error',
+      message: 'Não foi possível restaurar a oferta. Tente de novo.'
     }
   }
 }

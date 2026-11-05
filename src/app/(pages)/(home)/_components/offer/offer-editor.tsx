@@ -30,6 +30,7 @@ import {
   movePage,
   moveSlotToNewPage,
   moveSlotToPage,
+  type OfferBackupSummary,
   type OfferContent,
   type OfferPage,
   removePage,
@@ -39,16 +40,22 @@ import {
 import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
-import { generateOfferAction, saveOfferAction } from './actions'
+import {
+  generateOfferAction,
+  restoreOfferAction,
+  saveOfferAction
+} from './actions'
 import { CLEAR_NOTE, ClearOfferButton } from './clear-offer-button'
 import type { MoveTarget } from './move-product-button'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
 import { PosterStage } from './poster-stage'
 import { PRICE_MISSING_ATTRIBUTE } from './price-field'
+import { RestoreOfferButton } from './restore-offer-button'
 
 type OfferEditorProps = {
   offer: OfferContent
+  backup: OfferBackupSummary | undefined
   brand: Brand
   templates: PosterTemplate[]
   noEanImages: string[]
@@ -101,8 +108,16 @@ const describeScope = (count: number) =>
     ? 'Vale para a única página da oferta.'
     : `Vale para todas as ${count} páginas da oferta.`
 
+const describeLeftOut = (count: number) =>
+  count === 1
+    ? '1 produto excluído do cadastro desde essa versão ficou de fora.'
+    : `${count} produtos excluídos do cadastro desde essa versão ficaram de fora.`
+
+const UNDO_NOTE = 'Para desfazer, restaure de novo.'
+
 export const OfferEditor = ({
   offer,
+  backup: initialBackup,
   brand,
   templates,
   noEanImages
@@ -121,6 +136,9 @@ export const OfferEditor = ({
   const [clearCount, setClearCount] = useState(0)
   const [saving, startSave] = useTransition()
   const [generating, startGenerate] = useTransition()
+  const [backup, setBackup] = useState(initialBackup)
+  const [restoring, startRestore] = useTransition()
+  const busy = saving || generating || restoring
   const dirty = content !== saved
 
   const selectedIndex = Math.max(pageKeys.indexOf(selectedKey), 0)
@@ -129,6 +147,10 @@ export const OfferEditor = ({
   const filledPageCount = content.pages.filter(
     (page) => countProducts([page]) > 0
   ).length
+
+  let restoreHint: string | undefined
+  if (!backup) restoreHint = 'restore-hint'
+  else if (dirty) restoreHint = 'restore-dirty-hint'
 
   useUnsavedChangesWarning(dirty)
 
@@ -268,8 +290,40 @@ export const OfferEditor = ({
         return
       }
       setSaved(snapshot)
+      setBackup(result.backup)
       setStatus(undefined)
       toast.success('Oferta salva.')
+    })
+  }
+
+  const restore = () => {
+    startRestore(async () => {
+      const result = await restoreOfferAction()
+      toast.dismiss()
+      if (result.status === 'error') {
+        toast.error(result.message, { duration: Infinity })
+        return
+      }
+      const { content: restored, missingProductCount } = result
+      const keys = restored.pages.map((_, index) => index)
+      setContent(restored)
+      setSaved(restored)
+      setPageKeys(keys)
+      setSelectedKey(keys[0])
+      setClearCount(clearCount + 1)
+      setStatus(undefined)
+      setBackup(result.backup)
+      if (missingProductCount > 0) {
+        // Stays until closed, like an error, since the store has to place those products again
+        toast.warning(
+          `Oferta anterior restaurada. ${describeLeftOut(missingProductCount)} ${UNDO_NOTE}`,
+          { duration: Infinity }
+        )
+        return
+      }
+      toast.success(`Oferta anterior restaurada. ${UNDO_NOTE}`, {
+        duration: 10_000
+      })
     })
   }
 
@@ -314,9 +368,16 @@ export const OfferEditor = ({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <RestoreOfferButton
+              backup={backup}
+              disabled={dirty || busy}
+              restoring={restoring}
+              describedBy={restoreHint}
+              onConfirm={restore}
+            />
             <Button
               variant="outline"
-              disabled={dirty || generating}
+              disabled={dirty || busy}
               focusableWhenDisabled
               aria-describedby={dirty ? 'generate-hint' : undefined}
               onClick={generate}
@@ -328,7 +389,7 @@ export const OfferEditor = ({
               )}
               {generating ? 'Gerando…' : 'Gerar'}
             </Button>
-            <Button disabled={saving} focusableWhenDisabled onClick={save}>
+            <Button disabled={busy} focusableWhenDisabled onClick={save}>
               {saving ? (
                 <Spinner data-icon="inline-start" aria-hidden />
               ) : (
@@ -339,8 +400,24 @@ export const OfferEditor = ({
           </div>
         </div>
         {dirty && (
-          <p id="generate-hint" className="text-sm text-muted-foreground">
-            Salve a oferta para gerar as páginas.
+          <p className="text-sm text-muted-foreground">
+            <span id="generate-hint">
+              Salve a oferta para gerar as páginas.
+            </span>
+            {/* Saving would replace the stored version, which is what the store wants back */}
+            {backup && (
+              <span id="restore-dirty-hint">
+                {' '}
+                Para restaurar a versão anterior sem salvar o que mudou,
+                recarregue a página e descarte as alterações.
+              </span>
+            )}
+          </p>
+        )}
+        {!backup && (
+          <p id="restore-hint" className="text-sm text-muted-foreground">
+            Ainda não há versão anterior para restaurar. Ela fica guardada
+            quando você salva uma alteração.
           </p>
         )}
         <div aria-live="polite" className="min-h-5">
@@ -364,7 +441,8 @@ export const OfferEditor = ({
 
       {/* The preview column is as wide as a poster as tall as the screen, up to 40% of the width */}
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_min(40vw,calc((100dvh-6rem)*0.8))]">
-        <div className="flex min-w-0 flex-col gap-10">
+        {/* What is typed while restoring would be replaced by the restored offer */}
+        <div className="flex min-w-0 flex-col gap-10" inert={restoring}>
           <section
             aria-labelledby="offer-texts-heading"
             className="flex flex-col gap-4"

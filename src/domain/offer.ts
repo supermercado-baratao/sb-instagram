@@ -287,3 +287,119 @@ export const clearOfferPrices = (content: OfferContent): OfferContent => ({
   validUntil: null,
   pages: mapSlots(content.pages, (slot) => ({ ...slot, priceInCents: 0 }))
 })
+
+export type OfferSnapshotItem = {
+  position: number
+  productId: string
+  priceInCents: number
+}
+
+export type OfferSnapshotPage = {
+  templateId: string
+  layout: PosterLayout
+  items: OfferSnapshotItem[]
+}
+
+// The offer as the database keeps it, with products by id, so a stored copy never goes stale
+// when a product is edited
+export type OfferSnapshot = Omit<OfferContent, 'pages'> & {
+  pages: OfferSnapshotPage[]
+}
+
+export const toOfferSnapshot = (content: OfferContent): OfferSnapshot => ({
+  validUntil: content.validUntil,
+  highlightTitle: content.highlightTitle,
+  highlightMessage: content.highlightMessage,
+  pages: content.pages.map((page) => ({
+    templateId: page.templateId,
+    layout: page.layout,
+    items: page.slots.flatMap((slot, position) =>
+      slot
+        ? [
+            {
+              position,
+              productId: slot.product.id,
+              priceInCents: slot.priceInCents
+            }
+          ]
+        : []
+    )
+  }))
+})
+
+export const isSameOfferSnapshot = (a: OfferSnapshot, b: OfferSnapshot) =>
+  a.validUntil === b.validUntil &&
+  a.highlightTitle === b.highlightTitle &&
+  a.highlightMessage === b.highlightMessage &&
+  a.pages.length === b.pages.length &&
+  a.pages.every((page, index) => {
+    const other = b.pages[index]
+    return (
+      page.templateId === other.templateId &&
+      page.layout === other.layout &&
+      page.items.length === other.items.length &&
+      page.items.every(
+        (item, itemIndex) =>
+          item.position === other.items[itemIndex].position &&
+          item.productId === other.items[itemIndex].productId &&
+          item.priceInCents === other.items[itemIndex].priceInCents
+      )
+    )
+  })
+
+const isSnapshotItem = (value: unknown): value is OfferSnapshotItem =>
+  isRecord(value) &&
+  Number.isSafeInteger(value.position) &&
+  (value.position as number) >= 0 &&
+  (value.position as number) < PAGE_PRODUCT_COUNT &&
+  typeof value.productId === 'string' &&
+  isValidProductId(value.productId) &&
+  Number.isSafeInteger(value.priceInCents) &&
+  (value.priceInCents as number) >= 0
+
+const isSnapshotPage = (value: unknown): value is OfferSnapshotPage =>
+  isRecord(value) &&
+  typeof value.templateId === 'string' &&
+  isPosterLayout(value.layout) &&
+  Array.isArray(value.items) &&
+  value.items.every(isSnapshotItem)
+
+// The stored copy is JSON, so one written by a future version or edited by hand is never restored
+export const isOfferSnapshot = (value: unknown): value is OfferSnapshot =>
+  isRecord(value) &&
+  isOptionalText(value.validUntil) &&
+  typeof value.highlightTitle === 'string' &&
+  typeof value.highlightMessage === 'string' &&
+  Array.isArray(value.pages) &&
+  value.pages.length > 0 &&
+  value.pages.every(isSnapshotPage)
+
+export const getSnapshotProductIds = (snapshot: OfferSnapshot) => [
+  ...new Set(
+    snapshot.pages.flatMap((page) => page.items.map((item) => item.productId))
+  )
+]
+
+// A product deleted after the copy was stored leaves its slot empty
+export const dropMissingProducts = (
+  snapshot: OfferSnapshot,
+  existingIds: ReadonlySet<string>
+) => {
+  let missingProductCount = 0
+  const pages = snapshot.pages.map((page) => ({
+    ...page,
+    items: page.items.filter((item) => {
+      if (existingIds.has(item.productId)) return true
+      missingProductCount += 1
+      return false
+    })
+  }))
+  return { snapshot: { ...snapshot, pages }, missingProductCount }
+}
+
+export type OfferBackupSummary = {
+  replacedAt: number
+  pageCount: number
+  productCount: number
+  missingProductCount: number
+}
