@@ -1,7 +1,7 @@
 'use client'
 
 import type { LucideIcon } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { type ComponentProps, useRef, useState } from 'react'
 
 import {
   AlertDialog,
@@ -16,8 +16,12 @@ import {
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
 
+export const CLEAR_NOTE =
+  'A limpeza só vale depois de salvar a oferta, e as gerações já feitas não mudam.'
+
 type ClearOfferButtonProps = {
   label: string
+  size?: ComponentProps<typeof Button>['size']
   icon: LucideIcon
   title: string
   description: string
@@ -28,6 +32,7 @@ type ClearOfferButtonProps = {
 
 export const ClearOfferButton = ({
   label,
+  size,
   icon: Icon,
   title,
   description,
@@ -48,7 +53,12 @@ export const ClearOfferButton = ({
     >
       <AlertDialogTrigger
         render={
-          <Button variant="outline" disabled={disabled} focusableWhenDisabled />
+          <Button
+            variant="outline"
+            size={size}
+            disabled={disabled}
+            focusableWhenDisabled
+          />
         }
       >
         <Icon data-icon="inline-start" aria-hidden />

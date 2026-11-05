@@ -1,7 +1,7 @@
 'use client'
 
 import { Select as SelectPrimitive } from '@base-ui/react/select'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eraser } from 'lucide-react'
 import { useState } from 'react'
 import { flushSync } from 'react-dom'
 
@@ -17,7 +17,12 @@ import {
   ToggleGroup,
   ToggleGroupItem
 } from '@/app/components/ui/shadcn/toggle-group'
-import { moveSlot, type OfferPage, setSlot } from '@/domain/offer'
+import {
+  clearPageProducts,
+  moveSlot,
+  type OfferPage,
+  setSlot
+} from '@/domain/offer'
 import {
   getPageTemplate,
   isPosterLayout,
@@ -26,9 +31,22 @@ import {
 } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
+import { CLEAR_NOTE, ClearOfferButton } from './clear-offer-button'
 import type { MoveTarget } from './move-product-button'
 import { RemovePageButton } from './remove-page-button'
 import { SlotField } from './slot-field'
+
+// Counts the hidden slots too, which clearing also empties, so the number matches what leaves
+const describeCleared = (productCount: number, hiddenCount: number) => {
+  const removed =
+    productCount === 1
+      ? 'O produto desta página sai, com o preço'
+      : `Os ${productCount} produtos desta página saem, com os preços`
+  if (hiddenCount === 0) return `${removed}.`
+  return hiddenCount === 1
+    ? `${removed}, incluindo o guardado fora desta quantidade.`
+    : `${removed}, incluindo os ${hiddenCount} guardados fora desta quantidade.`
+}
 
 type PagePanelProps = {
   index: number
@@ -65,6 +83,7 @@ export const PagePanel = ({
   const [slotKeys, setSlotKeys] = useState(() =>
     page.slots.map((_, position) => position)
   )
+  const productCount = page.slots.filter((slot) => slot !== null).length
   const hiddenCount = page.slots
     .slice(page.layout)
     .filter((slot) => slot !== null).length
@@ -154,9 +173,26 @@ export const PagePanel = ({
             Mover para depois
             <ArrowRight data-icon="inline-end" aria-hidden />
           </Button>
+          <ClearOfferButton
+            label="Limpar produtos da página"
+            size="sm"
+            icon={Eraser}
+            title={`Limpar os produtos da página ${index + 1}?`}
+            description={`${describeCleared(productCount, hiddenCount)} As outras páginas, a validade e os textos do destaque continuam. ${CLEAR_NOTE}`}
+            disabled={productCount === 0}
+            getNextField={() =>
+              document.querySelector<HTMLElement>(`#${id}-slot-0-code`)
+            }
+            onConfirm={() => {
+              onChange(clearPageProducts(page))
+              onNotice(
+                `Produtos da página ${index + 1} limpos. Coloque os novos produtos e salve.`
+              )
+            }}
+          />
           <RemovePageButton
             pageNumber={index + 1}
-            productCount={page.slots.filter((slot) => slot !== null).length}
+            productCount={productCount}
             disabled={pageCount === 1}
             onRemove={onRemove}
           />

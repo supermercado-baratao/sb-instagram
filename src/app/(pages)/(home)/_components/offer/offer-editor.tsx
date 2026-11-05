@@ -40,7 +40,7 @@ import type { Brand, PosterTemplate } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 import { generateOfferAction, saveOfferAction } from './actions'
-import { ClearOfferButton } from './clear-offer-button'
+import { CLEAR_NOTE, ClearOfferButton } from './clear-offer-button'
 import type { MoveTarget } from './move-product-button'
 import { PagePanel } from './page-panel'
 import { PosterFullView } from './poster-full-view'
@@ -96,8 +96,10 @@ const describeKept = (count: number) =>
 const describeRemoved = (count: number) =>
   count === 1 ? 'O produto sai' : `Os ${count} produtos saem`
 
-const CLEAR_NOTE =
-  'A limpeza só vale depois de salvar a oferta, e as gerações já feitas não mudam.'
+const describeScope = (count: number) =>
+  count === 1
+    ? 'Vale para a única página da oferta.'
+    : `Vale para todas as ${count} páginas da oferta.`
 
 export const OfferEditor = ({
   offer,
@@ -124,6 +126,9 @@ export const OfferEditor = ({
   const selectedIndex = Math.max(pageKeys.indexOf(selectedKey), 0)
   const selectedPage = content.pages[selectedIndex]
   const productCount = countProducts(content.pages)
+  const filledPageCount = content.pages.filter(
+    (page) => countProducts([page]) > 0
+  ).length
 
   useUnsavedChangesWarning(dirty)
 
@@ -426,10 +431,10 @@ export const OfferEditor = ({
               </div>
               <div className="flex flex-wrap gap-2">
                 <ClearOfferButton
-                  label="Limpar preços"
+                  label="Limpar preços de todas as páginas"
                   icon={Eraser}
-                  title="Limpar os preços da oferta?"
-                  description={`${describeKept(productCount)} nas páginas, sem preço, e a validade da oferta é apagada. Será preciso digitar os preços de novo para salvar. ${CLEAR_NOTE}`}
+                  title="Limpar os preços de todas as páginas?"
+                  description={`${describeScope(content.pages.length)} ${describeKept(productCount)} ${filledPageCount === 1 ? 'na página' : 'nas páginas'}, sem preço, e a validade da oferta é apagada. Será preciso digitar os preços de novo para salvar. ${CLEAR_NOTE}`}
                   disabled={productCount === 0}
                   getNextField={() =>
                     document.querySelector<HTMLElement>(
@@ -444,10 +449,10 @@ export const OfferEditor = ({
                   }
                 />
                 <ClearOfferButton
-                  label="Limpar produtos"
+                  label="Limpar produtos de todas as páginas"
                   icon={Eraser}
-                  title="Limpar os produtos da oferta?"
-                  description={`${describeRemoved(productCount)} de todas as páginas, com os preços, e a validade da oferta é apagada. As páginas, os modelos de arte e os textos do destaque continuam. ${CLEAR_NOTE}`}
+                  title="Limpar os produtos de todas as páginas?"
+                  description={`${describeScope(content.pages.length)} ${describeRemoved(productCount)} ${filledPageCount === 1 ? 'da página' : 'das páginas'}, com os preços, e a validade da oferta é apagada. As páginas, os modelos de arte e os textos do destaque continuam. ${CLEAR_NOTE}`}
                   disabled={productCount === 0}
                   getNextField={() =>
                     document.querySelector<HTMLElement>(
