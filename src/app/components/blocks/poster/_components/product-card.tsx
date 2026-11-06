@@ -35,20 +35,13 @@ export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
   const name = resolvePosterField(product.name, posterPlaceholders.name)
   const brand = resolvePosterField(product.brand, posterPlaceholders.brand)
 
-  const nameFontSize = fitFontSize({
-    text: name ?? '',
+  const labelText = [name, brand].filter(Boolean).join(' ')
+  const labelFontSize = fitFontSize({
+    text: labelText,
     width: labelWidth,
     lines: 2,
-    maxFontSize: 22 * textScale,
-    minFontSize: 14 * textScale,
-    charWidth: posterCharWidth.body
-  })
-  const brandFontSize = fitFontSize({
-    text: brand ?? '',
-    width: labelWidth,
-    lines: 1,
-    maxFontSize: 34 * textScale,
-    minFontSize: 18 * textScale,
+    maxFontSize: 26 * textScale,
+    minFontSize: 16 * textScale,
     charWidth: posterCharWidth.heading
   })
 
@@ -111,24 +104,15 @@ export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
           padding: `${6 * scale}px ${labelPadding}px`
         }}
       >
-        {name && (
+        {/* Name and brand read as one description, so a product sold under any brand (ham, cassava
+            flour) leaves the brand empty instead of writing "-" as its name (#84). No line-clamp: its
+            overflow clipping cuts the accents and cedillas of Anton, which reach past its line box */}
+        {labelText && (
           <p
-            className="line-clamp-2 font-semibold tracking-wide text-(--poster-primary-label)"
-            style={{ fontSize: nameFontSize }}
+            className="w-full font-(family-name:--font-poster-heading) text-white"
+            style={{ fontSize: labelFontSize, lineHeight: 1.15 }}
           >
-            {name}
-          </p>
-        )}
-        {brand && (
-          <p
-            className="w-full truncate font-(family-name:--font-poster-heading) text-white"
-            style={{
-              fontSize: brandFontSize,
-              lineHeight: 1.1,
-              marginTop: name ? 4 * textScale : 0
-            }}
-          >
-            {brand}
+            {labelText}
           </p>
         )}
       </div>

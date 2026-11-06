@@ -268,3 +268,38 @@ test('independent-generations keeps every generation and its id sequence', async
     .run()
   expect(lastInsertRowid).toBe(7)
 })
+
+test('move-brand-into-placeholder-name moves the description out of the brand', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore(
+      '_move-brand-into-placeholder-name'
+    )
+  })
+
+  sqlite.exec(`
+    INSERT INTO products (id, name, brand) VALUES
+      ('a', '-', ' Presunto Fatiado '),
+      ('b', ' . ', 'Óleo'),
+      ('c', 'Arroz', 'Tio João'),
+      ('d', '-', NULL),
+      ('e', '-', '-'),
+      ('f', 'Água', 'Crystal');
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  const rows = sqlite
+    .prepare('SELECT id, name, brand FROM products ORDER BY id')
+    .all()
+  expect(rows).toEqual([
+    { id: 'a', name: 'Presunto Fatiado', brand: null },
+    { id: 'b', name: 'Óleo', brand: null },
+    { id: 'c', name: 'Arroz', brand: 'Tio João' },
+    { id: 'd', name: '-', brand: null },
+    { id: 'e', name: '-', brand: '-' },
+    { id: 'f', name: 'Água', brand: 'Crystal' }
+  ])
+})

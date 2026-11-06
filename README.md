@@ -139,6 +139,7 @@ Abaixo estão os destaques das convenções.
 ### Pôster em PNG
 
 - O PNG é uma captura do componente do pôster feita pelo Chromium headless (`playwright-core`), então sai idêntico à pré-visualização. O `ImageResponse` (Satori) não é usado porque não suporta grid, variáveis CSS nem cores relativas.
+- No card do produto, o nome e a marca aparecem juntos, como um texto só, na mesma fonte e na mesma cor, em até duas linhas; um produto sem marca mostra só o nome. A unidade fica na etiqueta de preço.
 - As fontes do pôster são servidas pela própria instância (`next/font`), então a geração funciona sem internet.
 - O Chromium vem dentro da imagem Docker, que por isso tem cerca de 1,3 GB.
 
