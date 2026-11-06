@@ -28,7 +28,13 @@ import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
 import { useProductSuggestions } from '@/app/hooks/use-product-suggestions'
-import { getPageConflict, type OfferPage, type OfferSlot } from '@/domain/offer'
+import {
+  findOtherPagesWithProduct,
+  findProductPrice,
+  getPageConflict,
+  type OfferPage,
+  type OfferSlot
+} from '@/domain/offer'
 import type { Product } from '@/domain/product'
 
 import { lookupSlotProduct } from './actions'
@@ -47,6 +53,7 @@ type SlotFieldProps = {
   canMoveBefore: boolean
   canMoveAfter: boolean
   onChange: (slot: OfferSlot) => void
+  onPriceChange: (productId: string, priceInCents: number) => void
   onMove: (to: number) => void
   onMoveToPage: (target: MoveTarget) => void
   onProductSaved: (product: Product) => void
@@ -67,6 +74,7 @@ export const SlotField = ({
   canMoveBefore,
   canMoveAfter,
   onChange,
+  onPriceChange,
   onMove,
   onMoveToPage,
   onProductSaved,
@@ -74,6 +82,7 @@ export const SlotField = ({
 }: SlotFieldProps) => {
   const [error, setError] = useState<LookupError>()
   const [focusPrice, setFocusPrice] = useState(false)
+  const [priceBrought, setPriceBrought] = useState(false)
   const [searching, startSearch] = useTransition()
   // Holds the code the dialog starts from, if any, while it is open
   const [creating, setCreating] = useState<{ missingCode?: string }>()
@@ -98,7 +107,10 @@ export const SlotField = ({
       return false
     }
     setError(undefined)
-    onChange({ product, priceInCents: 0 })
+    // The product keeps one price across the offer (#93), so it comes with the price it has elsewhere
+    const priceInCents = findProductPrice(pages, product.id)
+    setPriceBrought(priceInCents > 0)
+    onChange({ product, priceInCents })
     if (conflict === 'shared-code') {
       toast.dismiss()
       toast.warning(
@@ -117,6 +129,7 @@ export const SlotField = ({
   const moveToPage = (target: MoveTarget) => {
     // The product that comes in a trade must not take the focus from a scan that is long gone
     setFocusPrice(false)
+    setPriceBrought(false)
     const emptiesSlot =
       target.kind === 'new-page' ||
       pages[target.to.page].slots[target.to.position] === null
@@ -361,7 +374,9 @@ export const SlotField = ({
           productName={product.name}
           priceInCents={priceInCents}
           autoFocus={focusPrice}
-          onChange={(cents) => onChange({ product, priceInCents: cents })}
+          selectOnFocus={priceBrought}
+          otherPages={findOtherPagesWithProduct(pages, product.id, pageIndex)}
+          onChange={(cents) => onPriceChange(product.id, cents)}
         />
         <div className="flex flex-wrap gap-2">
           <Button

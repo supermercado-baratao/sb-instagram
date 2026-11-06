@@ -55,6 +55,7 @@ type PagePanelProps = {
   noEanImages: string[]
   photoVersion?: number
   onChange: (page: OfferPage) => void
+  onPriceChange: (productId: string, priceInCents: number) => void
   onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
   onMove: (to: number) => void
@@ -69,6 +70,7 @@ export const PagePanel = ({
   noEanImages,
   photoVersion,
   onChange,
+  onPriceChange,
   onProductSaved,
   onNotice,
   onMove,
@@ -213,6 +215,7 @@ export const PagePanel = ({
               canMoveBefore={position > 0}
               canMoveAfter={position < page.layout - 1}
               onChange={(next) => onChange(setSlot(page, position, next))}
+              onPriceChange={onPriceChange}
               onMove={(to) => moveSlotTo(position, to)}
               onMoveToPage={(target) => onMoveProduct(position, target)}
               onProductSaved={onProductSaved}

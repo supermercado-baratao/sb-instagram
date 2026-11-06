@@ -35,6 +35,7 @@ import {
   type OfferPage,
   removePage,
   replaceProduct,
+  setProductPrice,
   setSlot
 } from '@/domain/offer'
 import type { Brand, PosterTemplate } from '@/domain/poster'
@@ -164,6 +165,9 @@ export const OfferEditor = ({
 
   const updatePage = (index: number, page: OfferPage) =>
     update({ pages: content.pages.with(index, page) })
+
+  const updatePrice = (productId: string, priceInCents: number) =>
+    update({ pages: setProductPrice(content.pages, productId, priceInCents) })
 
   // The product is already saved, so the saved copy takes it too and the offer doesn't look changed
   const updateProduct = (product: Product) => {
@@ -579,6 +583,7 @@ export const OfferEditor = ({
                   noEanImages={noEanImages}
                   photoVersion={photoVersion}
                   onChange={(page) => updatePage(selectedIndex, page)}
+                  onPriceChange={updatePrice}
                   onProductSaved={updateProduct}
                   onNotice={(message) => show({ kind: 'info', message })}
                   onMove={moveSelectedPage}

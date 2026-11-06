@@ -327,6 +327,46 @@ test('moves products between the pages of the offer', async ({ page }) => {
   await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
 })
 
+test('keeps one price for a product placed on two pages', async ({ page }) => {
+  test.slow()
+  const code = `E2E-PRICE-${Date.now()}`
+  const name = `Café ${code}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+  const price = page.getByLabel(`Preço de ${name} (R$)`)
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await openEmptyOffer(page)
+  const slot = page.getByLabel('Produto 1', { exact: true })
+  await slot.fill(code)
+  await slot.press('Enter')
+  await price.fill('15,90')
+
+  // The scan brings the price, selected, so typing replaces it on both pages
+  await page.getByRole('button', { name: 'Adicionar página' }).click()
+  await slot.fill(code)
+  await slot.press('Enter')
+  await expect(price).toHaveValue('15,90')
+  await expect(price).toBeFocused()
+  await expect(page.getByText('Mesmo preço na página 1.')).toBeVisible()
+  // Pages left by other tests stay, so the new page isn't always the second
+  const newPage = await page.getByRole('tab', { name: /^Página \d+$/ }).count()
+  await page.keyboard.type('13,50')
+
+  await page.getByRole('tab', { name: 'Página 1' }).click()
+  await expect(price).toHaveValue('13,50')
+  await expect(
+    page.getByText(`Mesmo preço na página ${newPage}.`)
+  ).toBeVisible()
+})
+
 test('edits a product placed in an offer slot', async ({ page }) => {
   const code = `E2E-EDIT-${Date.now()}`
   const createDialog = page.getByRole('dialog', {
