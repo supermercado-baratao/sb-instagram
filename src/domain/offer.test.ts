@@ -11,7 +11,9 @@ import {
   createOfferPage,
   dropMissingProducts,
   findEmptySlot,
+  findOtherPagesWithProduct,
   findPageWithoutPrice,
+  findProductPrice,
   formatPrice,
   formatValidUntil,
   getPageConflict,
@@ -24,10 +26,12 @@ import {
   moveSlotToPage,
   type OfferContent,
   type OfferItem,
+  type OfferSlot,
   parsePrice,
   placeSlots,
   removePage,
   replaceProduct,
+  setProductPrice,
   setSlot,
   toOfferSnapshot
 } from '@/domain/offer'
@@ -342,6 +346,65 @@ describe('replaceProduct', () => {
     expect(first.slots[1]).toBe(other)
     expect(second.slots[4]).toEqual({ product: edited, priceInCents: 5990 })
     expect(second.slots[0]).toBeNull()
+  })
+})
+
+describe('sharing a price across the offer', () => {
+  const group: OfferItem = {
+    product: {
+      ...item.product,
+      id: '7a1e2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b',
+      codes: ['1234', '5678']
+    },
+    priceInCents: 4990
+  }
+  const slots: OfferSlot[] = emptySlots
+  const pages = [
+    { ...createOfferPage('mercado'), slots: slots.with(0, item) },
+    {
+      ...createOfferPage('mercado'),
+      layout: 4 as const,
+      slots: slots.with(1, group).with(6, { ...item, priceInCents: 7990 })
+    }
+  ]
+
+  test('sets the price of every slot with the product, past the layout too', () => {
+    const next = setProductPrice(pages, item.product.id, 5990)
+
+    expect(next[0].slots[0]?.priceInCents).toBe(5990)
+    expect(next[1].slots[6]?.priceInCents).toBe(5990)
+  })
+
+  test('keeps the price of a product that only shares a code', () => {
+    const next = setProductPrice(pages, item.product.id, 5990)
+
+    expect(next[1].slots[1]).toBe(group)
+  })
+
+  test('brings the price of the first slot with the product', () => {
+    expect(findProductPrice(pages, item.product.id)).toBe(6990)
+    expect(findProductPrice(pages, group.product.id)).toBe(4990)
+  })
+
+  test('brings no price from a slot past the layout', () => {
+    expect(findProductPrice(pages.slice(1), item.product.id)).toBe(0)
+  })
+
+  test('brings no price for a product the offer lacks', () => {
+    expect(
+      findProductPrice([createOfferPage('mercado')], item.product.id)
+    ).toBe(0)
+  })
+
+  test('lists the other pages that show the product', () => {
+    const shown = pages.with(1, { ...pages[1], layout: 9 })
+
+    expect(findOtherPagesWithProduct(shown, item.product.id, 0)).toEqual([1])
+    expect(findOtherPagesWithProduct(shown, item.product.id, 1)).toEqual([0])
+  })
+
+  test('leaves out a page that only holds the product past the layout', () => {
+    expect(findOtherPagesWithProduct(pages, item.product.id, 0)).toEqual([])
   })
 })
 

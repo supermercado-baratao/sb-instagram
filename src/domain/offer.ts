@@ -191,6 +191,41 @@ export const replaceProduct = (
     )
   }))
 
+// The price belongs to the product across the whole offer (#93), so the same product never goes out
+// with two prices. Reaches the slots past the layout too, which come back if the layout grows
+export const setProductPrice = (
+  pages: OfferPage[],
+  productId: string,
+  priceInCents: number
+): OfferPage[] =>
+  pages.map((page) => ({
+    ...page,
+    slots: page.slots.map((slot) =>
+      slot?.product.id === productId ? { ...slot, priceInCents } : slot
+    )
+  }))
+
+// Only a slot the layout shows lends its price, like the notice under the price field, so a price
+// never comes in unexplained. The first one wins, since an offer saved before #93 may hold two
+export const findProductPrice = (pages: OfferPage[], productId: string) =>
+  pages
+    .flatMap((page) => page.slots.slice(0, page.layout))
+    .find((slot) => slot?.product.id === productId)?.priceInCents ?? 0
+
+export const findOtherPagesWithProduct = (
+  pages: OfferPage[],
+  productId: string,
+  pageIndex: number
+) =>
+  pages.flatMap((page, index) =>
+    index !== pageIndex &&
+    page.slots
+      .slice(0, page.layout)
+      .some((slot) => slot?.product.id === productId)
+      ? [index]
+      : []
+  )
+
 const PRICE_PATTERN = /^\d+(?:[.,]\d{1,2})?$/
 
 // Accepts what a cashier types ("12,90", "12.9", "12"), with or without "R$" and thousands dots
