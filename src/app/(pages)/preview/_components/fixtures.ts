@@ -1,4 +1,9 @@
-import type { Brand, Offer, OfferProduct } from '@/domain/poster'
+import {
+  type Brand,
+  HIDDEN_FIELD_MARKER,
+  type Offer,
+  type OfferProduct
+} from '@/domain/poster'
 
 // The preview shows the poster art apart from any store, so it doesn't read the saved brand
 export const brand: Brand = {
@@ -42,8 +47,8 @@ export const products: OfferProduct[] = [
     '2L',
     1099
   ),
-  product('4', '-', 'Picanha bovina', 'Kg', 6990),
-  product('5', 'Leite integral', 'Italac', '1L', 549),
+  product('4', 'Picanha bovina', HIDDEN_FIELD_MARKER, 'Kg', 6990),
+  product('5', 'Açúcar refinado', 'União', '1Kg', 549),
   product('6', 'Café torrado e moído', '', '500g', 1890),
   product('7', 'Óleo de soja', 'Liza', '900ml', 799),
   product('8', '', '', '', 0),
