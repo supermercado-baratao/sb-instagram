@@ -88,31 +88,20 @@ describe('spellNumbers', () => {
 })
 
 describe('suggestVoiceText', () => {
-  test('leaves out a name or brand with no letters or digits', () => {
-    expect(
-      suggestVoiceText({ name: '-', brand: 'Presunto', unit: 'Kg' }, [])
-    ).toBe('Presunto Kg')
-    expect(
-      suggestVoiceText({ name: 'Presunto', brand: '—', unit: null }, [])
-    ).toBe('Presunto')
+  test('leaves out a description with no letters or digits', () => {
+    expect(suggestVoiceText({ description: '-', unit: 'Kg' }, [])).toBe('Kg')
   })
 
-  test('joins name, brand and unit, with numbers spelled out', () => {
+  test('joins description and unit, with numbers spelled out', () => {
     expect(
-      suggestVoiceText({ name: 'Arroz', brand: 'Tio João', unit: '5 kg' }, [])
+      suggestVoiceText({ description: 'Arroz Tio João', unit: '5 kg' }, [])
     ).toBe('Arroz Tio João cinco quilos')
-  })
-
-  test('leaves out the brand when the name already says it', () => {
-    expect(
-      suggestVoiceText({ name: 'Café Pilão', brand: 'pilao', unit: null }, [])
-    ).toBe('Café Pilão')
   })
 
   test('applies the dictionary after spelling, so it can change a unit', () => {
     expect(
       suggestVoiceText(
-        { name: 'Biscoito Cream Cracker', brand: 'Vitarella', unit: '900ml' },
+        { description: 'Biscoito Cream Cracker Vitarella', unit: '900ml' },
         [
           { term: 'cream cracker', spoken: 'kreme cráquer' },
           { term: 'mililitros', spoken: 'eme éli' }

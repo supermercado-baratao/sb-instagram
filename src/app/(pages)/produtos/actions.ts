@@ -40,7 +40,7 @@ const getMergeError = (error: unknown): ActionError => {
   if (error instanceof DuplicateCodesError) {
     return {
       status: 'error',
-      message: `Os produtos juntos teriam os mesmos códigos de “${error.product.name}”. Mescle-o junto ou escolha outros produtos.`
+      message: `Os produtos juntos teriam os mesmos códigos de “${error.product.description}”. Mescle-o junto ou escolha outros produtos.`
     }
   }
   if (error instanceof MissingProductError) {

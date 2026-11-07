@@ -26,7 +26,7 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
     .getByRole('button', { name: `Cadastrar produto com o código ${code}` })
     .click()
   await expect(dialog.getByText('Código interno novo')).toBeVisible()
-  await dialog.getByLabel('Nome').fill('Picanha bovina')
+  await dialog.getByLabel('Descrição').fill('Picanha bovina')
   await dialog.getByLabel('Unidade').fill('1 kg')
   await dialog.getByLabel('Enviar foto').setInputFiles({
     name: 'picanha.png',
@@ -42,7 +42,7 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
   await codeField.press('Enter')
 
   await expect(page.getByText('Produto já cadastrado')).toBeVisible()
-  await expect(page.getByLabel('Nome')).toHaveValue('Picanha bovina')
+  await expect(page.getByLabel('Descrição')).toHaveValue('Picanha bovina')
   await expect(page.getByLabel('Unidade')).toHaveValue('1 kg')
   await expect(
     page.getByAltText('Foto do produto Picanha bovina')
@@ -61,7 +61,7 @@ test('finds a saved product by name and opens it from the list', async ({
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await dialog.getByLabel('Código de barras ou código interno').fill(code)
   await dialog.getByLabel('Código de barras ou código interno').press('Enter')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
@@ -73,8 +73,8 @@ test('finds a saved product by name and opens it from the list', async ({
   await page.getByRole('button', { name: new RegExp(`^${name}`) }).click()
 
   await expect(page.getByText('Produto já cadastrado')).toBeVisible()
-  await expect(page.getByLabel('Nome')).toHaveValue(name)
-  await expect(page.getByLabel('Nome')).toBeFocused()
+  await expect(page.getByLabel('Descrição')).toHaveValue(name)
+  await expect(page.getByLabel('Descrição')).toBeFocused()
 })
 
 test('registers a product from the create dialog', async ({ page }) => {
@@ -91,8 +91,8 @@ test('registers a product from the create dialog', async ({ page }) => {
   await codeField.press('Enter')
 
   await expect(dialog.getByText('Código interno novo')).toBeVisible()
-  await expect(dialog.getByLabel('Nome')).toBeFocused()
-  await dialog.getByLabel('Nome').fill(name)
+  await expect(dialog.getByLabel('Descrição')).toBeFocused()
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
 
   await expect(dialog).toBeHidden()
@@ -115,7 +115,7 @@ test('opens the registered product when its code is typed in the create dialog',
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await dialogCode.fill(code)
   await dialogCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
@@ -128,8 +128,8 @@ test('opens the registered product when its code is typed in the create dialog',
   await dialog.getByRole('button', { name: 'Abrir produto cadastrado' }).click()
 
   await expect(dialog).toBeHidden()
-  await expect(page.getByLabel('Nome')).toHaveValue(name)
-  await expect(page.getByLabel('Nome')).toBeFocused()
+  await expect(page.getByLabel('Descrição')).toHaveValue(name)
+  await expect(page.getByLabel('Descrição')).toBeFocused()
 })
 
 test('asks before replacing a product registered again with other data', async ({
@@ -144,7 +144,7 @@ test('asks before replacing a product registered again with other data', async (
     await page.getByRole('button', { name: 'Cadastrar produto' }).click()
     await codeField.fill(code)
     await codeField.press('Enter')
-    await dialog.getByLabel('Nome').fill(productName)
+    await dialog.getByLabel('Descrição').fill(productName)
     await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   }
 
@@ -163,7 +163,7 @@ test('asks before replacing a product registered again with other data', async (
     name: 'Substituir os dados do produto?'
   })
   await expect(confirm.getByRole('listitem')).toHaveText([
-    `Nome:${name}passa a ser${name} especial`
+    `Descrição:${name}passa a ser${name} especial`
   ])
   await confirm.getByRole('button', { name: 'Substituir' }).click()
 
@@ -187,7 +187,7 @@ test('chooses between a single product and a group with the same code', async ({
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await dialogCode.fill(lavender)
   await dialogCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(single)
+  await dialog.getByLabel('Descrição').fill(single)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(dialog).toBeHidden()
   await expect(page.getByText(`${single} salvo`)).toBeVisible()
@@ -198,7 +198,7 @@ test('chooses between a single product and a group with the same code', async ({
   await expect(
     dialog.getByText(`Este código já está cadastrado em ${single}.`)
   ).toBeVisible()
-  await dialog.getByLabel('Nome').fill(group)
+  await dialog.getByLabel('Descrição').fill(group)
   await dialog.getByLabel('Adicionar código').fill(fennel)
   await dialog.getByLabel('Adicionar código').press('Enter')
   await expect(
@@ -219,8 +219,8 @@ test('chooses between a single product and a group with the same code', async ({
   ])
   await choice.getByRole('button', { name: new RegExp(`^${group}`) }).click()
 
-  await expect(page.getByLabel('Nome')).toHaveValue(group)
-  await expect(page.getByLabel('Nome')).toBeFocused()
+  await expect(page.getByLabel('Descrição')).toHaveValue(group)
+  await expect(page.getByLabel('Descrição')).toBeFocused()
   await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
     new RegExp(`${fennel}.*${lavender}`)
   )
@@ -254,7 +254,7 @@ test('merges two products and finds the kept one by the merged code', async ({
     await page.getByRole('button', { name: 'Cadastrar produto' }).click()
     await dialogCode.fill(code)
     await dialogCode.press('Enter')
-    await dialog.getByLabel('Nome').fill(name)
+    await dialog.getByLabel('Descrição').fill(name)
     await dialog.getByRole('button', { name: 'Salvar produto' }).click()
     await expect(page.getByText(`${name} salvo`)).toBeVisible()
   }
@@ -279,7 +279,7 @@ test('merges two products and finds the kept one by the merged code', async ({
 
   await codeField.fill(fennel)
   await codeField.press('Enter')
-  await expect(page.getByLabel('Nome')).toHaveValue(kept)
+  await expect(page.getByLabel('Descrição')).toHaveValue(kept)
   await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
     new RegExp(`${fennel}.*${lavender}`)
   )
@@ -299,7 +299,7 @@ test('adds a new code to an existing product from the create dialog', async ({
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await dialogCode.fill(code)
   await dialogCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
@@ -320,5 +320,5 @@ test('adds a new code to an existing product from the create dialog', async ({
   const codeField = page.getByLabel('Buscar produto')
   await codeField.fill(variation)
   await codeField.press('Enter')
-  await expect(page.getByLabel('Nome')).toHaveValue(name)
+  await expect(page.getByLabel('Descrição')).toHaveValue(name)
 })

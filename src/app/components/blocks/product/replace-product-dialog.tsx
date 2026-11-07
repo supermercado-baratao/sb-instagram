@@ -31,8 +31,7 @@ type ReplaceProductDialogProps = {
 }
 
 const FIELD_LABELS: Record<ProductChange['field'], string> = {
-  name: 'Nome',
-  brand: 'Marca',
+  description: 'Descrição',
   unit: 'Unidade',
   voiceText: 'Texto da locução'
 }
@@ -68,8 +67,8 @@ export const ReplaceProductDialog = ({
             <AlertDialogTitle>Substituir os dados do produto?</AlertDialogTitle>
             <AlertDialogDescription>
               {request.current.codes.length === 1
-                ? `O código ${request.current.codes[0]} já está cadastrado como ${request.current.name}.`
-                : `Os códigos ${request.current.codes.join(', ')} já estão cadastrados como ${request.current.name}.`}{' '}
+                ? `O código ${request.current.codes[0]} já está cadastrado como ${request.current.description}.`
+                : `Os códigos ${request.current.codes.join(', ')} já estão cadastrados como ${request.current.description}.`}{' '}
               Salvar troca estes dados:
             </AlertDialogDescription>
           </AlertDialogHeader>

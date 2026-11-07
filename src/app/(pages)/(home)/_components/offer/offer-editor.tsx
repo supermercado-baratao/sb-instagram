@@ -179,7 +179,7 @@ export const OfferEditor = ({
         : { ...saved, pages: replaceProduct(saved.pages, product) }
     )
     setPhotoVersion(Date.now())
-    toast.success(`${product.name} atualizado.`)
+    toast.success(`${product.description} atualizado.`)
   }
 
   const addNewPage = () => {
@@ -200,7 +200,7 @@ export const OfferEditor = ({
     const from = { page: selectedIndex, position }
     const moved = selectedPage.slots[position]
     if (!moved) return
-    const { name } = moved.product
+    const { description } = moved.product
 
     // A toast, since a slot can be too far down the page to see the header's status line
     const notify = (message: string, warnedPage?: number) => {
@@ -220,7 +220,9 @@ export const OfferEditor = ({
         pages: moveSlotToNewPage(content.pages, from, templates[0]?.id ?? '')
       })
       setPageKeys([...pageKeys, Math.max(...pageKeys) + 1])
-      notify(`${name} movido para a nova página ${content.pages.length + 1}.`)
+      notify(
+        `${description} movido para a nova página ${content.pages.length + 1}.`
+      )
       return
     }
 
@@ -234,7 +236,7 @@ export const OfferEditor = ({
       getPageConflict(withoutMoved, moved.product) === 'shared-code'
     if (!other) {
       notify(
-        `${name} movido para a página ${to.page + 1}.`,
+        `${description} movido para a página ${to.page + 1}.`,
         warnsTarget ? to.page : undefined
       )
       return
@@ -244,7 +246,7 @@ export const OfferEditor = ({
       getPageConflict(withoutOther, other.product) === 'shared-code'
     const warnedPage = warnsSource ? from.page : to.page
     notify(
-      `${name} movido para a página ${to.page + 1}, e ${other.product.name} veio para esta página.`,
+      `${description} movido para a página ${to.page + 1}, e ${other.product.description} veio para esta página.`,
       warnsTarget || warnsSource ? warnedPage : undefined
     )
   }

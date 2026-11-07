@@ -9,12 +9,11 @@ import {
 } from '@/domain/offer'
 import { getOfferExport } from '@/domain/offer-export'
 
-const item = (name: string, priceInCents: number): OfferItem => ({
+const item = (description: string, priceInCents: number): OfferItem => ({
   product: {
     id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
     codes: ['7891000100103', '1234'],
-    name,
-    brand: 'Marca',
+    description,
     unit: '500g',
     voiceText: null,
     photo: 'foto.png'
@@ -41,7 +40,7 @@ describe('getOfferExport', () => {
     }
 
     expect(getOfferExport(content)).toEqual({
-      version: 2,
+      version: 3,
       validUntil: '2026-10-24',
       highlightTitle: 'Ofertas da semana',
       highlightMessage: 'Só nesta loja',
@@ -50,15 +49,13 @@ describe('getOfferExport', () => {
           number: 1,
           products: [
             {
-              name: 'Arroz',
-              brand: 'Marca',
+              description: 'Arroz',
               unit: '500g',
               codes: ['7891000100103', '1234'],
               price: '29,90'
             },
             {
-              name: 'Café',
-              brand: 'Marca',
+              description: 'Café',
               unit: '500g',
               codes: ['7891000100103', '1234'],
               price: '10,75'
@@ -69,8 +66,7 @@ describe('getOfferExport', () => {
           number: 2,
           products: [
             {
-              name: 'Detergente',
-              brand: 'Marca',
+              description: 'Detergente',
               unit: '500g',
               codes: ['7891000100103', '1234'],
               price: '1,58'
@@ -94,7 +90,9 @@ describe('getOfferExport', () => {
       pages: [filled]
     })
 
-    expect(pages[0].products.map(({ name }) => name)).toEqual(['Arroz'])
+    expect(pages[0].products.map(({ description }) => description)).toEqual([
+      'Arroz'
+    ])
   })
 
   test('keeps a page with no products, so the numbers match the poster pages', () => {

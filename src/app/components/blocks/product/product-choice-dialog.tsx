@@ -54,9 +54,6 @@ export const ProductChoiceDialog = ({
           </DialogHeader>
           <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-lg border border-border">
             {choice.products.map((product) => {
-              const details = [product.brand, product.unit]
-                .filter(Boolean)
-                .join(' · ')
               return (
                 <li key={product.id}>
                   <button
@@ -84,10 +81,10 @@ export const ProductChoiceDialog = ({
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="font-medium wrap-break-word">
-                        {product.name}
+                        {product.description}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {[details, getCodeSummary(product)]
+                        {[product.unit, getCodeSummary(product)]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>

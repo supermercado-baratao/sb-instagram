@@ -97,8 +97,7 @@ test('exports the products that fit the catalog in its folders', async () => {
   await addProduct(
     {
       codes: [EAN],
-      name: 'Leite Condensado',
-      brand: 'Moça',
+      description: 'Leite Condensado Moça',
       unit: '395 g'
     },
     photo
@@ -106,8 +105,7 @@ test('exports the products that fit the catalog in its folders', async () => {
   await addProduct(
     {
       codes: ['2001'],
-      name: 'Pão Francês',
-      brand: null,
+      description: 'Pão Francês',
       unit: null
     },
     photo
@@ -122,8 +120,7 @@ test('exports the products that fit the catalog in its folders', async () => {
     'relatorio.txt'
   ])
   expect(JSON.parse(read(files[`ean/${EAN}.json`]))).toEqual({
-    name: 'Leite Condensado',
-    brand: 'Moça',
+    description: 'Leite Condensado Moça',
     unit: '395 g'
   })
   const image = await readCatalogImage(Buffer.from(files[`ean/${EAN}.png`]))
@@ -133,11 +130,11 @@ test('exports the products that fit the catalog in its folders', async () => {
 test('exports a group with its other EANs, after the single products', async () => {
   const { database, addProduct, ...directories } = await setup()
   const photo = await createImage({ side: 1600, background: 'transparent' })
-  const details = { brand: 'Albany', unit: '85 g' }
+  const details = { unit: '85 g' }
   await addProduct(
     {
       codes: [EAN, '7891000100110', '7891000100127', '2001'],
-      name: 'Sabonete',
+      description: 'Sabonete',
       ...details
     },
     photo
@@ -145,13 +142,13 @@ test('exports a group with its other EANs, after the single products', async () 
   await addProduct(
     {
       codes: ['7891000100127', '7891000100134'],
-      name: 'Amaciante',
+      description: 'Amaciante',
       ...details
     },
     photo
   )
   await addProduct(
-    { codes: ['7891000100134'], name: 'Sabonete Erva-Doce', ...details },
+    { codes: ['7891000100134'], description: 'Sabonete Erva-Doce', ...details },
     photo
   )
 
@@ -165,7 +162,7 @@ test('exports a group with its other EANs, after the single products', async () 
     'relatorio.txt'
   ])
   expect(JSON.parse(read(files[`ean/${EAN}.json`]))).toEqual({
-    name: 'Sabonete',
+    description: 'Sabonete',
     ...details,
     codes: ['7891000100110', '7891000100127']
   })
@@ -188,8 +185,7 @@ test('reports the products left out and why', async () => {
   await writeFile(
     path.join(directories.ean, '7891000053522.json'),
     JSON.stringify({
-      name: 'Sabonete',
-      brand: 'Albany',
+      description: 'Sabonete Albany',
       unit: '85 g',
       codes: [CATALOG_CODE]
     })
@@ -199,8 +195,7 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: ['1'],
-      name: 'Alface',
-      brand: null,
+      description: 'Alface',
       unit: null
     },
     await createImage({ side: 1600, background: 'white' })
@@ -208,8 +203,7 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: ['2'],
-      name: 'Banana',
-      brand: null,
+      description: 'Banana',
       unit: null
     },
     await createImage({ side: 400, background: 'transparent' })
@@ -217,8 +211,7 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: ['3'],
-      name: 'Coxão Mole',
-      brand: null,
+      description: 'Coxão Mole',
       unit: null
     },
     catalogImage
@@ -226,8 +219,7 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: ['4'],
-      name: 'Laranja',
-      brand: null,
+      description: 'Laranja',
       unit: null
     },
     transparent
@@ -235,8 +227,7 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: ['5'],
-      name: 'laranja',
-      brand: null,
+      description: 'laranja',
       unit: null
     },
     transparent
@@ -244,23 +235,20 @@ test('reports the products left out and why', async () => {
   await addProduct(
     {
       codes: [EAN, CATALOG_CODE],
-      name: 'Sabonete',
-      brand: 'Albany',
+      description: 'Sabonete Albany',
       unit: '85 g'
     },
     transparent
   )
   await addProduct({
     codes: ['6'],
-    name: 'Pepino',
-    brand: null,
+    description: 'Pepino',
     unit: null
   })
   await addProduct(
     {
       codes: [CATALOG_EAN],
-      name: 'Café',
-      brand: 'Pilão',
+      description: 'Café Pilão',
       unit: '500 g'
     },
     transparent
@@ -286,9 +274,9 @@ test('reports the products left out and why', async () => {
   )
   expect(pending).toContain('6 · Pepino: Sem foto')
   expect(inCatalog).toContain(
-    `${CATALOG_CODE}, ${EAN} · Sabonete: O EAN ${CATALOG_CODE} já está no catálogo`
+    `${CATALOG_CODE}, ${EAN} · Sabonete Albany: O EAN ${CATALOG_CODE} já está no catálogo`
   )
   expect(inCatalog).toContain(
-    `${CATALOG_EAN} · Café: O EAN ${CATALOG_EAN} já está no catálogo`
+    `${CATALOG_EAN} · Café Pilão: O EAN ${CATALOG_EAN} já está no catálogo`
   )
 })

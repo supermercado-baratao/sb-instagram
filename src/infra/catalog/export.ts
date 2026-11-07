@@ -122,14 +122,18 @@ export const buildCatalogExport = async (
     database
       .select()
       .from(products)
-      .orderBy(searchText(products.name), firstProductCode)
+      .orderBy(searchText(products.description), firstProductCode)
       .all()
   ).toSorted((a, b) => a.codes.length - b.codes.length)
 
   const files: Record<string, Uint8Array> = {}
   const skipped: SkippedProduct[] = []
-  const skip = ({ codes, name }: Product, kind: SkipKind, reason: string) => {
-    skipped.push({ codes, name, kind, reason })
+  const skip = (
+    { codes, description }: Product,
+    kind: SkipKind,
+    reason: string
+  ) => {
+    skipped.push({ codes, description, kind, reason })
   }
 
   // One photo at a time, so a large instance doesn't hold every decoded image in memory at once

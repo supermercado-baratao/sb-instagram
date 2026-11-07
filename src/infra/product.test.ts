@@ -44,8 +44,7 @@ import {
 
 const EAN = '7891000100103'
 const catalogProduct = {
-  name: 'Leite Condensado',
-  brand: 'Moça',
+  description: 'Leite Condensado Moça',
   unit: '395 g'
 }
 
@@ -71,14 +70,13 @@ const setup = async () => {
 
   const addProduct = (
     codes: string[],
-    name: string,
-    details: Partial<Omit<Product, 'id' | 'codes' | 'name'>> = {}
+    description: string,
+    details: Partial<Omit<Product, 'id' | 'codes' | 'description'>> = {}
   ): Product => {
     const product: Product = {
       id: randomUUID(),
       codes: codes.toSorted((a, b) => a.localeCompare(b)),
-      name,
-      brand: null,
+      description,
       unit: null,
       voiceText: null,
       photo: null,
@@ -88,8 +86,7 @@ const setup = async () => {
       .insert(products)
       .values({
         id: product.id,
-        name: product.name,
-        brand: product.brand,
+        description: product.description,
         unit: product.unit,
         photo: product.photo
       })
@@ -132,7 +129,7 @@ const listStoreNames = async (
   options: Parameters<typeof listProducts>[1] = {}
 ) => {
   const products = await listStoreProducts(database, options)
-  return products.map(({ name }) => name)
+  return products.map(({ description }) => description)
 }
 
 const describeItems = async (
@@ -141,7 +138,7 @@ const describeItems = async (
   options: Parameters<typeof listProducts>[1] = {}
 ) => {
   const { items } = await listProducts(database, options, { catalog })
-  return items.map(({ origin, product }) => `${origin}: ${product.name}`)
+  return items.map(({ origin, product }) => `${origin}: ${product.description}`)
 }
 
 const exists = async (file: string) => {
@@ -220,7 +217,10 @@ describe('findProductsByCode', () => {
 
   test('ignores a catalog file that breaks the schema', async () => {
     const { database, catalog } = await setup()
-    await writeFile(path.join(catalog, `${EAN}.json`), '{"name":"Leite"}')
+    await writeFile(
+      path.join(catalog, `${EAN}.json`),
+      '{"description":"Leite"}'
+    )
 
     expect(await findProductsByCode(database, EAN, { catalog })).toBe(undefined)
   })
@@ -287,8 +287,7 @@ describe('saveProduct', () => {
       {
         id: product.id,
         codes: ['2002', ' 2003', '2002'],
-        name: 'Picanha bovina',
-        brand: null,
+        description: 'Picanha bovina',
         unit: 'Kg'
       },
       { catalog, photos }
@@ -297,7 +296,7 @@ describe('saveProduct', () => {
     expect(findProductById(database, product.id)).toEqual({
       ...product,
       codes: ['2002', '2003'],
-      name: 'Picanha bovina',
+      description: 'Picanha bovina',
       unit: 'Kg'
     })
     expect(database.select().from(products).all()).toHaveLength(1)
@@ -306,7 +305,7 @@ describe('saveProduct', () => {
   test('takes a code another product has, but never the same codes', async () => {
     const { database, catalog, photos, addProduct } = await setup()
     const single = addProduct(['2001'], 'Sabonete lavanda')
-    const details = { name: 'Sabonete', brand: null, unit: null }
+    const details = { description: 'Sabonete', unit: null }
 
     const group = await saveProduct(
       database,
@@ -335,7 +334,7 @@ describe('saveProduct', () => {
 
   test('rejects a product without codes or with a code that could leave the photos folder', async () => {
     const { database, catalog, photos } = await setup()
-    const details = { name: 'Picanha', brand: null, unit: null }
+    const details = { description: 'Picanha', unit: null }
 
     await expect(
       saveProduct(database, { codes: [' '], ...details }, { catalog, photos })
@@ -358,8 +357,7 @@ describe('saveProduct', () => {
         {
           id: randomUUID(),
           codes: ['2001'],
-          name: 'Picanha',
-          brand: null,
+          description: 'Picanha',
           unit: null
         },
         { catalog, photos }
@@ -371,7 +369,7 @@ describe('saveProduct', () => {
     const { database, catalog, photos, addProduct, readPhoto } = await setup()
     const product = addProduct(['2001'], 'Sabonete', { photo: '2001.png' })
     await writeFile(path.join(photos, '2001.png'), 'photo')
-    const details = { name: 'Sabonete', brand: null, unit: null }
+    const details = { description: 'Sabonete', unit: null }
 
     const group = await saveProduct(
       database,
@@ -401,8 +399,7 @@ describe('saveProduct', () => {
       {
         id: product.id,
         codes: ['2002'],
-        name: 'Alcatra',
-        brand: null,
+        description: 'Alcatra',
         unit: null,
         photo: { kind: 'ean', ean: EAN }
       },
@@ -422,8 +419,7 @@ describe('saveProduct', () => {
       {
         id: product.id,
         codes: ['2002'],
-        name: 'Alcatra',
-        brand: null,
+        description: 'Alcatra',
         unit: null
       },
       { catalog, photos }
@@ -452,16 +448,16 @@ describe('listProducts', () => {
     expect(await names('')).toEqual(['Alcatra', 'Fraldinha', 'picanha bovina'])
   })
 
-  test('searches every word in the name, brand, unit or codes', async () => {
+  test('searches every word in the description, unit or codes', async () => {
     const { database, addProduct } = await setup()
-    addProduct(['7891'], 'Sabonete', { brand: 'Albany', unit: '85 g' })
-    addProduct(['7892'], 'Sabonete', { brand: 'Lux', unit: '90 g' })
-    addProduct(['7893'], 'Papel Higiênico', { brand: 'Velud', unit: '12/30m' })
+    addProduct(['7891'], 'Sabonete Albany', { unit: '85 g' })
+    addProduct(['7892'], 'Sabonete Lux', { unit: '90 g' })
+    addProduct(['7893'], 'Papel Higiênico Velud', { unit: '12/30m' })
 
     const names = (query: string) => listStoreNames(database, { query })
-    expect(await names('sabonete ALBANY')).toEqual(['Sabonete'])
-    expect(await names('90 g')).toEqual(['Sabonete'])
-    expect(await names('higienico 12/30m')).toEqual(['Papel Higiênico'])
+    expect(await names('sabonete ALBANY')).toEqual(['Sabonete Albany'])
+    expect(await names('90 g')).toEqual(['Sabonete Lux'])
+    expect(await names('higienico 12/30m')).toEqual(['Papel Higiênico Velud'])
     expect(await names('velud 7891')).toEqual([])
   })
 
@@ -554,7 +550,7 @@ describe('listProducts with the catalog', () => {
 
     expect(await describeItems(database, catalog)).toEqual([
       'store: Arroz',
-      'catalog: Leite Condensado',
+      'catalog: Leite Condensado Moça',
       'store: Macarrão'
     ])
   })
@@ -565,7 +561,7 @@ describe('listProducts with the catalog', () => {
       path.join(catalog, `${OTHER_EAN}.json`),
       JSON.stringify({
         ...catalogProduct,
-        name: 'Creme de Leite',
+        description: 'Creme de Leite',
         codes: [EXTRA_EAN]
       })
     )
@@ -576,8 +572,7 @@ describe('listProducts with the catalog', () => {
       product: {
         ean: OTHER_EAN,
         codes: [OTHER_EAN, EXTRA_EAN],
-        name: 'Creme de Leite',
-        brand: catalogProduct.brand,
+        description: 'Creme de Leite',
         unit: catalogProduct.unit
       }
     })
@@ -589,7 +584,7 @@ describe('listProducts with the catalog', () => {
       path.join(catalog, `${OTHER_EAN}.json`),
       JSON.stringify({
         ...catalogProduct,
-        name: 'Creme de Leite',
+        description: 'Creme de Leite',
         codes: [EXTRA_EAN]
       })
     )
@@ -602,19 +597,21 @@ describe('listProducts with the catalog', () => {
     ])
   })
 
-  test('searches the catalog by every word in the name, brand, unit or codes', async () => {
+  test('searches the catalog by every word in the description, unit or codes', async () => {
     const { database, catalog, addProduct } = await setup()
     addProduct(['1001'], 'Leite Integral')
 
     const search = (query: string) =>
       describeItems(database, catalog, { query })
     expect(await search('LEITE')).toEqual([
-      'catalog: Leite Condensado',
+      'catalog: Leite Condensado Moça',
       'store: Leite Integral'
     ])
-    expect(await search('condensádo')).toEqual(['catalog: Leite Condensado'])
-    expect(await search('0100 ')).toEqual(['catalog: Leite Condensado'])
-    expect(await search('moca 395')).toEqual(['catalog: Leite Condensado'])
+    expect(await search('condensádo')).toEqual([
+      'catalog: Leite Condensado Moça'
+    ])
+    expect(await search('0100 ')).toEqual(['catalog: Leite Condensado Moça'])
+    expect(await search('moca 395')).toEqual(['catalog: Leite Condensado Moça'])
     expect(await search('leite moça 1 kg')).toEqual([])
   })
 
@@ -627,33 +624,32 @@ describe('listProducts with the catalog', () => {
     )
     expect(
       await describeItems(database, catalog, { filter: 'catalog' })
-    ).toEqual(['catalog: Leite Condensado'])
+    ).toEqual(['catalog: Leite Condensado Moça'])
   })
 })
 
 describe('searchProducts', () => {
-  test('matches every word in the name, brand, unit or codes ignoring accents', async () => {
+  test('matches every word in the description, unit or codes ignoring accents', async () => {
     const { database, addProduct } = await setup()
-    addProduct(['7891', '7893'], 'Sabonete Erva-Doce', {
-      brand: 'Albany',
-      unit: '85 g'
-    })
-    addProduct(['7892'], 'Sabonete Aveia', { brand: 'Lux', unit: '85 g' })
+    addProduct(['7891', '7893'], 'Sabonete Erva-Doce Albany', { unit: '85 g' })
+    addProduct(['7892'], 'Sabonete Aveia Lux', { unit: '85 g' })
     addProduct(['ab-1'], 'Pão Francês')
 
     const names = (query: string) =>
-      searchProducts(database, query).map(({ name }) => name)
+      searchProducts(database, query).map(({ description }) => description)
 
     expect(await names('sabonete')).toEqual([
-      'Sabonete Aveia',
-      'Sabonete Erva-Doce'
+      'Sabonete Aveia Lux',
+      'Sabonete Erva-Doce Albany'
     ])
-    expect(await names('SABONETE  albany')).toEqual(['Sabonete Erva-Doce'])
+    expect(await names('SABONETE  albany')).toEqual([
+      'Sabonete Erva-Doce Albany'
+    ])
     expect(await names('85 G')).toEqual([
-      'Sabonete Aveia',
-      'Sabonete Erva-Doce'
+      'Sabonete Aveia Lux',
+      'Sabonete Erva-Doce Albany'
     ])
-    expect(await names('7893')).toEqual(['Sabonete Erva-Doce'])
+    expect(await names('7893')).toEqual(['Sabonete Erva-Doce Albany'])
     expect(await names('AB-1')).toEqual(['Pão Francês'])
     expect(await names('pao frances')).toEqual(['Pão Francês'])
     expect(await names('pao albany')).toEqual([])
@@ -669,7 +665,9 @@ describe('searchProducts', () => {
     expect(searchProducts(database, '%')).toEqual([])
     expect(searchProducts(database, '_')).toEqual([])
     expect(
-      searchProducts(database, 'produto', { limit: 2 }).map(({ name }) => name)
+      searchProducts(database, 'produto', { limit: 2 }).map(
+        ({ description }) => description
+      )
     ).toEqual(['Produto 0', 'Produto 1'])
   })
 })
@@ -766,7 +764,7 @@ const readItems = (database: Awaited<ReturnType<typeof setup>>['database']) =>
 describe('mergeProducts', () => {
   test('moves every code to the kept product and deletes the others', async () => {
     const { database, photos, addProduct } = await setup()
-    const kept = addProduct(['2001'], 'Sabonete lavanda', { brand: 'Albany' })
+    const kept = addProduct(['2001'], 'Sabonete lavanda Albany')
     const merged = addProduct(['2002', '2003'], 'Sabonete erva-doce')
     const other = addProduct(['2002'], 'Sabonete erva-doce avulso')
 

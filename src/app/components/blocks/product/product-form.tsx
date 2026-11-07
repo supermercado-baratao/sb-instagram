@@ -55,7 +55,7 @@ type ProductFormProps = {
   codeField?: ReactNode
   // The value of codeField, which decides like the other codes whether the picker shows
   typedCode?: string
-  focusName?: boolean
+  focusDescription?: boolean
   className?: string
 }
 
@@ -70,7 +70,7 @@ export const ProductForm = ({
   askBeforeReplacing = false,
   codeField,
   typedCode = '',
-  focusName = true,
+  focusDescription = true,
   className
 }: ProductFormProps) => {
   const [uploadPreview, setUploadPreview] = useState<string>()
@@ -86,7 +86,7 @@ export const ProductForm = ({
   const [replaceOpen, setReplaceOpen] = useState(false)
   const pendingForm = useRef<FormData>(undefined)
   const form = useRef<HTMLFormElement>(null)
-  const nameInput = useRef<HTMLInputElement>(null)
+  const descriptionInput = useRef<HTMLInputElement>(null)
   const voiceInput = useRef<HTMLInputElement>(null)
   const suggestButton = useRef<HTMLButtonElement>(null)
   const photoInput = useRef<HTMLInputElement>(null)
@@ -109,8 +109,8 @@ export const ProductForm = ({
     allCodes.every((code) => getCodeType(code) === 'internal')
 
   useEffect(() => {
-    if (focusName) nameInput.current?.focus()
-  }, [focusName])
+    if (focusDescription) descriptionInput.current?.focus()
+  }, [focusDescription])
 
   useEffect(
     () => () => {
@@ -154,8 +154,7 @@ export const ProductForm = ({
       try {
         setVoiceText(
           await suggestProductVoiceText({
-            name: read('name'),
-            brand: read('brand'),
+            description: read('description'),
             unit: read('unit')
           })
         )
@@ -240,8 +239,8 @@ export const ProductForm = ({
                 <img
                   src={preview}
                   alt={
-                    product?.name
-                      ? `Foto do produto ${product.name}`
+                    product?.description
+                      ? `Foto do produto ${product.description}`
                       : 'Foto do produto'
                   }
                   className="size-full object-contain"
@@ -278,25 +277,17 @@ export const ProductForm = ({
 
           <FieldGroup>
             {codeField ?? codesField}
-            <Field>
-              <FieldLabel htmlFor={`${id}-name`}>Nome</FieldLabel>
-              <Input
-                ref={nameInput}
-                id={`${id}-name`}
-                name="name"
-                required
-                autoComplete="off"
-                defaultValue={product?.name}
-              />
-            </Field>
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_10rem]">
               <Field>
-                <FieldLabel htmlFor={`${id}-brand`}>Marca</FieldLabel>
+                <FieldLabel htmlFor={`${id}-description`}>Descrição</FieldLabel>
                 <Input
-                  id={`${id}-brand`}
-                  name="brand"
+                  ref={descriptionInput}
+                  id={`${id}-description`}
+                  name="description"
+                  required
                   autoComplete="off"
-                  defaultValue={product?.brand ?? ''}
+                  placeholder="Ex.: Café Pilão, Picanha bovina"
+                  defaultValue={product?.description}
                 />
               </Field>
               <Field>

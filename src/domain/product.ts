@@ -10,15 +10,15 @@ export type CodeType = (typeof CODE_TYPES)[number]
 export type Product = {
   id: string
   codes: string[]
-  name: string
-  brand: string | null
+  // Name and brand as one text, since the poster shows them together (#99)
+  description: string
   unit: string | null
   // How the radio ad speaks it; null falls back to suggestVoiceText (#72)
   voiceText: string | null
   photo: string | null
 }
 
-export type ProductDetails = Pick<Product, 'name' | 'brand' | 'unit'>
+export type ProductDetails = Pick<Product, 'description' | 'unit'>
 
 export type ProductFields = ProductDetails & Pick<Product, 'voiceText'>
 
@@ -28,7 +28,7 @@ export type ProductChange = {
   to: string | null
 }
 
-const DETAIL_FIELDS = ['name', 'brand', 'unit', 'voiceText'] as const
+const DETAIL_FIELDS = ['description', 'unit', 'voiceText'] as const
 
 export const getProductChanges = (
   current: ProductFields,
@@ -116,20 +116,20 @@ export type ProductPage = {
 export const getSearchWords = (query: string) =>
   normalizeSearchText(query).split(/\s+/).filter(Boolean)
 
-// Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany"), like
+// Joining the fields lets a query mix them, e.g. a description and a unit ("sabonete 85"), like
 // the SQLite search of the store's products
 export const matchesProductQuery = (
-  { name, brand, unit, codes }: ProductDetails & Pick<Product, 'codes'>,
+  { description, unit, codes }: ProductDetails & Pick<Product, 'codes'>,
   query: string
 ) => {
   const fields = normalizeSearchText(
-    [name, brand ?? '', unit ?? '', codes.join(' ')].join(' ')
+    [description, unit ?? '', codes.join(' ')].join(' ')
   )
   return getSearchWords(query).every((word) => fields.includes(word))
 }
 
 const getSortKey = ({ product }: ProductListItem) =>
-  [normalizeSearchText(product.name), product.codes[0] ?? ''] as const
+  [normalizeSearchText(product.description), product.codes[0] ?? ''] as const
 
 // Plain code unit order, like SQLite's BINARY collation, so both origins sort alike
 const compareText = (a: string, b: string) => {
@@ -141,9 +141,9 @@ export const compareProductListItems = (
   a: ProductListItem,
   b: ProductListItem
 ) => {
-  const [nameA, codeA] = getSortKey(a)
-  const [nameB, codeB] = getSortKey(b)
-  return compareText(nameA, nameB) || compareText(codeA, codeB)
+  const [descriptionA, codeA] = getSortKey(a)
+  const [descriptionB, codeB] = getSortKey(b)
+  return compareText(descriptionA, descriptionB) || compareText(codeA, codeB)
 }
 
 export const getProductPage = (

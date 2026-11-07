@@ -18,15 +18,14 @@ import {
 } from '@/domain/radio-script'
 
 const item = (
-  name: string,
+  description: string,
   priceInCents: number,
-  voiceText: string | null = name
+  voiceText: string | null = description
 ): OfferItem => ({
   product: {
     id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
     codes: ['1234'],
-    name,
-    brand: null,
+    description,
     unit: null,
     voiceText,
     photo: null

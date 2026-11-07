@@ -47,8 +47,8 @@ export const ProductList = ({
               onCheckedChange={(checked) => onSelect(item.product, checked)}
               // Its invisible hit area would cover the edge of the button that opens the product
               className="mr-2"
-              // Not every product is unique by name, so the codes tell them apart
-              aria-label={`Selecionar ${product.name} (${product.codes.join(', ')})`}
+              // Not every product is unique by description, so the codes tell them apart
+              aria-label={`Selecionar ${product.description} (${product.codes.join(', ')})`}
             />
           ) : (
             // Only the store's products can be merged, but the rows stay aligned
@@ -81,11 +81,13 @@ export const ProductList = ({
             </span>
             <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
               <span className="font-medium wrap-break-word">
-                {product.name}
+                {product.description}
               </span>
-              <span className="text-sm text-muted-foreground">
-                {[product.brand, product.unit].filter(Boolean).join(' · ')}
-              </span>
+              {product.unit && (
+                <span className="text-sm text-muted-foreground">
+                  {product.unit}
+                </span>
+              )}
               {item.origin === 'store' ? (
                 <Badge variant="outline">Da loja</Badge>
               ) : (

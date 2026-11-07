@@ -73,8 +73,8 @@ export const DeleteProductButton = ({
     >
       <AlertDialogTrigger
         render={<Button variant="ghost" size="icon" />}
-        // Not every product is unique by name, so the codes tell them apart
-        aria-label={`Excluir ${product.name} (${product.codes.join(', ')})`}
+        // Not every product is unique by description, so the codes tell them apart
+        aria-label={`Excluir ${product.description} (${product.codes.join(', ')})`}
         disabled={disabled}
       >
         <Trash2 aria-hidden />
@@ -83,8 +83,8 @@ export const DeleteProductButton = ({
         <AlertDialogHeader>
           <AlertDialogTitle>
             {refusal
-              ? `Não é possível excluir “${product.name}”`
-              : `Excluir “${product.name}”?`}
+              ? `Não é possível excluir “${product.description}”`
+              : `Excluir “${product.description}”?`}
           </AlertDialogTitle>
           <AlertDialogDescription
             // A fresh alert is announced, while a changed description is not read again

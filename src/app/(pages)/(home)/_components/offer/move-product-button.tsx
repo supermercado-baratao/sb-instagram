@@ -81,7 +81,7 @@ export const MoveProductButton = ({
               size="sm"
               disabled={pages.length === 1}
               focusableWhenDisabled
-              aria-label={`Mover ${product.name} para outra página`}
+              aria-label={`Mover ${product.description} para outra página`}
             />
           }
         >
@@ -130,9 +130,9 @@ export const MoveProductButton = ({
               A página {(opened?.page ?? 0) + 1} está cheia
             </DialogTitle>
             <DialogDescription>
-              Crie uma página nova com {opened?.product.name} ou troque por um
-              produto da página {(opened?.page ?? 0) + 1}. A mudança só vale
-              depois de salvar a oferta.
+              Crie uma página nova com {opened?.product.description} ou troque
+              por um produto da página {(opened?.page ?? 0) + 1}. A mudança só
+              vale depois de salvar a oferta.
             </DialogDescription>
           </DialogHeader>
           <Button
@@ -153,9 +153,6 @@ export const MoveProductButton = ({
                   if (!slot || !opened) return null
                   const to = { page: opened.page, position }
                   const canSwap = canSwapSlots(opened.pages, from, to)
-                  const details = [slot.product.brand, slot.product.unit]
-                    .filter(Boolean)
-                    .join(' · ')
                   return (
                     <li key={position}>
                       <Button
@@ -170,13 +167,13 @@ export const MoveProductButton = ({
                         <span className="flex min-w-0 flex-col wrap-break-word">
                           <span>
                             <span className="sr-only">Trocar por </span>
-                            {slot.product.name}
+                            {slot.product.description}
                             {!canSwap &&
                               ` (já está na página ${from.page + 1})`}
                           </span>
-                          {details && (
+                          {slot.product.unit && (
                             <span className="text-xs font-normal text-muted-foreground">
-                              {details}
+                              {slot.product.unit}
                             </span>
                           )}
                         </span>

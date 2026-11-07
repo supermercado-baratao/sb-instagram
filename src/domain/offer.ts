@@ -251,8 +251,7 @@ const isProduct = (value: unknown): value is Product =>
   isValidProductId(value.id) &&
   Array.isArray(value.codes) &&
   value.codes.every((code) => typeof code === 'string' && isValidCode(code)) &&
-  typeof value.name === 'string' &&
-  isOptionalText(value.brand) &&
+  typeof value.description === 'string' &&
   isOptionalText(value.unit) &&
   isOptionalText(value.photo)
 

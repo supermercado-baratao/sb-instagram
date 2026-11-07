@@ -4,18 +4,13 @@ import {
   type OfferContent,
   type OfferSlot
 } from '@/domain/offer'
-import {
-  HIDDEN_FIELD_MARKER,
-  type Offer,
-  type OfferProduct
-} from '@/domain/poster'
+import { type Offer, type OfferProduct } from '@/domain/poster'
 import { getCodeType } from '@/domain/product'
 
 // Keeps the date line readable on the poster while the offer has no validity yet
 export const VALIDITY_PLACEHOLDER = '__/__/____'
 
-// An empty slot becomes a blank product, which the poster fills with its placeholders. A product
-// without a brand hides the line instead, since the "MARCA" placeholder would print on its card
+// An empty slot becomes a blank product, which the poster fills with its placeholders
 export const getPosterProducts = (
   slots: OfferSlot[],
   photoVersion?: number
@@ -25,8 +20,7 @@ export const getPosterProducts = (
       ? {
           code: slot.product.codes[0] ?? '',
           codeType: getCodeType(slot.product.codes[0] ?? ''),
-          name: slot.product.name,
-          brand: slot.product.brand ?? HIDDEN_FIELD_MARKER,
+          description: slot.product.description,
           unit: slot.product.unit ?? '',
           image: slot.product.photo
             ? getPhotoUrl(slot.product.id, photoVersion)
@@ -36,8 +30,7 @@ export const getPosterProducts = (
       : {
           code: '',
           codeType: 'internal',
-          name: '',
-          brand: '',
+          description: '',
           unit: '',
           image: null,
           priceInCents: 0

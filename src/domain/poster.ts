@@ -21,8 +21,7 @@ export type CodeType = 'ean' | 'internal'
 export type Product = {
   code: string
   codeType: CodeType
-  name: string
-  brand: string
+  description: string
   unit: string
   image: string | null
 }

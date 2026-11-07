@@ -23,7 +23,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await dialog.getByLabel('Nome').fill('Feijão carioca')
+  await dialog.getByLabel('Descrição').fill('Feijão carioca')
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão carioca salvo')).toBeVisible()
 
@@ -90,7 +90,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await page.goto('/')
   await page.getByRole('button', { name: 'Editar Feijão carioca' }).click()
   const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
-  await editDialog.getByLabel('Nome').fill('Feijão preto')
+  await editDialog.getByLabel('Descrição').fill('Feijão preto')
   await editDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão preto atualizado.')).toBeVisible()
 
@@ -137,8 +137,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
       number: 1,
       products: [
         {
-          name: 'Feijão carioca',
-          brand: null,
+          description: 'Feijão carioca',
           unit: null,
           codes: [code],
           price: '7,89'
@@ -189,8 +188,8 @@ test('registers a missing product from an offer slot', async ({ page }) => {
   await expect(
     dialog.getByLabel('Código de barras ou código interno')
   ).toHaveValue(code)
-  await expect(dialog.getByLabel('Nome')).toBeFocused()
-  await dialog.getByLabel('Nome').fill('Arroz agulhinha')
+  await expect(dialog.getByLabel('Descrição')).toBeFocused()
+  await dialog.getByLabel('Descrição').fill('Arroz agulhinha')
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
 
   await expect(dialog).toBeHidden()
@@ -208,7 +207,7 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
@@ -256,7 +255,7 @@ test('moves products between the pages of the offer', async ({ page }) => {
     await page.getByRole('button', { name: 'Cadastrar produto' }).click()
     await productCode.fill(`E2E-MOVE-${stamp}-${index}`)
     await productCode.press('Enter')
-    await dialog.getByLabel('Nome').fill(name)
+    await dialog.getByLabel('Descrição').fill(name)
     await dialog.getByRole('button', { name: 'Salvar produto' }).click()
     await expect(page.getByText(`${name} salvo`)).toBeVisible()
   }
@@ -339,7 +338,7 @@ test('keeps one price for a product placed on two pages', async ({ page }) => {
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(name)
+  await dialog.getByLabel('Descrição').fill(name)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${name} salvo`)).toBeVisible()
 
@@ -380,7 +379,7 @@ test('edits a product placed in an offer slot', async ({ page }) => {
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await createDialog.getByLabel('Nome').fill('Café torrado')
+  await createDialog.getByLabel('Descrição').fill('Café torrado')
   await createDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Café torrado salvo')).toBeVisible()
 
@@ -394,8 +393,8 @@ test('edits a product placed in an offer slot', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Editar Café torrado' }).click()
   const dialog = page.getByRole('dialog', { name: 'Editar produto' })
-  await expect(dialog.getByLabel('Nome')).toBeFocused()
-  await dialog.getByLabel('Nome').fill('Café extraforte')
+  await expect(dialog.getByLabel('Descrição')).toBeFocused()
+  await dialog.getByLabel('Descrição').fill('Café extraforte')
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
 
   await expect(dialog).toBeHidden()
@@ -421,7 +420,7 @@ test('clears the prices or the products of the offer or of one page', async ({
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(productName)
+  await dialog.getByLabel('Descrição').fill(productName)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${productName} salvo`)).toBeVisible()
 
@@ -488,7 +487,7 @@ test('restores the offer saved before a mistaken save, and restoring again undoe
   await page.getByRole('button', { name: 'Cadastrar produto' }).click()
   await productCode.fill(code)
   await productCode.press('Enter')
-  await dialog.getByLabel('Nome').fill(productName)
+  await dialog.getByLabel('Descrição').fill(productName)
   await dialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText(`${productName} salvo`)).toBeVisible()
 

@@ -1,15 +1,14 @@
 import { formatPrice, type OfferContent } from '@/domain/offer'
 
 export type OfferExportProduct = {
-  name: string
-  brand: string | null
+  description: string
   unit: string | null
   codes: string[]
   price: string
 }
 
 export type OfferExport = {
-  version: 2
+  version: 3
   validUntil: string | null
   highlightTitle: string
   highlightMessage: string
@@ -18,7 +17,7 @@ export type OfferExport = {
 
 // Slots past the layout keep their products when the layout shrinks, but the poster doesn't show them
 export const getOfferExport = (content: OfferContent): OfferExport => ({
-  version: 2,
+  version: 3,
   validUntil: content.validUntil,
   highlightTitle: content.highlightTitle,
   highlightMessage: content.highlightMessage,
@@ -28,8 +27,7 @@ export const getOfferExport = (content: OfferContent): OfferExport => ({
       .slice(0, page.layout)
       .filter((slot) => slot !== null)
       .map(({ product, priceInCents }) => ({
-        name: product.name,
-        brand: product.brand,
+        description: product.description,
         unit: product.unit,
         codes: product.codes,
         price: formatPrice(priceInCents)

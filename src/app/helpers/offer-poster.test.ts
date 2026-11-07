@@ -6,14 +6,12 @@ import {
   VALIDITY_PLACEHOLDER
 } from '@/app/helpers/offer-poster'
 import { createOfferContent } from '@/domain/offer'
-import { HIDDEN_FIELD_MARKER } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
   codes: ['7891000100103'],
-  name: 'Leite integral',
-  brand: 'Italac',
+  description: 'Leite integral Italac',
   unit: '1L',
   voiceText: null,
   photo: '7891000100103.png'
@@ -24,27 +22,24 @@ describe('getPosterProducts', () => {
     const [poster] = getPosterProducts([{ product, priceInCents: 549 }])
 
     expect(poster).toMatchObject({
-      name: 'Leite integral',
-      brand: 'Italac',
+      description: 'Leite integral Italac',
       unit: '1L',
       image: '/fotos/0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
       priceInCents: 549
     })
   })
 
-  test('hides the brand line of a product without brand', () => {
+  test('leaves the image empty for a product without photo', () => {
     const [poster] = getPosterProducts([
-      { product: { ...product, brand: null, photo: null }, priceInCents: 549 }
+      { product: { ...product, photo: null }, priceInCents: 549 }
     ])
 
-    expect(poster.brand).toBe(HIDDEN_FIELD_MARKER)
     expect(poster.image).toBe(null)
   })
 
   test('turns an empty slot into a blank product', () => {
     expect(getPosterProducts([null])[0]).toMatchObject({
-      name: '',
-      brand: '',
+      description: '',
       unit: '',
       image: null
     })

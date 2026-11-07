@@ -39,8 +39,7 @@ test('saves the radio ad settings and suggests the voice text through the dictio
   await dialog
     .getByLabel('Código de barras ou código interno')
     .fill(`E2E-${Date.now()}`)
-  await dialog.getByLabel('Nome').fill('Biscoito Cream Cracker')
-  await dialog.getByLabel('Marca').fill('Vitarella')
+  await dialog.getByLabel('Descrição').fill('Biscoito Cream Cracker Vitarella')
   await dialog.getByLabel('Unidade').fill('400g')
   await dialog.getByRole('button', { name: 'Sugerir' }).click()
 

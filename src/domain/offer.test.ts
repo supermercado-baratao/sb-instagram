@@ -43,8 +43,7 @@ const item: OfferItem = {
   product: {
     id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
     codes: ['1234'],
-    name: 'Picanha bovina',
-    brand: null,
+    description: 'Picanha bovina',
     unit: 'Kg',
     voiceText: null,
     photo: null
@@ -338,7 +337,7 @@ describe('replaceProduct', () => {
       setSlot(setSlot(createOfferPage('a'), 0, item), 1, other),
       setSlot(createOfferPage('a'), 4, { ...item, priceInCents: 5990 })
     ]
-    const edited = { ...item.product, name: 'Picanha maturada' }
+    const edited = { ...item.product, description: 'Picanha maturada' }
 
     const [first, second] = replaceProduct(pages, edited)
 

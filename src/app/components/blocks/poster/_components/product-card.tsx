@@ -22,7 +22,7 @@ const HORIZONTAL_IMAGE_SHARE = 0.48
 export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
   const { scale, orientation } = layout
   const isHorizontal = orientation === 'horizontal'
-  // The horizontal card gives name and brand a whole column, so they can grow past the card scale
+  // The horizontal card gives the description a whole column, so it can grow past the card scale
   const textScale = isHorizontal ? scale * 1.25 : scale
   const labelPadding = 8 * textScale
   const contentWidth = width - CARD_PADDING * 2
@@ -32,12 +32,12 @@ export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
       : contentWidth) -
     labelPadding * 2
 
-  const name = resolvePosterField(product.name, posterPlaceholders.name)
-  const brand = resolvePosterField(product.brand, posterPlaceholders.brand)
-
-  const labelText = [name, brand].filter(Boolean).join(' ')
+  const labelText = resolvePosterField(
+    product.description,
+    posterPlaceholders.description
+  )
   const labelFontSize = fitFontSize({
-    text: labelText,
+    text: labelText ?? '',
     width: labelWidth,
     lines: 2,
     maxFontSize: 26 * textScale,
@@ -91,7 +91,7 @@ export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
             </span>
           </div>
         )}
-        {/* The horizontal card keeps the tag over the photo, so it never covers name and brand */}
+        {/* The horizontal card keeps the tag over the photo, so it never covers the description */}
         {isHorizontal && priceTag}
       </div>
       {!isHorizontal && priceTag}
@@ -104,9 +104,8 @@ export const ProductCard = ({ product, layout, width }: ProductCardProps) => {
           padding: `${6 * scale}px ${labelPadding}px`
         }}
       >
-        {/* Name and brand read as one description, so a product sold under any brand (ham, cassava
-            flour) leaves the brand empty instead of writing "-" as its name (#84). No line-clamp: its
-            overflow clipping cuts the accents and cedillas of Anton, which reach past its line box */}
+        {/* No line-clamp: its overflow clipping cuts the accents and cedillas of Anton, which reach
+            past its line box */}
         {labelText && (
           <p
             className="w-full font-(family-name:--font-poster-heading) text-white"

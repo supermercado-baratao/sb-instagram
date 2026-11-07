@@ -18,8 +18,8 @@ export const products = sqliteTable(
   {
     // A random UUID (crypto.randomUUID), since a product has no main code to be keyed by (#55)
     id: text().notNull(),
-    name: text().notNull(),
-    brand: text(),
+    // Name and brand as one text, since the poster shows them together (#99)
+    description: text().notNull(),
     unit: text(),
     // How the radio ad speaks the product; null falls back to suggestVoiceText (#72)
     voiceText: text(),

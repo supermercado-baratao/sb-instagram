@@ -33,7 +33,7 @@ export type CatalogExportContext = {
   exportedNames: ReadonlySet<string>
 }
 
-export type SkippedProduct = Pick<Product, 'codes' | 'name'> & {
+export type SkippedProduct = Pick<Product, 'codes' | 'description'> & {
   kind: SkipKind
   reason: string
 }
@@ -47,12 +47,6 @@ export const toCatalogDescriptionName = (name: string) =>
 
 const isFilled = (value: string | null): value is string =>
   value !== null && value.trim() !== ''
-
-const getMissingFieldsReason = ({ brand, unit }: Product) => {
-  if (!isFilled(brand) && !isFilled(unit)) return 'Faltam a marca e a unidade'
-  if (!isFilled(brand)) return 'Falta a marca'
-  if (!isFilled(unit)) return 'Falta a unidade'
-}
 
 const pending = (reason: string): CatalogExportCheck => ({
   status: 'skipped',
@@ -86,8 +80,7 @@ export const checkCatalogExport = (
 
     if (product.photo === null) return pending('Sem foto')
 
-    const missingFields = getMissingFieldsReason(product)
-    if (missingFields) return pending(missingFields)
+    if (!isFilled(product.unit)) return pending('Falta a unidade')
 
     const exported = eans.find((ean) => exportedEans.has(ean))
     if (exported !== undefined) {
@@ -98,7 +91,7 @@ export const checkCatalogExport = (
     return { status: 'ok', target: { folder: 'ean', base, codes } }
   }
 
-  const base = toCatalogDescriptionName(product.name)
+  const base = toCatalogDescriptionName(product.description)
   const fileName = `${base}${CATALOG_IMAGE_EXTENSION}`
 
   if (catalogNames.has(base)) {
@@ -109,7 +102,7 @@ export const checkCatalogExport = (
 
   if (!isCatalogDescriptionName(base)) {
     return pending(
-      'O nome do produto não tem letras para formar o nome do arquivo'
+      'A descrição do produto não tem letras para formar o nome do arquivo'
     )
   }
 
@@ -143,8 +136,7 @@ const formatCodesLine = (codes: string[]) => {
 // Matches Prettier's JSON output, so the files pass `pnpm prettier:check` once in the repository
 export const formatCatalogProduct = (product: Product, codes: string[]) => {
   const data: CatalogProduct = {
-    name: product.name.trim(),
-    brand: product.brand?.trim() ?? '',
+    description: product.description.trim(),
     unit: product.unit?.trim() ?? ''
   }
   const json = JSON.stringify(data, null, 2)
@@ -167,7 +159,8 @@ export const formatCatalogExportReport = (skipped: SkippedProduct[]) => {
     const lines = skipped
       .filter((product) => product.kind === kind)
       .map(
-        ({ codes, name, reason }) => `${codes.join(', ')} · ${name}: ${reason}`
+        ({ codes, description, reason }) =>
+          `${codes.join(', ')} · ${description}: ${reason}`
       )
     return lines.length === 0 ? [] : [[REPORT_SECTIONS[kind], '', ...lines]]
   })

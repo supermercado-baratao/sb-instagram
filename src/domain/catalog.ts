@@ -1,8 +1,8 @@
 import { isValidEan } from '@/domain/ean'
 
 export type CatalogProduct = {
-  name: string
-  brand: string
+  // Name and brand as one text, like the store's products (#99)
+  description: string
   unit: string
   // The product's other EANs, for a photo that groups variations sold under different codes (#51)
   codes?: string[]
@@ -75,7 +75,7 @@ export const getCatalogImageLayout = (content: {
   }
 }
 
-const CATALOG_PRODUCT_FIELDS = ['name', 'brand', 'unit'] as const
+const CATALOG_PRODUCT_FIELDS = ['description', 'unit'] as const
 
 const CATALOG_PRODUCT_KEYS: ReadonlySet<string> = new Set([
   ...CATALOG_PRODUCT_FIELDS,
@@ -202,7 +202,7 @@ const checkCodesField = (codes: unknown, ean: string): string[] => {
 
 export const checkCatalogProduct = (data: unknown, ean: string): string[] => {
   if (!isPlainObject(data)) {
-    return ['O JSON precisa ser um objeto com name, brand e unit']
+    return ['O JSON precisa ser um objeto com description e unit']
   }
 
   const fieldErrors = CATALOG_PRODUCT_FIELDS.flatMap((field) => {

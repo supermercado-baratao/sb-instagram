@@ -54,7 +54,7 @@ type ProductDirectories = {
 
 type ProductRow = typeof products.$inferSelect
 
-// Breaks ties between products with the same name the same way on every query
+// Breaks ties between products with the same description the same way on every query
 export const firstProductCode = sql`(SELECT min(${productCodes.code}) FROM ${productCodes} WHERE ${productCodes.productId} = ${products.id})`
 
 export const attachCodes = (
@@ -97,7 +97,7 @@ const findInstanceProducts = (
     .select()
     .from(products)
     .where(exists(database.select().from(productCodes).where(hasCode)))
-    .orderBy(searchText(products.name), firstProductCode)
+    .orderBy(searchText(products.description), firstProductCode)
     .all()
 
   // A single product comes before the groups that also have its code, smaller groups first
@@ -250,8 +250,7 @@ export const saveProduct = async (
   const saved: Product = {
     id,
     codes,
-    name: input.name,
-    brand: input.brand,
+    description: input.description,
     unit: input.unit,
     voiceText:
       input.voiceText === undefined
@@ -265,8 +264,7 @@ export const saveProduct = async (
 
     const row = {
       id,
-      name: saved.name,
-      brand: saved.brand,
+      description: saved.description,
       unit: saved.unit,
       voiceText: saved.voiceText,
       photo
@@ -301,15 +299,14 @@ const productCodeList = sql`(SELECT group_concat(${productCodes.code}, ' ') FROM
 const toCatalogMatch = ({ ean, product }: CatalogEntry): CatalogMatch => ({
   ean,
   codes: getCatalogProductCodes(ean, product),
-  name: product.name,
-  brand: product.brand,
+  description: product.description,
   unit: product.unit
 })
 
-// Joining the fields lets a query mix them, e.g. a name and a brand ("sabonete albany")
-const productSearchFields = sql`search_text(${products.name} || ' ' || coalesce(${products.brand}, '') || ' ' || coalesce(${products.unit}, '') || ' ' || coalesce(${productCodeList}, ''))`
+// Joining the fields lets a query mix them, e.g. a description and a unit ("sabonete 85")
+const productSearchFields = sql`search_text(${products.description} || ' ' || coalesce(${products.unit}, '') || ' ' || coalesce(${productCodeList}, ''))`
 
-// Every word in the name, brand, unit or codes, ignoring case and accents
+// Every word in the description, unit or codes, ignoring case and accents
 const matchesWords = (words: string[]) =>
   and(...words.map((word) => contains(productSearchFields, word)))
 
@@ -379,7 +376,7 @@ export const searchProducts = (
     .select()
     .from(products)
     .where(matchesWords(words))
-    .orderBy(searchText(products.name), firstProductCode)
+    .orderBy(searchText(products.description), firstProductCode)
     .limit(limit)
     .all()
   return attachCodes(database, rows)

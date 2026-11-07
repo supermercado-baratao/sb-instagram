@@ -87,9 +87,9 @@ describe('checkNoEanFileNames', () => {
 })
 
 describe('checkCatalogProduct', () => {
-  const product = { name: 'Leite Integral', brand: 'Marca', unit: '1 L' }
+  const product = { description: 'Leite Integral Marca', unit: '1 L' }
 
-  test('accepts a product with name, brand and unit', () => {
+  test('accepts a product with description and unit', () => {
     expect(checkCatalogProduct(product, ean)).toEqual([])
   })
 
@@ -101,9 +101,8 @@ describe('checkCatalogProduct', () => {
   )
 
   test('reports each missing or empty field', () => {
-    expect(checkCatalogProduct({ name: ' ', brand: 1 }, ean)).toEqual([
-      'O campo name precisa ser um texto não vazio',
-      'O campo brand precisa ser um texto não vazio',
+    expect(checkCatalogProduct({ description: ' ' }, ean)).toEqual([
+      'O campo description precisa ser um texto não vazio',
       'O campo unit precisa ser um texto não vazio'
     ])
   })
@@ -192,8 +191,7 @@ describe('getCatalogProductCodes', () => {
   test('joins the file EAN and the codes, sorted', () => {
     expect(
       getCatalogProductCodes(ean, {
-        name: 'Sabonete',
-        brand: 'Albany',
+        description: 'Sabonete Albany',
         unit: '85 g',
         codes: ['12345670']
       })

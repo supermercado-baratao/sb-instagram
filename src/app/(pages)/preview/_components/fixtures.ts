@@ -1,9 +1,4 @@
-import {
-  type Brand,
-  HIDDEN_FIELD_MARKER,
-  type Offer,
-  type OfferProduct
-} from '@/domain/poster'
+import { type Brand, type Offer, type OfferProduct } from '@/domain/poster'
 
 // The preview shows the poster art apart from any store, so it doesn't read the saved brand
 export const brand: Brand = {
@@ -23,34 +18,31 @@ export const offer: Offer = {
 
 const product = (
   code: string,
-  name: string,
-  brand: string,
+  description: string,
   unit: string,
   priceInCents: number
 ): OfferProduct => ({
   code,
   codeType: 'internal',
-  name,
-  brand,
+  description,
   unit,
   image: null,
   priceInCents
 })
 
 export const products: OfferProduct[] = [
-  product('1', 'Arroz tipo 1', 'Camil', '5Kg', 2398),
-  product('2', 'Feijão carioca', 'Kicaldo', '1Kg', 789),
+  product('1', 'Arroz tipo 1 Camil', '5Kg', 2398),
+  product('2', 'Feijão carioca Kicaldo', '1Kg', 789),
   product(
     '3',
-    'Refrigerante de cola sabor original garrafa retornável',
-    'Coca-Cola',
+    'Refrigerante de cola sabor original garrafa retornável Coca-Cola',
     '2L',
     1099
   ),
-  product('4', 'Picanha bovina', HIDDEN_FIELD_MARKER, 'Kg', 6990),
-  product('5', 'Açúcar refinado', 'União', '1Kg', 549),
-  product('6', 'Café torrado e moído', '', '500g', 1890),
-  product('7', 'Óleo de soja', 'Liza', '900ml', 799),
-  product('8', '', '', '', 0),
-  product('9', 'Macarrão espaguete', 'Renata Superiore Grano Duro', '500g', 105)
+  product('4', 'Picanha bovina', 'Kg', 6990),
+  product('5', 'Açúcar refinado União', '1Kg', 549),
+  product('6', 'Café torrado e moído', '500g', 1890),
+  product('7', 'Óleo de soja Liza', '900ml', 799),
+  product('8', '', '', 0),
+  product('9', 'Macarrão espaguete Renata Superiore Grano Duro', '500g', 105)
 ]

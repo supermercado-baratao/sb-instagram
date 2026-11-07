@@ -16,8 +16,7 @@ const OTHER_EAN = '7891000100110'
 const eanProduct: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
   codes: [EAN],
-  name: 'Leite Condensado',
-  brand: 'Moça',
+  description: 'Leite Condensado Moça',
   unit: '395 g',
   voiceText: null,
   photo: `${EAN}.png`
@@ -26,8 +25,7 @@ const eanProduct: Product = {
 const internalProduct: Product = {
   id: '1c7a4d2f-6e3b-4a9c-8d2e-3f4a5b6c7d8e',
   codes: ['2001'],
-  name: 'Pão Francês',
-  brand: null,
+  description: 'Pão Francês',
   unit: null,
   voiceText: null,
   photo: '2001.png'
@@ -71,7 +69,7 @@ describe('checkCatalogExport', () => {
     })
   })
 
-  test('places a group of internal codes in no-ean/ under its name', () => {
+  test('places a group of internal codes in no-ean/ under its description', () => {
     expect(
       checkCatalogExport(
         { ...internalProduct, codes: ['2001', '2002'] },
@@ -83,7 +81,7 @@ describe('checkCatalogExport', () => {
     })
   })
 
-  test('places an internal code product in no-ean/ under its name', () => {
+  test('places an internal code product in no-ean/ under its description', () => {
     expect(checkCatalogExport(internalProduct, emptyContext)).toEqual({
       status: 'ok',
       target: { folder: 'no-ean', base: 'pao-frances', codes: [] }
@@ -97,9 +95,8 @@ describe('checkCatalogExport', () => {
   })
 
   test.each([
-    [{ brand: null }, 'Falta a marca'],
     [{ unit: ' ' }, 'Falta a unidade'],
-    [{ brand: '', unit: null }, 'Faltam a marca e a unidade']
+    [{ unit: null }, 'Falta a unidade']
   ])('skips an EAN product with %o', (changes, reason) => {
     expect(
       checkCatalogExport({ ...eanProduct, ...changes }, emptyContext)
@@ -109,7 +106,7 @@ describe('checkCatalogExport', () => {
   test('skips a product with an EAN already in the catalog as in the catalog', () => {
     expect(
       checkCatalogExport(
-        { ...eanProduct, codes: [EAN, OTHER_EAN], photo: null, brand: null },
+        { ...eanProduct, codes: [EAN, OTHER_EAN], photo: null, unit: null },
         { ...emptyContext, catalogEans: new Set([OTHER_EAN]) }
       )
     ).toEqual({
@@ -132,13 +129,16 @@ describe('checkCatalogExport', () => {
     })
   })
 
-  test('skips an internal code product whose name has no letter', () => {
+  test('skips an internal code product whose description has no letter', () => {
     expect(
-      checkCatalogExport({ ...internalProduct, name: '123' }, emptyContext)
+      checkCatalogExport(
+        { ...internalProduct, description: '123' },
+        emptyContext
+      )
     ).toMatchObject({ status: 'skipped', kind: 'pending' })
   })
 
-  test('skips a name the catalog already has as in the catalog', () => {
+  test('skips a description the catalog already has as in the catalog', () => {
     expect(
       checkCatalogExport(
         { ...internalProduct, photo: null },
@@ -154,7 +154,7 @@ describe('checkCatalogExport', () => {
     })
   })
 
-  test('skips a name another product already took in the export', () => {
+  test('skips a description another product already took in the export', () => {
     expect(
       checkCatalogExport(internalProduct, {
         ...emptyContext,
@@ -171,13 +171,15 @@ describe('checkCatalogExport', () => {
 describe('formatCatalogProduct', () => {
   test('writes only the catalog fields, trimmed', () => {
     expect(
-      JSON.parse(formatCatalogProduct({ ...eanProduct, name: ' Leite ' }, []))
-    ).toEqual({ name: 'Leite', brand: 'Moça', unit: '395 g' })
+      JSON.parse(
+        formatCatalogProduct({ ...eanProduct, description: ' Leite ' }, [])
+      )
+    ).toEqual({ description: 'Leite', unit: '395 g' })
   })
 
   test('keeps the codes on one line while they fit, like Prettier', () => {
     expect(formatCatalogProduct(eanProduct, [OTHER_EAN])).toBe(
-      `{\n  "name": "Leite Condensado",\n  "brand": "Moça",\n  "unit": "395 g",\n  "codes": ["${OTHER_EAN}"]\n}\n`
+      `{\n  "description": "Leite Condensado Moça",\n  "unit": "395 g",\n  "codes": ["${OTHER_EAN}"]\n}\n`
     )
   })
 
@@ -195,22 +197,22 @@ describe('formatCatalogExportReport', () => {
       formatCatalogExportReport([
         {
           codes: [OTHER_EAN],
-          name: 'Café',
+          description: 'Café',
           kind: 'in-catalog',
           reason: `O EAN ${OTHER_EAN} já está no catálogo`
         },
         {
           codes: [EAN, '2001'],
-          name: 'Leite Condensado',
+          description: 'Leite Condensado',
           kind: 'pending',
-          reason: 'Falta a marca'
+          reason: 'Falta a unidade'
         }
       ])
     ).toBe(
       [
         'Produtos com pendências, que ficaram fora da exportação:',
         '',
-        `${EAN}, 2001 · Leite Condensado: Falta a marca`,
+        `${EAN}, 2001 · Leite Condensado: Falta a unidade`,
         '',
         'Produtos que já estão no catálogo:',
         '',
@@ -225,7 +227,7 @@ describe('formatCatalogExportReport', () => {
       formatCatalogExportReport([
         {
           codes: ['2001'],
-          name: 'Pão Francês',
+          description: 'Pão Francês',
           kind: 'in-catalog',
           reason: 'O catálogo já tem a imagem pao-frances.png'
         }

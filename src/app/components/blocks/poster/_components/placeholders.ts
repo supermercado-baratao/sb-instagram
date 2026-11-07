@@ -1,5 +1,4 @@
 export const posterPlaceholders = {
-  name: 'NOME DO PRODUTO',
-  brand: 'MARCA',
+  description: 'DESCRIÇÃO DO PRODUTO',
   unit: 'UN'
 }
