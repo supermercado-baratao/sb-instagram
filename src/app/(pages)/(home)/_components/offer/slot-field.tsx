@@ -102,7 +102,7 @@ export const SlotField = ({
     if (conflict === 'same-product') {
       setError({
         kind: 'message',
-        message: `${product.name} já está nesta página.`
+        message: `${product.description} já está nesta página.`
       })
       return false
     }
@@ -114,7 +114,7 @@ export const SlotField = ({
     if (conflict === 'shared-code') {
       toast.dismiss()
       toast.warning(
-        `A página ${pageIndex + 1} já tem outro produto com um código de ${product.name}.`,
+        `A página ${pageIndex + 1} já tem outro produto com um código de ${product.description}.`,
         { duration: 10_000 }
       )
     }
@@ -163,7 +163,7 @@ export const SlotField = ({
           const placed = placeProduct(product)
           if (placed && outcome === 'unchanged') {
             onNotice(
-              `${product.name} já estava cadastrado, e nenhum dado mudou.`
+              `${product.description} já estava cadastrado, e nenhum dado mudou.`
             )
           }
         }}
@@ -251,7 +251,7 @@ export const SlotField = ({
                   id={`${id}-code`}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Código ou nome"
+                  placeholder="Código ou descrição"
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? errorId : undefined}
                   className="font-mono placeholder:font-sans"
@@ -317,7 +317,6 @@ export const SlotField = ({
   }
 
   const { product, priceInCents } = slot
-  const details = [product.brand, product.unit].filter(Boolean).join(' · ')
 
   return (
     <>
@@ -343,9 +342,9 @@ export const SlotField = ({
             <p id={labelId} className="text-xs text-muted-foreground">
               {label}
             </p>
-            <p className="font-medium wrap-break-word">{product.name}</p>
-            {details && (
-              <p className="text-sm text-muted-foreground">{details}</p>
+            <p className="font-medium wrap-break-word">{product.description}</p>
+            {product.unit && (
+              <p className="text-sm text-muted-foreground">{product.unit}</p>
             )}
           </div>
           <EditProductDialog
@@ -357,7 +356,7 @@ export const SlotField = ({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Tirar ${product.name} da página`}
+            aria-label={`Tirar ${product.description} da página`}
             onClick={() => {
               // The button goes away with the product, so focus moves to the slot's code field
               flushSync(() => onChange(null))
@@ -371,7 +370,7 @@ export const SlotField = ({
           // A new product in the slot starts its own price
           key={product.id}
           id={priceId}
-          productName={product.name}
+          productName={product.description}
           priceInCents={priceInCents}
           autoFocus={focusPrice}
           selectOnFocus={priceBrought}
@@ -385,7 +384,7 @@ export const SlotField = ({
             size="sm"
             disabled={!canMoveBefore}
             focusableWhenDisabled
-            aria-label={`Mover ${product.name} para antes`}
+            aria-label={`Mover ${product.description} para antes`}
             onClick={() => onMove(position - 1)}
           >
             <ArrowLeft data-icon="inline-start" aria-hidden />
@@ -397,7 +396,7 @@ export const SlotField = ({
             size="sm"
             disabled={!canMoveAfter}
             focusableWhenDisabled
-            aria-label={`Mover ${product.name} para depois`}
+            aria-label={`Mover ${product.description} para depois`}
             onClick={() => onMove(position + 1)}
           >
             Depois

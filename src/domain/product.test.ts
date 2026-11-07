@@ -39,8 +39,7 @@ describe('normalizeSearchText', () => {
 
 describe('getProductChanges', () => {
   const current = {
-    name: 'Arroz agulhinha',
-    brand: 'Camil',
+    description: 'Arroz agulhinha Camil',
     unit: '5 kg',
     voiceText: null
   }
@@ -52,18 +51,16 @@ describe('getProductChanges', () => {
   test('lists each changed field with its old and new value', () => {
     expect(
       getProductChanges(current, {
-        name: 'Arroz agulhinha tipo 1',
-        brand: null,
+        description: 'Arroz agulhinha tipo 1 Camil',
         unit: '5 kg',
         voiceText: 'Arroz agulhinha Camil'
       })
     ).toEqual([
       {
-        field: 'name',
-        from: 'Arroz agulhinha',
-        to: 'Arroz agulhinha tipo 1'
+        field: 'description',
+        from: 'Arroz agulhinha Camil',
+        to: 'Arroz agulhinha tipo 1 Camil'
       },
-      { field: 'brand', from: 'Camil', to: null },
       { field: 'voiceText', from: null, to: 'Arroz agulhinha Camil' }
     ])
   })

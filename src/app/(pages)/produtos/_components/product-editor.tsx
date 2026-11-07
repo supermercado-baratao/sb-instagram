@@ -164,8 +164,8 @@ export const ProductEditor = ({
     setChoosing(true)
   }
 
-  const getNameInput = () =>
-    formArea.current?.querySelector<HTMLElement>('[name="name"]') ?? null
+  const getDescriptionInput = () =>
+    formArea.current?.querySelector<HTMLElement>('[name="description"]') ?? null
 
   const openCatalogProduct = (product: CatalogMatch) => {
     clearMessages()
@@ -218,8 +218,8 @@ export const ProductEditor = ({
     if (savedToast.current !== undefined) toast.dismiss(savedToast.current)
     savedToast.current = toast.success(
       outcome === 'unchanged'
-        ? `${product.name} já estava cadastrado, e nenhum dado mudou.`
-        : `${product.name} salvo. Bipe o próximo código.`
+        ? `${product.description} já estava cadastrado, e nenhum dado mudou.`
+        : `${product.description} salvo. Bipe o próximo código.`
     )
   }
 
@@ -281,8 +281,8 @@ export const ProductEditor = ({
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Produtos</h1>
           <p className="text-muted-foreground">
-            Bipe o código com o leitor, ou digite um código ou nome e aperte
-            Enter.
+            Bipe o código com o leitor, ou digite um código ou descrição e
+            aperte Enter.
           </p>
         </div>
         <Button onClick={() => setCreating({})}>
@@ -301,14 +301,14 @@ export const ProductEditor = ({
         getFocusAfterSave={() => codeInput.current}
         onOpenExisting={openExisting}
         openExistingLabel="Abrir produto cadastrado"
-        getFocusAfterOpen={getNameInput}
+        getFocusAfterOpen={getDescriptionInput}
       />
       <ProductChoiceDialog
         open={choosing}
         choice={choice}
         onOpenChange={setChoosing}
         onChoose={openProduct}
-        getFocusAfterChoice={() => getNameInput() ?? codeInput.current}
+        getFocusAfterChoice={() => getDescriptionInput() ?? codeInput.current}
       />
 
       <form onSubmit={search} role="search" className="flex items-end gap-2">
@@ -320,7 +320,7 @@ export const ProductEditor = ({
             name="code"
             value={value}
             onChange={(event) => setValue(event.currentTarget.value)}
-            placeholder="Código ou nome"
+            placeholder="Código ou descrição"
             autoFocus
             autoComplete="off"
             spellCheck={false}
@@ -354,13 +354,13 @@ export const ProductEditor = ({
         {deleted && (
           <p className="flex items-center gap-2 text-sm">
             <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            {deleted.name} excluído.
+            {deleted.description} excluído.
           </p>
         )}
         {merged && (
           <p className="flex items-center gap-2 text-sm">
             <CircleCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            Produtos mesclados em {merged.name}.
+            Produtos mesclados em {merged.description}.
           </p>
         )}
         {lookup && (

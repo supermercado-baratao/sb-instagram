@@ -110,7 +110,7 @@ export const MergeProductsDialog = ({
             Mesclar {products.length} produtos?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            O produto que fica mantém nome, marca, unidade e foto e recebe os
+            O produto que fica mantém descrição, unidade e foto e recebe os
             códigos dos outros, que serão excluídos junto com as fotos.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -134,13 +134,11 @@ export const MergeProductsDialog = ({
                 <RadioGroupItem value={product.id} className="mt-0.5" />
                 <span className="flex min-w-0 flex-1 flex-col text-sm">
                   <span className="font-medium wrap-break-word">
-                    {product.name}
+                    {product.description}
                   </span>
-                  {(product.brand || product.unit) && (
+                  {product.unit && (
                     <span className="text-muted-foreground">
-                      {[product.brand, product.unit]
-                        .filter(Boolean)
-                        .join(' · ')}
+                      {product.unit}
                     </span>
                   )}
                   <span className="font-mono text-xs break-all text-muted-foreground">

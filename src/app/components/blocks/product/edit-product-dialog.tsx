@@ -48,7 +48,7 @@ export const EditProductDialog = ({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Editar ${product.name}`}
+            aria-label={`Editar ${product.description}`}
           />
         }
       >

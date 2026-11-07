@@ -15,7 +15,6 @@ type ProductSuggestionsProps = {
 }
 
 const ProductSuggestion = ({ product }: { product: Product }) => {
-  const details = [product.brand, product.unit].filter(Boolean).join(' · ')
   return (
     <>
       <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted">
@@ -31,9 +30,11 @@ const ProductSuggestion = ({ product }: { product: Product }) => {
         )}
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="font-medium wrap-break-word">{product.name}</span>
+        <span className="font-medium wrap-break-word">
+          {product.description}
+        </span>
         <span className="text-xs text-muted-foreground">
-          {details && `${details} · `}
+          {product.unit && `${product.unit} · `}
           <span className="font-mono">{product.codes.join(', ')}</span>
         </span>
       </span>

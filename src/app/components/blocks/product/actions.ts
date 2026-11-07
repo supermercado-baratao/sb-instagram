@@ -53,8 +53,8 @@ export type SaveResult =
     }
   | { status: 'error'; message: string }
 
-const getDuplicateMessage = ({ name }: Product) =>
-  `Já existe um produto com estes mesmos códigos: ${name}.`
+const getDuplicateMessage = ({ description }: Product) =>
+  `Já existe um produto com estes mesmos códigos: ${description}.`
 
 export const lookupProduct = async (rawCode: string): Promise<LookupResult> => {
   const code = normalizeCode(rawCode)
@@ -84,8 +84,7 @@ export const suggestProductVoiceText = async (
 ): Promise<string> => {
   return suggestVoiceText(
     {
-      name: readUnknownText(details.name),
-      brand: readUnknownText(details.brand) || null,
+      description: readUnknownText(details.description),
       unit: readUnknownText(details.unit) || null
     },
     listPronunciations(database)
@@ -121,9 +120,9 @@ export const saveProductForm = async (
     return { status: 'error', message: INVALID_CODE_MESSAGE }
   }
 
-  const name = readText(formData, 'name')
-  if (name === '') {
-    return { status: 'error', message: 'Informe o nome do produto.' }
+  const description = readText(formData, 'description')
+  if (description === '') {
+    return { status: 'error', message: 'Informe a descrição do produto.' }
   }
 
   const upload = readUpload(formData)
@@ -140,8 +139,7 @@ export const saveProductForm = async (
   const catalogEan = readText(formData, 'catalogEan')
 
   const details = {
-    name,
-    brand: readText(formData, 'brand') || null,
+    description,
     unit: readText(formData, 'unit') || null,
     voiceText: readText(formData, 'voiceText') || null
   }
@@ -243,8 +241,7 @@ export const addCodeToProduct = async (
     product = await saveProduct(database, {
       id: current.id,
       codes: [...current.codes, code],
-      name: current.name,
-      brand: current.brand,
+      description: current.description,
       unit: current.unit
     })
   } catch (error) {

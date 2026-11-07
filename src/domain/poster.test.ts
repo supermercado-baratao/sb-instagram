@@ -21,8 +21,7 @@ const products: OfferProduct[] = Array.from(
   (_, index) => ({
     code: String(index),
     codeType: 'internal',
-    name: `Produto ${index}`,
-    brand: '',
+    description: `Produto ${index}`,
     unit: 'UN',
     image: null,
     priceInCents: 100

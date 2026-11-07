@@ -55,11 +55,12 @@ type CreateProductContentProps = Pick<
 type DialogLookup = Exclude<LookupResult, { status: 'error' }>
 
 // A scanner sends Enter after the code, which would submit the form before the lookup
-const goToName = (event: KeyboardEvent<HTMLInputElement>) => {
+const goToDescription = (event: KeyboardEvent<HTMLInputElement>) => {
   if (event.key !== 'Enter') return
   event.preventDefault()
-  const name = event.currentTarget.form?.elements.namedItem('name')
-  if (name instanceof HTMLInputElement) name.focus()
+  const description =
+    event.currentTarget.form?.elements.namedItem('description')
+  if (description instanceof HTMLInputElement) description.focus()
 }
 
 const getLookedUpCode = (lookup: DialogLookup | undefined) => lookup?.code ?? ''
@@ -70,7 +71,7 @@ const getDescription = (lookup: DialogLookup | undefined) => {
 
   const [first, ...others] = lookup.products
   return others.length === 0
-    ? `Este código já está cadastrado em ${first.name}.`
+    ? `Este código já está cadastrado em ${first.description}.`
     : `Este código já está cadastrado em ${others.length + 1} produtos.`
 }
 
@@ -145,7 +146,7 @@ const CreateProductContent = ({
         noEanImages={noEanImages}
         onSaved={onSaved}
         askBeforeReplacing
-        focusName={filledCount > 0 || missingCode !== undefined}
+        focusDescription={filledCount > 0 || missingCode !== undefined}
         // The looked-up code, so the picker doesn't come and go on every keystroke
         typedCode={lookedUpCode}
         codeField={
@@ -162,7 +163,7 @@ const CreateProductContent = ({
               spellCheck={false}
               value={code}
               onChange={(event) => setCode(event.currentTarget.value)}
-              onKeyDown={goToName}
+              onKeyDown={goToDescription}
               onBlur={search}
               aria-busy={searching || undefined}
               aria-invalid={error ? true : undefined}
@@ -233,7 +234,7 @@ export const CreateProductDialog = ({
     >
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto sm:max-w-2xl sm:p-6"
-        // The photo input comes first in the form, so the code (or, when it is known, the name
+        // The photo input comes first in the form, so the code (or, when it is known, the description
         // the form focuses itself) has to be picked explicitly
         initialFocus={missingCode === undefined ? codeInput : false}
         finalFocus={() => {

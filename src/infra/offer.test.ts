@@ -27,8 +27,7 @@ import {
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
   codes: ['7891000100103'],
-  name: 'Leite Condensado',
-  brand: 'Moça',
+  description: 'Leite Condensado Moça',
   unit: '395 g',
   voiceText: null,
   photo: null
@@ -40,7 +39,7 @@ const other: Product = {
   ...product,
   id: '7c1d2e3f-4a5b-4c6d-8e7f-0b6f3c1e5d2a',
   codes: ['7891000100110'],
-  name: 'Creme de Leite'
+  description: 'Creme de Leite'
 }
 
 const insertProduct = (database: TestDatabase, item: Product) => {

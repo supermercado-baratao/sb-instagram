@@ -50,7 +50,7 @@ export const AddCodeToProduct = ({ code, onAdded }: AddCodeToProductProps) => {
 
   const add = (product: Product) => {
     suggestions.close()
-    suggestions.setQuery(product.name)
+    suggestions.setQuery(product.description)
     startAdd(async () => {
       const result = await addCodeToProduct(product.id, code)
       if (result.status === 'error') {
@@ -93,7 +93,7 @@ export const AddCodeToProduct = ({ code, onAdded }: AddCodeToProductProps) => {
           autoFocus
           autoComplete="off"
           spellCheck={false}
-          placeholder="Nome do produto"
+          placeholder="Descrição do produto"
           // Disabling would drop the focus, which an error then selects the query in again
           readOnly={adding}
           aria-invalid={error ? true : undefined}

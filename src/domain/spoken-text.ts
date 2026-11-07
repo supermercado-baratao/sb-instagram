@@ -1,4 +1,4 @@
-import { normalizeSearchText, type ProductDetails } from '@/domain/product'
+import { type ProductDetails } from '@/domain/product'
 import { applyPronunciations, type Pronunciation } from '@/domain/pronunciation'
 
 const ONES = [
@@ -201,23 +201,14 @@ export const spellNumbers = (text: string) =>
       spellParsed(parseNumber(number), 'masculine')
     )
 
-// A store may fill the name or the brand with a placeholder ("-") when the other one says it all,
-// which the voice would read out
-const hasSpokenText = (text: string | null): text is string =>
-  text !== null && /[\p{L}\p{N}]/u.test(text)
+// A product saved with a placeholder ("-") as its description would have the voice read it out
+const hasSpokenText = (text: string) => /[\p{L}\p{N}]/u.test(text)
 
-// The brand often repeats inside the name ("Café Pilão"), and saying it twice sounds like a mistake
 export const suggestVoiceText = (
-  { name, brand, unit }: ProductDetails,
+  { description, unit }: ProductDetails,
   pronunciations: Pronunciation[]
 ) => {
-  const words = hasSpokenText(name) ? [name] : []
-  if (
-    hasSpokenText(brand) &&
-    !normalizeSearchText(name).includes(normalizeSearchText(brand))
-  ) {
-    words.push(brand)
-  }
+  const words = hasSpokenText(description) ? [description] : []
   if (unit) words.push(unit)
   // Numbers first, so the dictionary can change how a unit sounds ("mililitros" → "eme éli")
   return applyPronunciations(spellNumbers(words.join(' ')), pronunciations)

@@ -30,8 +30,7 @@ import { saveOffer } from './offer'
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
   codes: ['7891000100103'],
-  name: 'Leite Condensado',
-  brand: 'Moça',
+  description: 'Leite Condensado Moça',
   unit: '395 g',
   voiceText: null,
   photo: null
@@ -95,7 +94,10 @@ describe('createGeneration', () => {
       findGenerationExport(database, generation?.id ?? 0) ?? ''
     )
     expect(offerExport.pages[0].products).toEqual([
-      expect.objectContaining({ name: 'Leite Condensado', price: '7,99' })
+      expect.objectContaining({
+        description: 'Leite Condensado Moça',
+        price: '7,99'
+      })
     ])
   })
 
@@ -106,7 +108,7 @@ describe('createGeneration', () => {
       directory
     })
 
-    database.update(products).set({ name: 'Creme de Leite' }).run()
+    database.update(products).set({ description: 'Creme de Leite' }).run()
 
     const offerExport = findGenerationExport(database, generation?.id ?? 0)
     expect(offerExport).toContain('Leite Condensado')

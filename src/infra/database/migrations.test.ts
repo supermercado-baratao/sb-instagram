@@ -54,7 +54,9 @@ test('products-by-id keeps each product, its codes and the offer items', async (
       (1, 1, '7891000100103', 399);
   `)
 
-  migrate(database, { migrationsFolder })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_merge-name-and-brand')
+  })
 
   const rows = sqlite
     .prepare(
@@ -289,7 +291,9 @@ test('move-brand-into-placeholder-name moves the description out of the brand', 
       ('f', 'Água', 'Crystal');
   `)
 
-  migrate(database, { migrationsFolder })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_merge-name-and-brand')
+  })
 
   const rows = sqlite
     .prepare('SELECT id, name, brand FROM products ORDER BY id')
@@ -301,5 +305,44 @@ test('move-brand-into-placeholder-name moves the description out of the brand', 
     { id: 'd', name: '-', brand: null },
     { id: 'e', name: '-', brand: '-' },
     { id: 'f', name: 'Água', brand: 'Crystal' }
+  ])
+})
+
+test('merge-name-and-brand joins name and brand into the description', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_merge-name-and-brand')
+  })
+
+  sqlite.exec(`
+    INSERT INTO products (id, name, brand, unit) VALUES
+      ('a', 'Arroz', ' Tio João ', '5 kg'),
+      ('b', 'Café Pilão', 'pilão', '500 g'),
+      ('c', 'Presunto Fatiado', NULL, 'Kg'),
+      ('d', 'Farinha', '-', NULL),
+      ('e', ' - ', NULL, NULL),
+      ('f', 'Sabão Ypê', 'YPÊ', NULL);
+    INSERT INTO product_codes (productId, code) VALUES ('a', '7896006716112');
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  expect(
+    sqlite
+      .prepare('SELECT id, description, unit FROM products ORDER BY id')
+      .all()
+  ).toEqual([
+    { id: 'a', description: 'Arroz Tio João', unit: '5 kg' },
+    { id: 'b', description: 'Café Pilão', unit: '500 g' },
+    { id: 'c', description: 'Presunto Fatiado', unit: 'Kg' },
+    { id: 'd', description: 'Farinha', unit: null },
+    { id: 'e', description: '-', unit: null },
+    // lower() folds only ASCII, so the brand in another case with an accent is appended
+    { id: 'f', description: 'Sabão Ypê YPÊ', unit: null }
+  ])
+  expect(sqlite.prepare('SELECT * FROM product_codes').all()).toEqual([
+    { productId: 'a', code: '7896006716112' }
   ])
 })

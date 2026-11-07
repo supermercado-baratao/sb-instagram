@@ -1,6 +1,6 @@
 # Como contribuir
 
-Obrigado pelo interesse em ajudar! A forma mais simples de contribuir é com o **catálogo comunitário**: fotos e dados de produtos que qualquer mercado pode usar. Quando um mercado bipa um produto que está no catálogo, o app já preenche nome, marca, unidade e foto.
+Obrigado pelo interesse em ajudar! A forma mais simples de contribuir é com o **catálogo comunitário**: fotos e dados de produtos que qualquer mercado pode usar. Quando um mercado bipa um produto que está no catálogo, o app já preenche descrição, unidade e foto.
 
 Para contribuir com código, veja o fluxo completo em [`docs/development-workflow.md`](./docs/development-workflow.md) e as convenções no [`AGENTS.md`](./AGENTS.md).
 
@@ -26,21 +26,19 @@ São os produtos com código de barras, que é o mesmo em qualquer mercado. Cada
 
 O EAN é o número impresso embaixo do código de barras, só com os dígitos. São aceitos códigos de 8 dígitos (EAN-8), 13 dígitos (EAN-13) e 12 dígitos (UPC-A, comum em importados). O último dígito é o verificador, então um número digitado errado é recusado pela validação.
 
-O JSON tem exatamente três campos, todos texto e nenhum vazio:
+O JSON tem exatamente dois campos, os dois texto e nenhum vazio:
 
 ```json
 {
-  "name": "Leite Integral",
-  "brand": "Marca",
+  "description": "Leite Integral Marca",
   "unit": "1 L"
 }
 ```
 
-| Campo   | O que é                                      | Exemplos                         |
-| ------- | -------------------------------------------- | -------------------------------- |
-| `name`  | Nome do produto, sem a marca e sem a unidade | `Leite Integral`, `Arroz Tipo 1` |
-| `brand` | Marca, como aparece na embalagem             | `Tio João`, `Nestlé`             |
-| `unit`  | Quantidade e unidade da embalagem            | `1 L`, `5 kg`, `500 g`, `12 un`  |
+| Campo         | O que é                                                            | Exemplos                                         |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------ |
+| `description` | Nome do produto com a marca, como aparece no pôster, sem a unidade | `Leite Integral Nestlé`, `Arroz Tipo 1 Tio João` |
+| `unit`        | Quantidade e unidade da embalagem                                  | `1 L`, `5 kg`, `500 g`, `12 un`                  |
 
 Os dois arquivos andam juntos: uma foto sem JSON (ou um JSON sem foto) é recusada.
 
@@ -50,8 +48,7 @@ Quando uma foto mostra variações vendidas com códigos de barras diferentes (a
 
 ```json
 {
-  "name": "Sabonete",
-  "brand": "Marca",
+  "description": "Sabonete Marca",
   "unit": "85 g",
   "codes": ["7891000100110", "7891000100127"]
 }
@@ -93,8 +90,8 @@ Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook
 Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo:
 
 1. Em **Produtos** (`/produtos`), clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas.
-2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo, em duas seções. Em "pendências" estão os que você pode corrigir (sem foto, sem marca ou unidade, foto com fundo ou foto pequena demais); em "já estão no catálogo", os que não precisam de nada (EAN ou imagem que o catálogo já tem). Corrija no app o que quiser incluir e exporte de novo.
-3. Confira os nomes, as marcas e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
+2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo, em duas seções. Em "pendências" estão os que você pode corrigir (sem foto, sem unidade, foto com fundo ou foto pequena demais); em "já estão no catálogo", os que não precisam de nada (EAN ou imagem que o catálogo já tem). Corrija no app o que quiser incluir e exporte de novo.
+3. Confira as descrições e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
 
    Um produto com vários EANs sai com um deles como nome e os outros em `codes`. Os códigos internos dele ficam de fora.
 
