@@ -14,6 +14,7 @@ import { listNoEanImages } from '@/infra/photo'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
 
+import { BackupPanel } from './_components/backup/backup-panel'
 import { BrandSettingsForm } from './_components/brand/brand-settings-form'
 import { HomeTabs } from './_components/home-tabs'
 import { OfferEditor } from './_components/offer/offer-editor'
@@ -60,6 +61,9 @@ const renderTab = async (id: HomeTabId, settings: BrandSettings) => {
           initialRadioScript={findRadioScriptTemplate(database)}
         />
       )
+    }
+    case 'backup': {
+      return <BackupPanel />
     }
   }
 }

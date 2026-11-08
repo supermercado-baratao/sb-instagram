@@ -6,7 +6,7 @@ As novidades de cada versão ficam na página de [releases](https://github.com/s
 
 ## Antes de atualizar
 
-[Faça um backup](./backup.md). Ao iniciar, uma versão nova pode ajustar o banco de dados para o formato dela, e uma versão antiga não abre mais esse banco. O backup é o que permite voltar para a versão anterior se algo der errado.
+[Faça um backup pelo terminal](./backup.md#pelo-terminal). Ao iniciar, uma versão nova pode ajustar o banco de dados para o formato dela, e uma versão antiga não abre mais esse banco. O backup é o que permite voltar para a versão anterior se algo der errado.
 
 ## Atualizando
 
@@ -48,6 +48,6 @@ Depois de mudar a tag, rode `docker compose pull` e `docker compose up -d`.
 Se a versão nova der problema:
 
 1. Troque a tag da linha `image` no `compose.yaml` pela versão que você usava antes, por exemplo `1.0.0`.
-2. [Restaure o backup](./backup.md#restaurando) feito antes da atualização. Não pule este passo: a versão antiga pode não abrir o banco ajustado pela versão nova.
+2. [Restaure o backup pelo terminal](./backup.md#restaurando-pelo-terminal) feito antes da atualização. Não pule este passo: a versão antiga pode não abrir o banco ajustado pela versão nova.
 
 Os dados salvos depois do backup se perdem. Se o problema não for urgente, abra uma [issue](https://github.com/supermercado-baratao/sb-instagram/issues) contando o que aconteceu.
