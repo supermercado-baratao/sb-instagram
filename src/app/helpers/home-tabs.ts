@@ -1,7 +1,8 @@
 export const HOME_TABS = [
   { id: 'oferta', label: 'Oferta' },
   { id: 'marca', label: 'Marca' },
-  { id: 'comercial', label: 'Comercial' }
+  { id: 'comercial', label: 'Comercial' },
+  { id: 'backup', label: 'Backup' }
 ] as const
 
 export type HomeTabId = (typeof HOME_TABS)[number]['id']
