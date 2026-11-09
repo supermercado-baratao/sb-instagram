@@ -58,6 +58,27 @@ export const isRadioScriptTemplate = (
   Array.isArray(value.priceMarkers) &&
   value.priceMarkers.every((marker: unknown) => typeof marker === 'string')
 
+const isRadioListItem = (value: unknown): value is RadioListItem =>
+  isRecord(value) &&
+  typeof value.number === 'number' &&
+  typeof value.text === 'string' &&
+  typeof value.price === 'string'
+
+const isPageNumber = (value: unknown) =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
+
+export const isRadioScript = (value: unknown): value is RadioScript =>
+  isRecord(value) &&
+  value.version === 2 &&
+  typeof value.script === 'string' &&
+  Array.isArray(value.list) &&
+  value.list.every(isRadioListItem) &&
+  Array.isArray(value.unusedPages) &&
+  value.unusedPages.every((page) => isPageNumber(page)) &&
+  typeof value.missingPageCount === 'number' &&
+  Number.isSafeInteger(value.missingPageCount) &&
+  value.missingPageCount >= 0
+
 export const isValidBlockPageCount = (pageCount: number) =>
   Number.isSafeInteger(pageCount) &&
   pageCount >= 1 &&

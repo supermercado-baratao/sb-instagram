@@ -34,3 +34,16 @@ export const getOfferExport = (content: OfferContent): OfferExport => ({
       }))
   }))
 })
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+// Generations keep the version they were recorded with, so an imported one may hold any of them.
+// Only what the app reads back (the validity) is checked, the rest is the store's file
+export const isStoredOfferExport = (
+  value: unknown
+): value is { version: number; validUntil: string | null } =>
+  isRecord(value) &&
+  [1, 2, 3].includes(value.version as number) &&
+  (value.validUntil === null || typeof value.validUntil === 'string') &&
+  Array.isArray(value.pages)

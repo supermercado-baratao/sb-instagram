@@ -72,8 +72,42 @@ export const findGenerationExport = (database: Database, id: number) =>
     .where(eq(generations.id, id))
     .get()?.offerExport
 
-// The files are rendered into a temporary folder and only take the generation's id once its row
-// exists, so a failure halfway never leaves a generation with missing files
+export const getTemporaryGenerationFolder = (
+  token: string,
+  directory = generationsDirectory
+) => path.join(directory, `${TEMPORARY_PREFIX}${token}`)
+
+type GenerationValues = Omit<typeof generations.$inferInsert, 'id' | 'number'>
+
+// The number is the next one of this instance, and the files only take the generation's id once
+// its row exists, so a failure halfway never leaves a generation with missing files
+export const recordGeneration = async (
+  database: Database,
+  temporary: string,
+  getValues: (transaction: Database) => GenerationValues,
+  directory = generationsDirectory
+): Promise<Generation> => {
+  const generation = database.transaction((transaction) => {
+    const last = transaction
+      .select({ number: max(generations.number) })
+      .from(generations)
+      .get()
+    return transaction
+      .insert(generations)
+      .values({ ...getValues(transaction), number: (last?.number ?? 0) + 1 })
+      .returning(generationColumns)
+      .get()
+  })
+
+  try {
+    await rename(temporary, getGenerationFolder(generation.id, directory))
+  } catch (error) {
+    database.delete(generations).where(eq(generations.id, generation.id)).run()
+    throw error
+  }
+  return generation
+}
+
 export const createGeneration = async (
   database: Database,
   renderer: OfferRenderer,
@@ -82,7 +116,7 @@ export const createGeneration = async (
   const offer = findOffer(database)
   if (!offer) return undefined
 
-  const temporary = path.join(directory, `${TEMPORARY_PREFIX}${randomUUID()}`)
+  const temporary = getTemporaryGenerationFolder(randomUUID(), directory)
   await mkdir(temporary, { recursive: true })
   try {
     // One page at a time, so a long offer doesn't open a Chromium tab per page at once
@@ -98,38 +132,21 @@ export const createGeneration = async (
       await renderer.renderPdf()
     )
 
-    const generation = database.transaction((transaction) => {
-      const last = transaction
-        .select({ number: max(generations.number) })
-        .from(generations)
-        .get()
-      return transaction
-        .insert(generations)
-        .values({
-          number: (last?.number ?? 0) + 1,
-          // Indented, since the store opens the file to read or edit it by hand
-          offerExport: JSON.stringify(getOfferExport(offer), null, 2),
-          pageCount: offer.pages.length,
-          radioScript: getRadioScript(
-            offer,
-            findRadioScriptTemplate(transaction),
-            listPronunciations(transaction)
-          )
-        })
-        .returning(generationColumns)
-        .get()
-    })
-
-    try {
-      await rename(temporary, getGenerationFolder(generation.id, directory))
-    } catch (error) {
-      database
-        .delete(generations)
-        .where(eq(generations.id, generation.id))
-        .run()
-      throw error
-    }
-    return generation
+    return await recordGeneration(
+      database,
+      temporary,
+      (transaction) => ({
+        // Indented, since the store opens the file to read or edit it by hand
+        offerExport: JSON.stringify(getOfferExport(offer), null, 2),
+        pageCount: offer.pages.length,
+        radioScript: getRadioScript(
+          offer,
+          findRadioScriptTemplate(transaction),
+          listPronunciations(transaction)
+        )
+      }),
+      directory
+    )
   } catch (error) {
     await rm(temporary, { recursive: true, force: true })
     throw error
