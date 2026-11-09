@@ -31,6 +31,16 @@ Para levar o app para outro computador, ou reinstalá-lo depois de uma pane:
 2. Configure qualquer marca no primeiro acesso, só para liberar as abas. Ela é substituída pela do backup.
 3. Restaure o backup pela aba **Backup**, como explicado acima.
 
+### Levando só uma geração
+
+Para levar uma única oferta gerada para outra instalação, sem substituir os dados dela, use a página **Gerações**:
+
+1. Na geração, clique em **Baixar geração completa**. O navegador baixa o arquivo `geracao-<número>-completa.zip`, com as imagens, o PDF, o JSON dos produtos, o roteiro e a lista da rádio.
+2. Na outra instalação, abra **Gerações** e clique em **Importar geração**. Escolha o arquivo `.zip`.
+3. O app mostra o número da geração no arquivo, quando ela foi gerada, quantas páginas tem, a validade e o número que ela vai receber. Clique em **Importar geração** para confirmar.
+
+A geração importada sempre entra como uma nova, com o próximo número da instalação e a data em que foi gerada. As outras gerações, a oferta e os produtos não mudam. Importar o mesmo arquivo duas vezes cria duas gerações.
+
 ## Pelo terminal
 
 Use este caminho quando o app não abre no navegador e antes de cada [atualização](./atualizacao.md), já que voltar para a versão anterior pode exigir restaurar com o app parado. Os comandos são os mesmos no Windows (PowerShell) e no Linux, e são rodados na pasta `sb-instagram` da [instalação](./instalacao.md). Um backup feito pelo terminal só é restaurado pelo terminal, e um feito pelo app só pelo app.

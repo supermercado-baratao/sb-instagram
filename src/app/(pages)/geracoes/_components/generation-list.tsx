@@ -1,5 +1,6 @@
 import {
   Download,
+  FileArchive,
   FileBraces,
   ListOrdered,
   Megaphone,
@@ -111,6 +112,15 @@ const GenerationCard = ({ generation }: { generation: Generation }) => {
           Exportar produtos (JSON)
           <span className="sr-only"> da geração {generation.number}</span>
         </a>
+        <a
+          href={getGenerationHref(generation, 'geracao.zip')}
+          download
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+        >
+          <FileArchive data-icon="inline-start" aria-hidden />
+          Baixar geração completa
+          <span className="sr-only"> (geração {generation.number})</span>
+        </a>
         {generation.radioScript && (
           <>
             <RadioTextDialog
@@ -148,7 +158,8 @@ export const GenerationList = ({
 }) =>
   generations.length === 0 ? (
     <p className="text-sm text-muted-foreground">
-      Nenhuma geração ainda. Salve a oferta e clique em Gerar.
+      Nenhuma geração ainda. Salve a oferta e clique em Gerar, ou importe uma
+      geração baixada em outra instalação.
     </p>
   ) : (
     <ol className="flex flex-col gap-4">

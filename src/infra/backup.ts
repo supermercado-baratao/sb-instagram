@@ -1,15 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import { createWriteStream } from 'node:fs'
 import { mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { finished } from 'node:stream/promises'
 
 import BetterSqlite3 from 'better-sqlite3'
 import { count } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import { Unzip, UnzipInflate, Zip, ZipDeflate } from 'fflate'
+import { Zip, ZipDeflate } from 'fflate'
 
 import {
   BACKUP_DATA_ENTRIES,
@@ -34,6 +32,7 @@ import {
   products,
   pronunciations
 } from '@/infra/database/schema'
+import { extractZip } from '@/infra/zip'
 
 // The instance's own connection, since a backup reads and replaces the whole file
 type ClientDatabase = Database & { $client: BetterSqlite3.Database }
@@ -174,77 +173,22 @@ export async function* createBackupArchive(
   }
 }
 
+const getExtractTarget = (name: string) => {
+  if (name === BACKUP_MANIFEST_NAME || name === BACKUP_DATABASE_NAME) {
+    return [name]
+  }
+  const segments = getBackupFilePath(name)
+  return segments && [RESTORE_FILES_FOLDER, ...segments]
+}
+
 const extractArchive = async (
   archive: AsyncIterable<Uint8Array>,
   folder: string
 ) => {
-  const writes: Promise<void>[] = []
-  const names = new Set<string>()
-  let failure: Error | undefined
-  let manifest = ''
-
-  const unzip = new Unzip((file) => {
-    if (failure) return
-    if (file.name.endsWith('/')) return
-    if (names.has(file.name)) {
-      failure = new BackupError(INVALID_BACKUP_MESSAGE)
-      return
-    }
-    names.add(file.name)
-    if (file.name === BACKUP_MANIFEST_NAME) {
-      const decoder = new TextDecoder()
-      file.ondata = (error, data, final) => {
-        if (error) failure = error
-        else manifest += decoder.decode(data, { stream: !final })
-      }
-      file.start()
-      return
-    }
-    const segments =
-      file.name === BACKUP_DATABASE_NAME
-        ? [BACKUP_DATABASE_NAME]
-        : getBackupFilePath(file.name)
-    if (!segments) {
-      failure = new BackupError(INVALID_BACKUP_MESSAGE)
-      return
-    }
-    const target =
-      file.name === BACKUP_DATABASE_NAME
-        ? path.join(folder, BACKUP_DATABASE_NAME)
-        : path.join(folder, RESTORE_FILES_FOLDER, ...segments)
-    writes.push(
-      (async () => {
-        await mkdir(path.dirname(target), { recursive: true })
-        const stream = createWriteStream(target)
-        file.ondata = (error, data, final) => {
-          if (error) {
-            failure = error
-            stream.destroy(error)
-            return
-          }
-          stream.write(data)
-          if (final) stream.end()
-        }
-        file.start()
-        await finished(stream)
-      })()
-    )
-  })
-  unzip.register(UnzipInflate)
-
+  let names: Set<string>
   try {
-    for await (const chunk of archive) {
-      unzip.push(chunk)
-      if (failure) break
-    }
-    if (!failure) unzip.push(new Uint8Array(0), true)
-  } catch (error) {
-    failure ??= error instanceof Error ? error : new Error(String(error))
-  }
-
-  const results = await Promise.allSettled(writes)
-  if (failure instanceof BackupError) throw failure
-  if (failure || results.some(({ status }) => status === 'rejected')) {
+    names = await extractZip(archive, folder, getExtractTarget)
+  } catch {
     throw new BackupError(INVALID_BACKUP_MESSAGE)
   }
   if (!names.has(BACKUP_DATABASE_NAME)) {
@@ -253,7 +197,9 @@ const extractArchive = async (
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(manifest)
+    parsed = JSON.parse(
+      await readFile(path.join(folder, BACKUP_MANIFEST_NAME), 'utf8')
+    )
   } catch {
     throw new BackupError(INVALID_BACKUP_MESSAGE)
   }
