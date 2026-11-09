@@ -19,11 +19,20 @@ export type CatalogExportTarget = {
   codes: string[]
 }
 
-export type SkipKind = 'pending' | 'in-catalog'
+export type SkipKind = 'pending' | 'in-catalog' | 'exported'
+
+// What the list of /produtos shows for each store product (#66)
+export type CatalogStatus =
+  | { kind: 'in-catalog' | 'pending'; reason: string }
+  | { kind: 'ready' }
+  | { kind: 'exported'; exportedAt: Date }
+
+export const isOutsideCatalog = ({ kind }: CatalogStatus) =>
+  kind !== 'in-catalog'
 
 export type CatalogExportCheck =
   | { status: 'ok'; target: CatalogExportTarget }
-  | { status: 'skipped'; kind: SkipKind; reason: string }
+  | { status: 'skipped'; kind: Exclude<SkipKind, 'exported'>; reason: string }
 
 export type CatalogExportContext = {
   // File names and codes lists alike, since an EAN may be in only one catalog product
@@ -145,8 +154,12 @@ export const formatCatalogProduct = (product: Product, codes: string[]) => {
     : `${json.slice(0, -2)},\n${formatCodesLine(codes)}\n}\n`
 }
 
+export const EXPORTED_UNCHANGED_REASON =
+  'Já exportado, sem mudanças desde então'
+
 const REPORT_SECTIONS: Record<SkipKind, string> = {
   pending: 'Produtos com pendências, que ficaram fora da exportação:',
+  exported: 'Produtos já exportados antes, sem mudanças desde então:',
   'in-catalog': 'Produtos que já estão no catálogo:'
 }
 
@@ -155,14 +168,16 @@ export const formatCatalogExportReport = (skipped: SkippedProduct[]) => {
     return 'Todos os produtos entraram na exportação para o catálogo.\n'
   }
 
-  const sections = (['pending', 'in-catalog'] as const).flatMap((kind) => {
-    const lines = skipped
-      .filter((product) => product.kind === kind)
-      .map(
-        ({ codes, description, reason }) =>
-          `${codes.join(', ')} · ${description}: ${reason}`
-      )
-    return lines.length === 0 ? [] : [[REPORT_SECTIONS[kind], '', ...lines]]
-  })
+  const sections = (['pending', 'exported', 'in-catalog'] as const).flatMap(
+    (kind) => {
+      const lines = skipped
+        .filter((product) => product.kind === kind)
+        .map(
+          ({ codes, description, reason }) =>
+            `${codes.join(', ')} · ${description}: ${reason}`
+        )
+      return lines.length === 0 ? [] : [[REPORT_SECTIONS[kind], '', ...lines]]
+    }
+  )
   return `${sections.map((section) => section.join('\n')).join('\n\n')}\n`
 }

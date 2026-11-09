@@ -87,15 +87,27 @@ Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook
 
 ## Contribuindo com os produtos do seu mercado
 
-Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo:
+Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo e sem instalar nada:
 
-1. Em **Produtos** (`/produtos`), clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas.
-2. Abra o `relatorio.txt` do ZIP: ele lista os produtos que ficaram de fora e o motivo, em duas seções. Em "pendências" estão os que você pode corrigir (sem foto, sem unidade, foto com fundo ou foto pequena demais); em "já estão no catálogo", os que não precisam de nada (EAN ou imagem que o catálogo já tem). Corrija no app o que quiser incluir e exporte de novo.
-3. Confira as descrições e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
+1. Em **Produtos** (`/produtos`), cada produto da loja mostra a situação dele no catálogo: "No catálogo", "Pronto para o catálogo", "Exportado para o catálogo" (enviado, esperando entrar numa versão nova do app) ou o que falta para entrar (sem foto, sem unidade, foto com fundo ou foto pequena demais). O filtro **Enviar ao catálogo** mostra só os que ainda não estão nele. Corrija no app o que quiser incluir.
+2. Clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas. Entram só os produtos novos ou alterados desde a última exportação; **Exportar todos de novo** inclui também os já exportados, caso o ZIP anterior tenha se perdido.
+3. O `relatorio.txt` do ZIP lista os produtos que ficaram de fora e o motivo: os que têm pendências, os já exportados sem mudanças e os que já estão no catálogo.
+4. Confira as descrições e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
 
    Um produto com vários EANs sai com um deles como nome e os outros em `codes`. Os códigos internos dele ficam de fora.
 
-4. Descompacte o ZIP dentro da pasta `catalog/` do seu fork, sem o `relatorio.txt`, e siga os passos abaixo. No commit, o hook de `pre-commit` otimiza e valida as imagens.
+5. Envie os arquivos pelo [site do GitHub](#enviando-pelo-site-do-github), sem git, ou descompacte o ZIP dentro da pasta `catalog/` do seu fork, sem o `relatorio.txt`, e siga [Validando e enviando](#validando-e-enviando).
+
+## Enviando pelo site do GitHub
+
+Não precisa instalar nada nem saber git: basta uma conta no GitHub. As fotos do `catalogo.zip` já saem otimizadas, então podem ser enviadas como estão.
+
+1. Descompacte o `catalogo.zip` no seu computador.
+2. Abra a pasta [`catalog/ean`](https://github.com/supermercado-baratao/sb-instagram/tree/main/catalog/ean) do repositório, clique em **Add file → Upload files** e arraste todos os arquivos da pasta `ean/` do ZIP (as imagens e os `.json`). O GitHub cria uma cópia do repositório na sua conta (um fork) se precisar.
+3. Embaixo, em **Commit changes**, escreva uma frase sobre o envio (ex.: `Produtos do Mercado Exemplo`), escolha **Create a new branch** e clique em **Propose changes**. Na página seguinte, clique em **Create pull request**.
+4. Faça o mesmo com a pasta `no-ean/` do ZIP, em [`catalog/no-ean`](https://github.com/supermercado-baratao/sb-instagram/tree/main/catalog/no-ean). Se preferir, envie no mesmo pull request: abra a branch criada no passo 3 antes de clicar em **Add file**.
+
+O GitHub aceita até 100 arquivos por envio. Como cada produto com EAN tem dois arquivos, envie em partes quando passar de 50 produtos. O CI valida os arquivos no pull request, e o pull request só pode ser aceito com a validação passando.
 
 ## Validando e enviando
 
@@ -108,4 +120,4 @@ Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografara
 
    O comando lista cada arquivo com problema e o motivo. Corrija até aparecer `Catálogo válido`.
 
-3. Abra um pull request. O CI roda a mesma validação, e o pull request só pode ser aceito com ela passando. Se você enviar os arquivos pelo site do GitHub, o hook não roda: otimize as imagens antes, no seu computador.
+3. Abra um pull request. O CI roda a mesma validação, e o pull request só pode ser aceito com ela passando. Se você enviar pelo site do GitHub imagens que não vieram do app, o hook não roda: otimize as imagens antes, no seu computador.

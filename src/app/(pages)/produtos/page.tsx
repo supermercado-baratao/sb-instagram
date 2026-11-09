@@ -3,6 +3,8 @@ import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
 import { requireBrandSettings } from '@/app/helpers/brand-settings'
+import { isOutsideCatalog } from '@/domain/catalog-export'
+import { checkCatalogPhotos, listCatalogStatuses } from '@/infra/catalog/export'
 import { database } from '@/infra/database/client'
 import { listNoEanImages } from '@/infra/photo'
 import { listProducts } from '@/infra/product'
@@ -25,11 +27,23 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
   const params = await searchParams
   const query = readParameter(params.q).trim()
   const filter = parseProductListFilter(readParameter(params.origem))
+  const statuses = await listCatalogStatuses(database)
   const productPage = await listProducts(database, {
     query,
     filter,
-    page: Number(readParameter(params.pagina))
+    page: Number(readParameter(params.pagina)),
+    outsideCatalogIds: new Set(
+      [...statuses]
+        .filter(([, status]) => isOutsideCatalog(status))
+        .map(([id]) => id)
+    )
   })
+  const catalogStatuses = await checkCatalogPhotos(
+    productPage.items.flatMap((item) =>
+      item.origin === 'store' ? [item.product] : []
+    ),
+    statuses
+  )
 
   return (
     <AppLayout brand={brand}>
@@ -39,6 +53,7 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
           productPage={productPage}
           query={query}
           filter={filter}
+          catalogStatuses={Object.fromEntries(catalogStatuses)}
         />
       </main>
     </AppLayout>

@@ -3,12 +3,15 @@ import { ImageOff } from 'lucide-react'
 import { Badge } from '@/app/components/ui/shadcn/badge'
 import { Checkbox } from '@/app/components/ui/shadcn/checkbox'
 import { getCatalogPhotoUrl, getPhotoUrl } from '@/app/helpers/product-photo'
+import type { CatalogStatus as Status } from '@/domain/catalog-export'
 import type { CatalogMatch, Product, ProductListItem } from '@/domain/product'
 
+import { CatalogStatus } from './catalog-status'
 import { DeleteProductButton } from './delete-product-button'
 
 type ProductListProps = {
   items: ProductListItem[]
+  catalogStatuses: Record<string, Status>
   busy: boolean
   selectedIds: Set<string>
   onSelect: (product: Product, selected: boolean) => void
@@ -27,6 +30,7 @@ const getKey = ({ origin, product }: ProductListItem) =>
 
 export const ProductList = ({
   items,
+  catalogStatuses,
   busy,
   selectedIds,
   onSelect,
@@ -38,6 +42,9 @@ export const ProductList = ({
     {items.map((item) => {
       const { product } = item
       const photo = getPhoto(item)
+      const catalogStatus =
+        item.origin === 'store' ? catalogStatuses[item.product.id] : undefined
+      const catalogStatusId = `catalog-status-${getKey(item)}`
 
       return (
         <li key={getKey(item)} className="flex items-center gap-1 pr-2 pl-3">
@@ -56,6 +63,7 @@ export const ProductList = ({
           )}
           <button
             type="button"
+            aria-describedby={catalogStatus ? catalogStatusId : undefined}
             onClick={() =>
               item.origin === 'store'
                 ? onOpen(item.product)
@@ -92,6 +100,9 @@ export const ProductList = ({
                 <Badge variant="outline">Da loja</Badge>
               ) : (
                 <Badge variant="secondary">Catálogo</Badge>
+              )}
+              {catalogStatus && (
+                <CatalogStatus id={catalogStatusId} status={catalogStatus} />
               )}
             </span>
             <span className="shrink-0 text-right font-mono text-sm text-muted-foreground">

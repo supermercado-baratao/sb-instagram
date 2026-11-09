@@ -317,8 +317,8 @@ const listStoreItems = (database: Database, query: string) => {
     .from(products)
     .where(words.length === 0 ? undefined : matchesWords(words))
     .all()
-  return attachCodes(database, rows).map((product): ProductListItem => ({
-    origin: 'store',
+  return attachCodes(database, rows).map((product) => ({
+    origin: 'store' as const,
     product
   }))
 }
@@ -351,15 +351,25 @@ export const listProducts = async (
   {
     query = '',
     page = 1,
-    filter = 'all'
-  }: { query?: string; page?: number; filter?: ProductListFilter } = {},
+    filter = 'all',
+    outsideCatalogIds = new Set()
+  }: {
+    query?: string
+    page?: number
+    filter?: ProductListFilter
+    // Store products the catalog doesn't hold yet, see listCatalogStatuses
+    outsideCatalogIds?: ReadonlySet<string>
+  } = {},
   { catalog = eanDirectory }: ProductDirectories = {}
 ): Promise<ProductPage> => {
+  const storeItems = filter === 'catalog' ? [] : listStoreItems(database, query)
   const items = [
-    ...(filter === 'catalog' ? [] : listStoreItems(database, query)),
-    ...(filter === 'store'
-      ? []
-      : await listCatalogItems(database, query, catalog))
+    ...(filter === 'outside-catalog'
+      ? storeItems.filter(({ product }) => outsideCatalogIds.has(product.id))
+      : storeItems),
+    ...(filter === 'all' || filter === 'catalog'
+      ? await listCatalogItems(database, query, catalog)
+      : [])
   ]
   return getProductPage(items.toSorted(compareProductListItems), page)
 }
