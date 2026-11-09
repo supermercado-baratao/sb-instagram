@@ -1,13 +1,18 @@
 'use client'
 
 import { cn } from 'cn'
-import { CircleAlert, Download } from 'lucide-react'
+import { CircleAlert, Download, ExternalLink } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-import { Button } from '@/app/components/ui/shadcn/button'
+import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { CATALOG_EXPORT_REPORT_FILE } from '@/domain/catalog-export'
 
 const FILE_NAME = 'catalogo.zip'
+
+// The instance has no git, so the store sends the ZIP through GitHub's site (#66)
+const SENDING_GUIDE_URL =
+  'https://github.com/supermercado-baratao/sb-instagram/blob/main/CONTRIBUTING.md#enviando-pelo-site-do-github'
 
 type Status = {
   kind: 'error' | 'info'
@@ -16,15 +21,43 @@ type Status = {
   id: number
 }
 
-const fetchExport = async () => {
+type ExportResult =
+  | { status: 'exported'; zip: Blob; count: number }
+  | { status: 'empty' }
+  | { status: 'error' }
+
+const fetchExport = async (all: boolean): Promise<ExportResult> => {
   // fetch rejects when the instance can't be reached, e.g. restarting during a long export
   try {
-    const response = await fetch(`/produtos/${FILE_NAME}`)
-    return response.ok ? await response.blob() : undefined
+    const response = await fetch(
+      `/produtos/${FILE_NAME}${all ? '?todos=1' : ''}`,
+      {
+        method: 'POST'
+      }
+    )
+    if (response.status === 204) return { status: 'empty' }
+    if (!response.ok) return { status: 'error' }
+    return {
+      status: 'exported',
+      zip: await response.blob(),
+      count: Number(response.headers.get('X-Exported-Count'))
+    }
   } catch {
-    return
+    return { status: 'error' }
   }
 }
+
+const download = (zip: Blob) => {
+  const url = URL.createObjectURL(zip)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = FILE_NAME
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const getExportedMessage = (count: number) =>
+  `Exportação baixada com ${count === 1 ? '1 produto' : `${count} produtos`}. Veja em ${CATALOG_EXPORT_REPORT_FILE} os que ficaram de fora.`
 
 type CatalogExportButtonProps = {
   onFinished: () => void
@@ -33,6 +66,7 @@ type CatalogExportButtonProps = {
 export const CatalogExportButton = ({
   onFinished
 }: CatalogExportButtonProps) => {
+  const router = useRouter()
   const [status, setStatus] = useState<Status>()
   const [exporting, startExport] = useTransition()
 
@@ -41,49 +75,64 @@ export const CatalogExportButton = ({
 
   // Fetched instead of linked, since preparing every photo takes a while and a plain link would
   // give no sign of progress
-  const exportCatalog = () => {
+  const exportCatalog = (all: boolean) => {
     show({ kind: 'info', message: 'Preparando as fotos dos produtos…' })
     startExport(async () => {
-      await downloadExport()
+      const result = await fetchExport(all)
+      if (result.status === 'error') {
+        show({
+          kind: 'error',
+          message: 'Não foi possível exportar os produtos. Tente de novo.'
+        })
+      } else if (result.status === 'empty') {
+        show({
+          kind: 'info',
+          message:
+            'Nenhum produto novo ou alterado desde a última exportação. Veja a situação de cada um em Enviar ao catálogo.'
+        })
+      } else {
+        download(result.zip)
+        show({ kind: 'info', message: getExportedMessage(result.count) })
+        // The list shows what was exported
+        router.refresh()
+      }
       // A scanner types into the focused element and sends Enter, so leaving the focus here would
       // run the export again on the next scan
       onFinished()
     })
   }
 
-  const downloadExport = async () => {
-    const zip = await fetchExport()
-    if (!zip) {
-      show({
-        kind: 'error',
-        message: 'Não foi possível exportar os produtos. Tente de novo.'
-      })
-      return
-    }
-    const url = URL.createObjectURL(zip)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = FILE_NAME
-    link.click()
-    URL.revokeObjectURL(url)
-    show({
-      kind: 'info',
-      message: `Exportação baixada. Veja em ${CATALOG_EXPORT_REPORT_FILE} os produtos que ficaram de fora.`
-    })
-  }
-
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        variant="outline"
-        className="self-start"
-        disabled={exporting}
-        focusableWhenDisabled
-        onClick={exportCatalog}
-      >
-        <Download data-icon="inline-start" aria-hidden />
-        Exportar para o catálogo
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          disabled={exporting}
+          focusableWhenDisabled
+          onClick={() => exportCatalog(false)}
+        >
+          <Download data-icon="inline-start" aria-hidden />
+          Exportar para o catálogo
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={exporting}
+          focusableWhenDisabled
+          onClick={() => exportCatalog(true)}
+        >
+          Exportar todos de novo
+        </Button>
+        <a
+          href={SENDING_GUIDE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({ variant: 'link' })}
+        >
+          Como enviar ao catálogo
+          <ExternalLink data-icon="inline-end" aria-hidden />
+          <span className="sr-only"> (abre em nova aba)</span>
+        </a>
+      </div>
       <div aria-live="polite" className="min-h-5">
         {status && (
           <p

@@ -1,11 +1,16 @@
 import type { ProductListFilter } from '@/domain/product'
 
-const FILTER_PARAMETERS = { store: 'loja', catalog: 'catalogo' } as const
+const FILTER_PARAMETERS = {
+  store: 'loja',
+  catalog: 'catalogo',
+  'outside-catalog': 'enviar-ao-catalogo'
+} as const
 
 export const parseProductListFilter = (value: string): ProductListFilter => {
-  if (value === FILTER_PARAMETERS.store) return 'store'
-  if (value === FILTER_PARAMETERS.catalog) return 'catalog'
-  return 'all'
+  const entry = Object.entries(FILTER_PARAMETERS).find(
+    ([, parameter]) => parameter === value
+  )
+  return (entry?.[0] as ProductListFilter | undefined) ?? 'all'
 }
 
 export type ProductsView = {

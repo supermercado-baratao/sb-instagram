@@ -104,7 +104,8 @@ export type ProductListItem =
   | { origin: 'store'; product: Product }
   | { origin: 'catalog'; product: CatalogMatch }
 
-export type ProductListFilter = ProductOrigin | 'all'
+// Outside the catalog is a subset of the store's products, which the catalog doesn't hold yet (#66)
+export type ProductListFilter = ProductOrigin | 'all' | 'outside-catalog'
 
 export type ProductPage = {
   items: ProductListItem[]

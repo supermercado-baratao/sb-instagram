@@ -49,6 +49,25 @@ export const productCodes = sqliteTable(
   ]
 )
 
+// What the last catalog export took of each product, so the next one takes only new or changed
+// products (#66)
+export const catalogExports = sqliteTable(
+  'catalog_exports',
+  {
+    productId: text().notNull(),
+    // Hash of the description, unit, codes and photo bytes, see getCatalogFingerprint
+    fingerprint: text().notNull(),
+    exportedAt: integer({ mode: 'timestamp_ms' }).notNull()
+  },
+  (table) => [
+    primaryKey({ columns: [table.productId] }),
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [products.id]
+    }).onDelete('cascade')
+  ]
+)
+
 // One row per instance, since the store only works on its current offer (#80)
 export const offers = sqliteTable(
   'offers',

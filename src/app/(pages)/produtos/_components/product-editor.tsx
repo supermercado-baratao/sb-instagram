@@ -31,6 +31,7 @@ import {
   ToggleGroup,
   ToggleGroupItem
 } from '@/app/components/ui/shadcn/toggle-group'
+import type { CatalogStatus } from '@/domain/catalog-export'
 import {
   type CatalogMatch,
   isValidCode,
@@ -52,12 +53,14 @@ type ProductEditorProps = {
   productPage: ProductPage
   query: string
   filter: ProductListFilter
+  catalogStatuses: Record<string, CatalogStatus>
 }
 
 const FILTERS: { value: ProductListFilter; label: string }[] = [
   { value: 'all', label: 'Todos' },
   { value: 'store', label: 'Da loja' },
-  { value: 'catalog', label: 'Catálogo' }
+  { value: 'catalog', label: 'Catálogo' },
+  { value: 'outside-catalog', label: 'Enviar ao catálogo' }
 ]
 
 const isProductListFilter = (value: unknown): value is ProductListFilter =>
@@ -73,9 +76,13 @@ const getListSummary = (
 ) => {
   if (total > 0) return total === 1 ? '1 produto' : `${total} produtos`
   if (query !== '') return `Nenhum produto encontrado para “${query}”.`
-  return filter === 'catalog'
-    ? 'O catálogo não tem produtos que a loja ainda não cadastrou.'
-    : 'Nenhum produto ainda. Bipe um código acima para cadastrar.'
+  if (filter === 'catalog') {
+    return 'O catálogo não tem produtos que a loja ainda não cadastrou.'
+  }
+  if (filter === 'outside-catalog') {
+    return 'Todos os produtos da loja já estão no catálogo.'
+  }
+  return 'Nenhum produto ainda. Bipe um código acima para cadastrar.'
 }
 
 const getSelectionSummary = (count: number) => {
@@ -89,7 +96,8 @@ export const ProductEditor = ({
   noEanImages,
   productPage,
   query,
-  filter
+  filter,
+  catalogStatuses
 }: ProductEditorProps) => {
   const router = useRouter()
   const [value, setValue] = useState(query)
@@ -399,14 +407,17 @@ export const ProductEditor = ({
             Clique num produto da loja para alterar os dados ou a foto, ou na
             lixeira para excluir. Um produto do catálogo da comunidade abre já
             preenchido, pronto para cadastrar. Para juntar produtos cadastrados
-            separados por engano, selecione-os e clique em Mesclar.
+            separados por engano, selecione-os e clique em Mesclar. Cada produto
+            da loja mostra se já está no catálogo da comunidade ou o que falta
+            para entrar.
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
+        <div className="max-w-full overflow-x-auto">
           <ToggleGroup
             variant="outline"
             spacing={0}
-            aria-label="Origem dos produtos"
+            aria-label="Filtrar produtos"
             value={[filter]}
             onValueChange={([next]) => {
               if (next !== filter && isProductListFilter(next)) {
@@ -420,7 +431,6 @@ export const ProductEditor = ({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-          <CatalogExportButton onFinished={() => codeInput.current?.focus()} />
         </div>
         {/* Mounted before the first selection, so the first count is announced too */}
         <p aria-live="polite" className="sr-only">
@@ -480,6 +490,7 @@ export const ProductEditor = ({
         {productPage.items.length > 0 && (
           <ProductList
             items={productPage.items}
+            catalogStatuses={catalogStatuses}
             busy={searching}
             selectedIds={new Set(selected.keys())}
             onSelect={select}

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import Database from 'better-sqlite3'
+import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import sharp from 'sharp'
@@ -16,8 +17,13 @@ import { readCatalogImage } from '@/infra/catalog/image'
 import { migrationsFolder } from '@/infra/database/file'
 import { productCodes, products } from '@/infra/database/schema'
 import { registerSearchText } from '@/infra/database/search-text'
+import { attachCodes } from '@/infra/product'
 
-import { buildCatalogExport } from './export'
+import {
+  buildCatalogExport,
+  checkCatalogPhotos,
+  listCatalogStatuses
+} from './export'
 
 const EAN = '7891000100103'
 const CATALOG_EAN = '7891000053508'
@@ -84,6 +90,7 @@ const setup = async () => {
       .insert(productCodes)
       .values(codes.map((code) => ({ productId: id, code })))
       .run()
+    return id
   }
 
   return { database, photos, ean, noEan, addProduct }
@@ -111,7 +118,7 @@ test('exports the products that fit the catalog in its folders', async () => {
     photo
   )
 
-  const files = await buildCatalogExport(database, directories)
+  const { files } = await buildCatalogExport(database, directories)
 
   expect(Object.keys(files).toSorted((a, b) => a.localeCompare(b))).toEqual([
     `ean/${EAN}.json`,
@@ -152,7 +159,7 @@ test('exports a group with its other EANs, after the single products', async () 
     photo
   )
 
-  const files = await buildCatalogExport(database, directories)
+  const { files } = await buildCatalogExport(database, directories)
 
   expect(Object.keys(files).toSorted((a, b) => a.localeCompare(b))).toEqual([
     `ean/${EAN}.json`,
@@ -254,7 +261,7 @@ test('reports the products left out and why', async () => {
     transparent
   )
 
-  const files = await buildCatalogExport(database, directories)
+  const { files } = await buildCatalogExport(database, directories)
 
   expect(Object.keys(files).toSorted((a, b) => a.localeCompare(b))).toEqual([
     'no-ean/laranja.png',
@@ -279,4 +286,104 @@ test('reports the products left out and why', async () => {
   expect(inCatalog).toContain(
     `${CATALOG_EAN} · Café Pilão: O EAN ${CATALOG_EAN} já está no catálogo`
   )
+})
+
+test('exports only the products that are new or changed since the last export', async () => {
+  const { database, addProduct, ...directories } = await setup()
+  const photo = await createImage({ side: 1600, background: 'transparent' })
+  const id = await addProduct(
+    { codes: [EAN], description: 'Leite Condensado Moça', unit: '395 g' },
+    photo
+  )
+
+  const first = await buildCatalogExport(database, directories)
+  expect(first.exportedCount).toBe(1)
+
+  const second = await buildCatalogExport(database, directories)
+  expect(second.exportedCount).toBe(0)
+  expect(Object.keys(second.files)).toEqual(['relatorio.txt'])
+  expect(read(second.files['relatorio.txt'])).toContain(
+    `${EAN} · Leite Condensado Moça: Já exportado, sem mudanças desde então`
+  )
+
+  const all = await buildCatalogExport(database, { ...directories, all: true })
+  expect(all.exportedCount).toBe(1)
+  expect(Object.keys(all.files)).toContain(`ean/${EAN}.png`)
+
+  database
+    .update(products)
+    .set({ unit: '390 g' })
+    .where(eq(products.id, id))
+    .run()
+  const changed = await buildCatalogExport(database, directories)
+  expect(changed.exportedCount).toBe(1)
+})
+
+test('gives each store product its catalog status', async () => {
+  const { database, addProduct, ...directories } = await setup()
+  const transparent = await createImage({
+    side: 1600,
+    background: 'transparent'
+  })
+  await writeFile(
+    path.join(directories.ean, `${CATALOG_EAN}.json`),
+    JSON.stringify({ description: 'Café Pilão', unit: '500 g' })
+  )
+  const now = new Date(2026, 10, 9)
+
+  const inCatalog = await addProduct(
+    { codes: [CATALOG_EAN], description: 'Café Pilão', unit: '500 g' },
+    transparent
+  )
+  const exported = await addProduct(
+    { codes: [EAN], description: 'Leite Condensado Moça', unit: '395 g' },
+    transparent
+  )
+  await buildCatalogExport(database, { ...directories, now })
+  const ready = await addProduct(
+    { codes: ['4'], description: 'Laranja', unit: null },
+    transparent
+  )
+  const withBackground = await addProduct(
+    { codes: ['1'], description: 'Alface', unit: null },
+    await createImage({ side: 1600, background: 'white' })
+  )
+  const withoutPhoto = await addProduct({
+    codes: ['6'],
+    description: 'Pepino',
+    unit: null
+  })
+
+  const statuses = await listCatalogStatuses(database, directories)
+
+  expect(statuses.get(inCatalog)).toEqual({
+    kind: 'in-catalog',
+    reason: `O EAN ${CATALOG_EAN} já está no catálogo`
+  })
+  expect(statuses.get(exported)).toEqual({ kind: 'exported', exportedAt: now })
+  expect(statuses.get(ready)).toEqual({ kind: 'ready' })
+  // The image is only checked for the products a page shows
+  expect(statuses.get(withBackground)).toEqual({ kind: 'ready' })
+  expect(statuses.get(withoutPhoto)).toEqual({
+    kind: 'pending',
+    reason: 'Sem foto'
+  })
+
+  const page = attachCodes(
+    database,
+    database
+      .select()
+      .from(products)
+      .where(inArray(products.id, [ready, withBackground]))
+      .all()
+  )
+  const checked = await checkCatalogPhotos(page, statuses, directories)
+
+  expect(checked.get(ready)).toEqual({ kind: 'ready' })
+  expect(checked.get(withBackground)).toEqual({
+    kind: 'pending',
+    reason: expect.stringContaining(
+      'O fundo da imagem precisa ser transparente'
+    )
+  })
 })

@@ -578,6 +578,19 @@ describe('listProducts with the catalog', () => {
     })
   })
 
+  test('lists only the store products outside the catalog', async () => {
+    const { database, catalog, addProduct } = await setup()
+    const outside = addProduct(['2001'], 'Pão Francês')
+    addProduct(['2002'], 'Picanha')
+
+    expect(
+      await describeItems(database, catalog, {
+        filter: 'outside-catalog',
+        outsideCatalogIds: new Set([outside.id])
+      })
+    ).toEqual(['store: Pão Francês'])
+  })
+
   test('leaves out a catalog product the store saved under any of its codes', async () => {
     const { database, catalog, addProduct } = await setup()
     await writeFile(
