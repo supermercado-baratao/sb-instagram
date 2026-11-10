@@ -20,6 +20,7 @@ import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   getPronunciationsError,
+  INITIAL_PRONUNCIATIONS,
   type Pronunciation,
   type PronunciationError
 } from '@/domain/pronunciation'
@@ -335,7 +336,10 @@ export const VoiceSettingsForm = ({
                         }
                       >
                         <FieldLabel htmlFor={`${id}-term`}>Termo</FieldLabel>
-                        <Input {...fieldProps('term')} />
+                        <Input
+                          {...fieldProps('term')}
+                          placeholder={INITIAL_PRONUNCIATIONS[0].term}
+                        />
                       </Field>
                       <Field
                         className="min-w-40 flex-1"
@@ -346,7 +350,10 @@ export const VoiceSettingsForm = ({
                         <FieldLabel htmlFor={`${id}-spoken`}>
                           Como falar
                         </FieldLabel>
-                        <Input {...fieldProps('spoken')} />
+                        <Input
+                          {...fieldProps('spoken')}
+                          placeholder={INITIAL_PRONUNCIATIONS[0].spoken}
+                        />
                       </Field>
                       <Button
                         type="button"

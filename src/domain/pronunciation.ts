@@ -4,6 +4,12 @@ export type Pronunciation = {
   spoken: string
 }
 
+// Until the store first saves the Comercial tab, also as an example of what the dictionary takes
+export const INITIAL_PRONUNCIATIONS: Pronunciation[] = [
+  { term: 'Cream cracker', spoken: 'kreme cráquer' },
+  { term: 'mililitros', spoken: 'eme éli' }
+]
+
 export type PronunciationError = {
   index: number
   field: keyof Pronunciation
