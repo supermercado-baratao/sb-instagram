@@ -7,6 +7,7 @@ import {
   checkCatalogExport,
   formatCatalogExportReport,
   formatCatalogProduct,
+  needsCatalogExport,
   toCatalogDescriptionName
 } from './catalog-export'
 
@@ -239,5 +240,21 @@ describe('formatCatalogExportReport', () => {
     expect(formatCatalogExportReport([])).toBe(
       'Todos os produtos entraram na exportação para o catálogo.\n'
     )
+  })
+})
+
+describe('needsCatalogExport', () => {
+  test.each([
+    { kind: 'pending', reason: 'Falta a unidade' },
+    { kind: 'ready' }
+  ] as const)('keeps a $kind product', (status) => {
+    expect(needsCatalogExport(status)).toBe(true)
+  })
+
+  test.each([
+    { kind: 'in-catalog', reason: 'O EAN já está no catálogo' },
+    { kind: 'exported', exportedAt: new Date() }
+  ] as const)('leaves out an $kind product', (status) => {
+    expect(needsCatalogExport(status)).toBe(false)
   })
 })

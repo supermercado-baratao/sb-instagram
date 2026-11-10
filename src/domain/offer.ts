@@ -163,6 +163,27 @@ export const moveSlotToNewPage = (
     position: 0
   })
 
+// The product stays where it is, with the price it has across the offer (#93)
+export const copySlotToPage = (
+  pages: OfferPage[],
+  from: SlotLocation,
+  to: SlotLocation
+): OfferPage[] => {
+  const copied = pages[from.page].slots[from.position]
+  if (!copied || from.page === to.page) return pages
+  return pages.with(to.page, setSlot(pages[to.page], to.position, copied))
+}
+
+export const copySlotToNewPage = (
+  pages: OfferPage[],
+  from: SlotLocation,
+  templateId: string
+): OfferPage[] =>
+  copySlotToPage(addPage(pages, templateId), from, {
+    page: pages.length,
+    position: 0
+  })
+
 // Each product must not already be on the page it goes to. Checking the pages as they are also
 // refuses trading a product for itself
 export const canSwapSlots = (

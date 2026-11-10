@@ -80,7 +80,7 @@ const getListSummary = (
     return 'O catálogo não tem produtos que a loja ainda não cadastrou.'
   }
   if (filter === 'outside-catalog') {
-    return 'Todos os produtos da loja já estão no catálogo.'
+    return 'Não há produtos da loja para enviar: todos já estão no catálogo ou foram exportados.'
   }
   return 'Nenhum produto ainda. Bipe um código acima para cadastrar.'
 }

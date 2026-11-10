@@ -8,7 +8,9 @@ import {
   checkEanFileNames,
   checkNoEanFileNames,
   getCatalogImageLayout,
-  getCatalogProductCodes
+  getCatalogProductCodes,
+  getTransparentShare,
+  isCutOut
 } from './catalog'
 
 const ean = '7891000100103'
@@ -205,7 +207,8 @@ describe('checkCatalogImage', () => {
     width: 800,
     height: 800,
     bytes: 100 * 1024,
-    cornerAlphas: [0, 0, 0, 0]
+    cornerAlphas: [0, 0, 0, 0],
+    transparentBorderShare: 1
   }
 
   test('accepts a square, transparent PNG within the limits', () => {
@@ -233,6 +236,29 @@ describe('checkCatalogImage', () => {
     ['a translucent corner', { cornerAlphas: [0, 1, 0, 0] }]
   ])('reports %s', (_, change) => {
     expect(checkCatalogImage({ ...image, ...change })).toHaveLength(1)
+  })
+})
+
+describe('getTransparentShare', () => {
+  test('counts the faint residue a background removal leaves as transparent', () => {
+    expect(getTransparentShare([0, 8, 9, 255])).toBe(0.5)
+  })
+
+  test('returns zero for no pixels', () => {
+    expect(getTransparentShare([])).toBe(0)
+  })
+})
+
+describe('isCutOut', () => {
+  test.each([0.25, 0.5, 1])(
+    'accepts a photo with %f of the border transparent',
+    (transparentBorderShare) => {
+      expect(isCutOut({ transparentBorderShare })).toBe(true)
+    }
+  )
+
+  test('refuses a photo whose border is mostly opaque', () => {
+    expect(isCutOut({ transparentBorderShare: 0.24 })).toBe(false)
   })
 })
 

@@ -19,6 +19,7 @@ export type CatalogImage = {
   height: number
   bytes: number
   cornerAlphas: number[]
+  transparentBorderShare: number
 }
 
 export type CatalogError = {
@@ -264,13 +265,32 @@ export const getCatalogProductCodes = (
   { codes = [] }: CatalogProduct
 ) => [ean, ...codes].toSorted((a, b) => a.localeCompare(b))
 
-export const TRANSPARENT_BACKGROUND_ERROR =
+const TRANSPARENT_BACKGROUND_ERROR =
   'O fundo da imagem precisa ser transparente (os quatro cantos com transparência total)'
 
 // The poster card has a colored background, so a white background would show around the photo
-export const hasTransparentBackground = (
-  image: Pick<CatalogImage, 'cornerAlphas'>
-) => image.cornerAlphas.every((alpha) => alpha === 0)
+const hasTransparentBackground = (image: Pick<CatalogImage, 'cornerAlphas'>) =>
+  image.cornerAlphas.every((alpha) => alpha === 0)
+
+// An editor or background removal tool often leaves a faint, invisible residue of the background
+const NEARLY_TRANSPARENT_ALPHA = 8
+
+// A product trimmed close to the edges covers part of the border, even touching the corners, so a
+// cut-out photo only needs part of its border transparent; a photo with a background has none (#109)
+const CUT_OUT_MIN_BORDER_SHARE = 0.25
+
+export const CUT_OUT_ERROR =
+  'A foto não tem fundo transparente: o fundo é branco ou colorido, ou o xadrez cinza e branco faz parte da imagem. Recorte o produto num editor de imagem ou numa ferramenta de remoção de fundo'
+
+export const getTransparentShare = (alphas: readonly number[]) =>
+  alphas.length === 0
+    ? 0
+    : alphas.filter((alpha) => alpha <= NEARLY_TRANSPARENT_ALPHA).length /
+      alphas.length
+
+// Checked on the original photo, before framing adds a transparent margin to every side
+export const isCutOut = (image: Pick<CatalogImage, 'transparentBorderShare'>) =>
+  image.transparentBorderShare >= CUT_OUT_MIN_BORDER_SHARE
 
 export const checkCatalogImage = (image: CatalogImage): string[] => {
   const { format, minSide, maxSide, maxMegabytes } = CATALOG_IMAGE_RULES

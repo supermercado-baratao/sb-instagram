@@ -56,6 +56,7 @@ type SlotFieldProps = {
   onPriceChange: (productId: string, priceInCents: number) => void
   onMove: (to: number) => void
   onMoveToPage: (target: MoveTarget) => void
+  onCopyToPage: (target: MoveTarget) => void
   onProductSaved: (product: Product) => void
   onNotice: (message: string) => void
 }
@@ -77,6 +78,7 @@ export const SlotField = ({
   onPriceChange,
   onMove,
   onMoveToPage,
+  onCopyToPage,
   onProductSaved,
   onNotice
 }: SlotFieldProps) => {
@@ -408,6 +410,7 @@ export const SlotField = ({
             pages={pages}
             from={{ page: pageIndex, position }}
             onMove={moveToPage}
+            onCopy={onCopyToPage}
           />
         </div>
       </div>

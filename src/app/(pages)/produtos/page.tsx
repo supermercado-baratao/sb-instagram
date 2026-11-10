@@ -3,7 +3,7 @@ import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
 import { requireBrandSettings } from '@/app/helpers/brand-settings'
-import { isOutsideCatalog } from '@/domain/catalog-export'
+import { needsCatalogExport } from '@/domain/catalog-export'
 import { checkCatalogPhotos, listCatalogStatuses } from '@/infra/catalog/export'
 import { database } from '@/infra/database/client'
 import { listNoEanImages } from '@/infra/photo'
@@ -32,9 +32,9 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
     query,
     filter,
     page: Number(readParameter(params.pagina)),
-    outsideCatalogIds: new Set(
+    catalogExportIds: new Set(
       [...statuses]
-        .filter(([, status]) => isOutsideCatalog(status))
+        .filter(([, status]) => needsCatalogExport(status))
         .map(([id]) => id)
     )
   })

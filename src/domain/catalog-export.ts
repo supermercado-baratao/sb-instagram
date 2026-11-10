@@ -27,8 +27,10 @@ export type CatalogStatus =
   | { kind: 'ready' }
   | { kind: 'exported'; exportedAt: Date }
 
-export const isOutsideCatalog = ({ kind }: CatalogStatus) =>
-  kind !== 'in-catalog'
+// What the store still has to do: an exported product waits for the catalog's pull request, with
+// nothing left on the store's side until it changes and turns ready again (#109)
+export const needsCatalogExport = ({ kind }: CatalogStatus) =>
+  kind === 'pending' || kind === 'ready'
 
 export type CatalogExportCheck =
   | { status: 'ok'; target: CatalogExportTarget }

@@ -1,6 +1,6 @@
 'use client'
 
-import { Files, Plus } from 'lucide-react'
+import { FileOutput, Plus } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { Button } from '@/app/components/ui/shadcn/button'
@@ -14,7 +14,10 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/app/components/ui/shadcn/dropdown-menu'
 import {
@@ -36,6 +39,7 @@ type MoveProductButtonProps = {
   pages: OfferPage[]
   from: SlotLocation
   onMove: (target: MoveTarget) => void
+  onCopy: (target: MoveTarget) => void
 }
 
 export const MoveProductButton = ({
@@ -43,7 +47,8 @@ export const MoveProductButton = ({
   product,
   pages,
   from,
-  onMove
+  onMove,
+  onCopy
 }: MoveProductButtonProps) => {
   // A copy from when the dialog opened, since a trade changes the pages while it animates out
   const [opened, setOpened] = useState<{
@@ -79,13 +84,11 @@ export const MoveProductButton = ({
               id={id}
               variant="outline"
               size="sm"
-              disabled={pages.length === 1}
-              focusableWhenDisabled
-              aria-label={`Mover ${product.description} para outra página`}
+              aria-label={`Mover ou copiar ${product.description} para outra página`}
             />
           }
         >
-          <Files data-icon="inline-start" aria-hidden />
+          <FileOutput data-icon="inline-start" aria-hidden />
           Outra página
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -93,30 +96,74 @@ export const MoveProductButton = ({
           // Unmounting after its exit animation, the menu would take the focus from the open dialog
           finalFocus={() => !leaving.current && !dialogOpen}
         >
-          {pages.map((page, index) => {
-            if (index === from.page) return null
-            const hasProduct = getPageConflict(page, product) === 'same-product'
-            const position = findEmptySlot(page)
-            const full = position === -1
-            return (
-              <DropdownMenuItem
-                key={index}
-                disabled={hasProduct}
-                onClick={() => {
-                  if (full) {
-                    setOpened({ page: index, product, pages })
-                    setDialogOpen(true)
-                    return
+          {/* Screen readers seldom read a group's label while moving through a menu, so each item
+              names its action too */}
+          {pages.length > 1 && (
+            <>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Mover para</DropdownMenuLabel>
+                {pages.map((page, index) => {
+                  if (index === from.page) return null
+                  const hasProduct =
+                    getPageConflict(page, product) === 'same-product'
+                  const position = findEmptySlot(page)
+                  const full = position === -1
+                  return (
+                    <DropdownMenuItem
+                      key={index}
+                      disabled={hasProduct}
+                      onClick={() => {
+                        if (full) {
+                          setOpened({ page: index, product, pages })
+                          setDialogOpen(true)
+                          return
+                        }
+                        move(
+                          { kind: 'slot', to: { page: index, position } },
+                          true
+                        )
+                      }}
+                    >
+                      <span className="sr-only">Mover para </span>
+                      Página {index + 1}
+                      {hasProduct && ' (já tem este produto)'}
+                      {!hasProduct && full && ' (cheia)'}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Copiar para</DropdownMenuLabel>
+            {pages.map((page, index) => {
+              if (index === from.page) return null
+              const hasProduct =
+                getPageConflict(page, product) === 'same-product'
+              const position = findEmptySlot(page)
+              const full = position === -1
+              return (
+                <DropdownMenuItem
+                  key={index}
+                  // A copy keeps the product where it is, so a full page has no trade to offer
+                  disabled={hasProduct || full}
+                  onClick={() =>
+                    onCopy({ kind: 'slot', to: { page: index, position } })
                   }
-                  move({ kind: 'slot', to: { page: index, position } }, true)
-                }}
-              >
-                Página {index + 1}
-                {hasProduct && ' (já tem este produto)'}
-                {!hasProduct && full && ' (cheia)'}
-              </DropdownMenuItem>
-            )
-          })}
+                >
+                  <span className="sr-only">Copiar para </span>
+                  Página {index + 1}
+                  {hasProduct && ' (já tem este produto)'}
+                  {!hasProduct && full && ' (cheia)'}
+                </DropdownMenuItem>
+              )
+            })}
+            <DropdownMenuItem onClick={() => onCopy({ kind: 'new-page' })}>
+              <span className="sr-only">Copiar para </span>
+              Página nova
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 

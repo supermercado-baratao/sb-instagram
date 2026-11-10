@@ -60,6 +60,7 @@ type PagePanelProps = {
   onNotice: (message: string) => void
   onMove: (to: number) => void
   onMoveProduct: (position: number, target: MoveTarget) => void
+  onCopyProduct: (position: number, target: MoveTarget) => void
   onRemove: () => void
 }
 
@@ -75,6 +76,7 @@ export const PagePanel = ({
   onNotice,
   onMove,
   onMoveProduct,
+  onCopyProduct,
   onRemove
 }: PagePanelProps) => {
   const id = `page-${index}`
@@ -218,6 +220,7 @@ export const PagePanel = ({
               onPriceChange={onPriceChange}
               onMove={(to) => moveSlotTo(position, to)}
               onMoveToPage={(target) => onMoveProduct(position, target)}
+              onCopyToPage={(target) => onCopyProduct(position, target)}
               onProductSaved={onProductSaved}
               onNotice={onNotice}
             />

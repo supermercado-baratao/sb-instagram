@@ -2,9 +2,9 @@ import sharp from 'sharp'
 
 import {
   checkCatalogImage,
+  CUT_OUT_ERROR,
   getCatalogImageLayout,
-  hasTransparentBackground,
-  TRANSPARENT_BACKGROUND_ERROR
+  isCutOut
 } from '@/domain/catalog'
 import { readCatalogImage } from '@/infra/catalog/image'
 
@@ -51,8 +51,8 @@ export const prepareCatalogImage = async (
 
   // The margin added around the product makes the corners transparent, so a photo with a
   // background would pass the check once framed: it has to be rejected before that
-  if (!hasTransparentBackground(originalImage)) {
-    return { image: undefined, errors: [TRANSPARENT_BACKGROUND_ERROR] }
+  if (!isCutOut(originalImage)) {
+    return { image: undefined, errors: [CUT_OUT_ERROR] }
   }
 
   const optimized = await optimizeCatalogImage(original)
