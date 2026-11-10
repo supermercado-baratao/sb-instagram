@@ -1,11 +1,18 @@
 'use client'
 
 import { cn } from 'cn'
-import { CircleAlert, Download, ExternalLink } from 'lucide-react'
+import {
+  CircleAlert,
+  Download,
+  ExternalLink,
+  type LucideIcon,
+  RefreshCw
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
+import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { CATALOG_EXPORT_REPORT_FILE } from '@/domain/catalog-export'
 
 const FILE_NAME = 'catalogo.zip'
@@ -59,6 +66,37 @@ const download = (zip: Blob) => {
 const getExportedMessage = (count: number) =>
   `Exportação baixada com ${count === 1 ? '1 produto' : `${count} produtos`}. Veja em ${CATALOG_EXPORT_REPORT_FILE} os que ficaram de fora.`
 
+type ExportButtonContentProps = {
+  busy: boolean
+  icon: LucideIcon
+  label: string
+}
+
+// Both labels share one grid cell, so the button keeps the longest one's width and the link
+// next to it never moves under the pointer while exporting; the hidden label is also hidden
+// from screen readers
+const ExportButtonContent = ({
+  busy,
+  icon: Icon,
+  label
+}: ExportButtonContentProps) => (
+  <>
+    {busy ? (
+      <Spinner data-icon="inline-start" aria-hidden />
+    ) : (
+      <Icon data-icon="inline-start" aria-hidden />
+    )}
+    <span className="grid">
+      <span className={cn('col-start-1 row-start-1', busy && 'invisible')}>
+        {label}
+      </span>
+      <span className={cn('col-start-1 row-start-1', !busy && 'invisible')}>
+        Exportando…
+      </span>
+    </span>
+  </>
+)
+
 type CatalogExportButtonProps = {
   onFinished: () => void
 }
@@ -69,6 +107,7 @@ export const CatalogExportButton = ({
   const router = useRouter()
   const [status, setStatus] = useState<Status>()
   const [exporting, startExport] = useTransition()
+  const [exportingAll, setExportingAll] = useState(false)
 
   const show = (status: Omit<Status, 'id'>) =>
     setStatus({ ...status, id: Date.now() })
@@ -77,6 +116,7 @@ export const CatalogExportButton = ({
   // give no sign of progress
   const exportCatalog = (all: boolean) => {
     show({ kind: 'info', message: 'Preparando as fotos dos produtos…' })
+    setExportingAll(all)
     startExport(async () => {
       const result = await fetchExport(all)
       if (result.status === 'error') {
@@ -111,8 +151,11 @@ export const CatalogExportButton = ({
           focusableWhenDisabled
           onClick={() => exportCatalog(false)}
         >
-          <Download data-icon="inline-start" aria-hidden />
-          Exportar para o catálogo
+          <ExportButtonContent
+            busy={exporting && !exportingAll}
+            icon={Download}
+            label="Exportar para o catálogo"
+          />
         </Button>
         <Button
           variant="ghost"
@@ -120,7 +163,11 @@ export const CatalogExportButton = ({
           focusableWhenDisabled
           onClick={() => exportCatalog(true)}
         >
-          Exportar todos de novo
+          <ExportButtonContent
+            busy={exporting && exportingAll}
+            icon={RefreshCw}
+            label="Exportar todos de novo"
+          />
         </Button>
         <a
           href={SENDING_GUIDE_URL}
