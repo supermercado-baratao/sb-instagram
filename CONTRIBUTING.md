@@ -60,7 +60,14 @@ Bipar qualquer um desses EANs encontra o produto. Cada EAN de `codes` precisa se
 
 Carnes, hortifrúti, padaria e outros produtos vendidos sem código de barras usam um código interno, que muda de mercado para mercado. Por isso, só a foto vai para o catálogo, em `catalog/no-ean/`, e cada mercado associa a foto ao próprio código (veja o [README](./README.md#usando-uma-imagem-sem-ean)).
 
-O nome do arquivo é a descrição do produto em letras minúsculas, sem acentos e com hífens no lugar dos espaços, por exemplo `picanha-bovina.png`, `pao-frances.png` ou `banana-prata.png`. Não use o código interno do seu mercado como nome.
+O nome do arquivo é a descrição do produto em letras minúsculas, sem acentos e com hífens no lugar dos espaços, por exemplo `picanha-bovina.png`, `pao-frances.png` ou `banana-prata.png`. Não use o código interno do seu mercado como nome. Se a foto não mostra embalagem nem marca, como a de um produto vendido a granel, deixe a marca fora do nome (`linguica-suina.png`, não `linguica-suina-aurora.png`), para que outros mercados a encontrem e usem com a marca que vendem.
+
+## Imagens repetidas
+
+Antes de enviar, confira se a mesma foto não aparece em mais de um arquivo, entre os que você está enviando ou nos que o catálogo já tem. Cada foto entra no catálogo uma vez só:
+
+- **Mesmo produto com EANs diferentes** (as fragrâncias de um sabão em pó numa foto só, por exemplo): é um produto só, com os outros EANs em `codes` (veja [Variações com uma foto só](#variações-com-uma-foto-só)). Não envie um arquivo por EAN com a mesma foto. Se um desses EANs já está no catálogo, acrescente os outros ao `codes` do arquivo que já existe.
+- **Produtos sem EAN de marcas diferentes com a mesma foto** (linguiças a granel, por exemplo): envie uma imagem só, com um nome genérico, sem a marca, e apague as cópias.
 
 ## Regras de imagem
 
@@ -89,10 +96,10 @@ Se você fizer o commit pelo seu computador, nem precisa rodar o comando: o hook
 
 Se o seu mercado usa o app, os produtos que vocês já cadastraram e fotografaram podem ir para o catálogo sem copiar arquivo por arquivo e sem instalar nada:
 
-1. Em **Produtos** (`/produtos`), cada produto da loja mostra a situação dele no catálogo: "No catálogo", "Pronto para o catálogo", "Exportado para o catálogo" (enviado, esperando entrar numa versão nova do app) ou o que falta para entrar (sem foto, sem unidade, foto com fundo ou foto pequena demais). O filtro **Enviar ao catálogo** mostra só os que ainda não estão nele. Corrija no app o que quiser incluir.
+1. Em **Produtos** (`/produtos`), cada produto da loja mostra a situação dele no catálogo: "No catálogo", "Pronto para o catálogo", "Exportado para o catálogo" (enviado, esperando entrar numa versão nova do app) ou o que falta para entrar (sem foto, sem unidade, foto com fundo ou foto pequena demais). O filtro **Enviar ao catálogo** mostra só os que ainda dependem do mercado: os que têm pendência e os prontos que ainda não foram exportados. Corrija no app o que quiser incluir. Se o mesmo produto foi cadastrado mais de uma vez, um cadastro para cada EAN com a mesma foto, junte os cadastros com **Mesclar** antes de exportar.
 2. Clique em **Exportar para o catálogo**. O app baixa o `catalogo.zip`, com as pastas `ean/` e `no-ean/` já no formato do catálogo e com as fotos otimizadas. Entram só os produtos novos ou alterados desde a última exportação; **Exportar todos de novo** inclui também os já exportados, caso o ZIP anterior tenha se perdido.
 3. O `relatorio.txt` do ZIP lista os produtos que ficaram de fora e o motivo: os que têm pendências, os já exportados sem mudanças e os que já estão no catálogo.
-4. Confira as descrições e as unidades nos arquivos `.json` e veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos.
+4. Confira as descrições e as unidades nos arquivos `.json`, veja se cada foto segue as [regras de imagem](#regras-de-imagem), principalmente a de direitos, e procure [imagens repetidas](#imagens-repetidas). O app não junta fotos iguais: produtos sem EAN que usam a mesma foto saem com uma imagem cada, com o nome da descrição de cada um.
 
    Um produto com vários EANs sai com um deles como nome e os outros em `codes`. Os códigos internos dele ficam de fora.
 
