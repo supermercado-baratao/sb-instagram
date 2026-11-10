@@ -354,7 +354,7 @@ test('keeps one price for a product placed on two pages', async ({ page }) => {
   await slot.press('Enter')
   await expect(price).toHaveValue('15,90')
   await expect(price).toBeFocused()
-  await expect(page.getByText('Mesmo preço na página 1.')).toBeVisible()
+  await expect(page.getByText('Produto repetido na página 1.')).toBeVisible()
   // Pages left by other tests stay, so the new page isn't always the second
   const newPage = await page.getByRole('tab', { name: /^Página \d+$/ }).count()
   await page.keyboard.type('13,50')
@@ -362,7 +362,7 @@ test('keeps one price for a product placed on two pages', async ({ page }) => {
   await page.getByRole('tab', { name: 'Página 1' }).click()
   await expect(price).toHaveValue('13,50')
   await expect(
-    page.getByText(`Mesmo preço na página ${newPage}.`)
+    page.getByText(`Produto repetido na página ${newPage}.`)
   ).toBeVisible()
 })
 

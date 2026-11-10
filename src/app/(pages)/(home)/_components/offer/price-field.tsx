@@ -19,8 +19,8 @@ type PriceFieldProps = {
 
 const describeOtherPages = (pages: number[]) => {
   const numbers = pages.map((page) => String(page + 1))
-  if (numbers.length === 1) return `Mesmo preço na página ${numbers[0]}.`
-  return `Mesmo preço nas páginas ${numbers.slice(0, -1).join(', ')} e ${numbers.at(-1)}.`
+  if (numbers.length === 1) return `Produto repetido na página ${numbers[0]}.`
+  return `Produto repetido nas páginas ${numbers.slice(0, -1).join(', ')} e ${numbers.at(-1)}.`
 }
 
 export const PRICE_MISSING_ATTRIBUTE = 'data-price-missing'
