@@ -4,8 +4,9 @@ import {
   assignTemplateIds,
   type BrandContent,
   getBrandContentError,
-  INITIAL_TEMPLATES,
+  INITIAL_TEMPLATE,
   isBrandContent,
+  normalizeHexColor,
   normalizeInstagram,
   type TemplateDraft
 } from './brand'
@@ -16,8 +17,26 @@ const content = (changes: Partial<BrandContent> = {}): BrandContent => ({
   name: 'Supermercado Exemplo',
   slogan: '',
   instagram: '@exemplo',
-  templates: INITIAL_TEMPLATES,
+  templates: [INITIAL_TEMPLATE],
   ...changes
+})
+
+describe('normalizeHexColor', () => {
+  test.each([
+    ['#1a1d6b', '#1a1d6b'],
+    ['#1A1D6B', '#1a1d6b'],
+    ['1a1d6b', '#1a1d6b'],
+    [' #e01b22 ', '#e01b22']
+  ])('normalizes %j', (value, expected) => {
+    expect(normalizeHexColor(value)).toBe(expected)
+  })
+
+  test.each(['', '#', '#1a1d6', '#1a1d6bb', '#abc', '##1a1d6b', '#1a1g6b'])(
+    'refuses %j',
+    (value) => {
+      expect(normalizeHexColor(value)).toBeUndefined()
+    }
+  )
 })
 
 describe('normalizeInstagram', () => {

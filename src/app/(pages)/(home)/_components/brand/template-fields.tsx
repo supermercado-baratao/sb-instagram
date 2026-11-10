@@ -1,6 +1,7 @@
 'use client'
 
 import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
@@ -10,7 +11,7 @@ import {
   FieldSet
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import type { TemplateDraft } from '@/domain/brand'
+import { normalizeHexColor, type TemplateDraft } from '@/domain/brand'
 
 type TemplateFieldsProps = {
   id: string
@@ -22,6 +23,49 @@ type TemplateFieldsProps = {
   canRemove: boolean
   onChange: (template: TemplateDraft) => void
   onRemove: () => void
+}
+
+type ColorFieldProps = {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+}
+
+// The native picker makes an exact brand color hard to hit, so the code can be typed or
+// pasted next to it (#102). Only a complete code reaches the template, and leaving the
+// field drops an incomplete one.
+const ColorField = ({ id, label, value, onChange }: ColorFieldProps) => {
+  const [draft, setDraft] = useState<string>()
+
+  return (
+    <Field className="w-auto">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="flex gap-2">
+        <Input
+          id={id}
+          type="color"
+          className="h-8 w-16 cursor-pointer p-1"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <Input
+          aria-label={`${label} (código)`}
+          autoComplete="off"
+          spellCheck={false}
+          maxLength={9}
+          className="w-24 font-mono"
+          value={draft ?? value}
+          onChange={(event) => {
+            setDraft(event.target.value)
+            const color = normalizeHexColor(event.target.value)
+            if (color) onChange(color)
+          }}
+          onBlur={() => setDraft(undefined)}
+        />
+      </div>
+    </Field>
+  )
 }
 
 export const getTemplateLabel = (template: TemplateDraft, number: number) =>
@@ -65,26 +109,18 @@ export const TemplateFields = ({
             }
           />
         </Field>
-        <Field className="w-auto">
-          <FieldLabel htmlFor={`${id}-primary`}>Cor principal</FieldLabel>
-          <Input
-            id={`${id}-primary`}
-            type="color"
-            className="h-8 w-16 cursor-pointer p-1"
-            value={template.colors.primary}
-            onChange={(event) => setColor('primary', event.target.value)}
-          />
-        </Field>
-        <Field className="w-auto">
-          <FieldLabel htmlFor={`${id}-accent`}>Cor de destaque</FieldLabel>
-          <Input
-            id={`${id}-accent`}
-            type="color"
-            className="h-8 w-16 cursor-pointer p-1"
-            value={template.colors.accent}
-            onChange={(event) => setColor('accent', event.target.value)}
-          />
-        </Field>
+        <ColorField
+          id={`${id}-primary`}
+          label="Cor principal"
+          value={template.colors.primary}
+          onChange={(value) => setColor('primary', value)}
+        />
+        <ColorField
+          id={`${id}-accent`}
+          label="Cor de destaque"
+          value={template.colors.accent}
+          onChange={(value) => setColor('accent', value)}
+        />
         <Button
           variant="ghost"
           size="icon"

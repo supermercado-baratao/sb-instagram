@@ -1,4 +1,9 @@
-import { type Brand, type Offer, type OfferProduct } from '@/domain/poster'
+import {
+  type Brand,
+  type Offer,
+  type OfferProduct,
+  type PosterTemplate
+} from '@/domain/poster'
 
 // The preview shows the poster art apart from any store, so it doesn't read the saved brand
 export const brand: Brand = {
@@ -8,7 +13,23 @@ export const brand: Brand = {
   instagram: '@supermercadoexemplo'
 }
 
-export { INITIAL_TEMPLATES as templates } from '@/domain/brand'
+export const templates: PosterTemplate[] = [
+  {
+    id: 'mercado',
+    name: 'Mercado',
+    colors: { primary: '#1c398e', accent: '#e7000b' }
+  },
+  {
+    id: 'acougue',
+    name: 'Açougue',
+    colors: { primary: '#82181a', accent: '#e7000b' }
+  },
+  {
+    id: 'hortifruti',
+    name: 'Hortifrúti',
+    colors: { primary: '#0d542b', accent: '#e7000b' }
+  }
+]
 
 export const offer: Offer = {
   validUntil: '20/10/2026',

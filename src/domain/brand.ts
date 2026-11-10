@@ -24,30 +24,20 @@ export type BrandContent = {
   templates: TemplateDraft[]
 }
 
-// A new instance starts with these, so an offer can be created right after the first setup
-export const INITIAL_TEMPLATES: PosterTemplate[] = [
-  {
-    id: 'mercado',
-    name: 'Mercado',
-    colors: { primary: '#1a1d6b', accent: '#e01b22' }
-  },
-  {
-    id: 'acougue',
-    name: 'Açougue',
-    colors: { primary: '#5c1310', accent: '#e01b22' }
-  },
-  {
-    id: 'hortifruti',
-    name: 'Hortifrúti',
-    colors: { primary: '#14532d', accent: '#ea580c' }
-  }
-]
+// A new instance starts with one template, so an offer can be created right after the first
+// setup. Its colors are generic (Tailwind's blue-900 and red-600) because each store sets its
+// own in the form, and nothing store-specific is hardcoded (#102)
+export const INITIAL_TEMPLATE: PosterTemplate = {
+  id: 'padrao',
+  name: 'Padrão',
+  colors: { primary: '#1c398e', accent: '#e7000b' }
+}
 
 export const createBrandContent = (settings?: BrandSettings): BrandContent => ({
   name: settings?.brand.name ?? '',
   slogan: settings?.brand.slogan ?? '',
   instagram: settings?.brand.instagram ?? '',
-  templates: settings?.templates ?? INITIAL_TEMPLATES
+  templates: settings?.templates ?? [INITIAL_TEMPLATE]
 })
 
 export const LOGO_FILE_NAME = 'logo.png'
@@ -58,6 +48,12 @@ export const LOGO_MAX_SIDE = 600
 const HEX_COLOR_PATTERN = /^#[\da-f]{6}$/i
 
 export const isHexColor = (value: string) => HEX_COLOR_PATTERN.test(value)
+
+// Brand manuals list colors as "#1A1D6B" or "1a1d6b", and people paste them with spaces
+export const normalizeHexColor = (value: string) => {
+  const color = `#${value.trim().replace(/^#/, '')}`.toLowerCase()
+  return isHexColor(color) ? color : undefined
+}
 
 // Instagram usernames: letters, digits, periods and underscores, up to 30 characters
 const INSTAGRAM_HANDLE_PATTERN = /^@[\w.]{1,30}$/

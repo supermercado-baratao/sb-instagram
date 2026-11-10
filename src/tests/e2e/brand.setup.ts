@@ -22,7 +22,14 @@ setup('configures the brand and shows it on the poster', async ({ page }) => {
   })
 
   await page.getByRole('button', { name: 'Adicionar modelo' }).click()
-  await page.getByLabel('Nome do modelo 4').fill('Padaria')
+  await page.getByLabel('Nome do modelo 2').fill('Padaria')
+  await page
+    .getByRole('textbox', { name: 'Cor principal (código)' })
+    .last()
+    .fill(' 1A1D6B')
+  await expect(
+    page.getByLabel('Cor principal', { exact: true }).last()
+  ).toHaveValue('#1a1d6b')
 
   const poster = page.getByRole('article', { name: `Ofertas de ${name}` })
   await expect(poster.getByText('Preço baixo todo dia')).toBeVisible()
@@ -51,6 +58,6 @@ setup('configures the brand and shows it on the poster', async ({ page }) => {
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Configurações salvas.')).toBeVisible()
   await page.reload()
-  await expect(page.getByLabel('Nome do modelo 3')).toBeVisible()
-  await expect(page.getByLabel('Nome do modelo 4')).toHaveCount(0)
+  await expect(page.getByLabel('Nome do modelo 1')).toBeVisible()
+  await expect(page.getByLabel('Nome do modelo 2')).toHaveCount(0)
 })
