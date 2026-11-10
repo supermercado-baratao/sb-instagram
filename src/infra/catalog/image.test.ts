@@ -6,7 +6,7 @@ import { readCatalogImage } from './image'
 const transparent = { r: 0, g: 0, b: 0, alpha: 0 }
 
 describe('readCatalogImage', () => {
-  test('reads the format, size and the alpha of the four corners', async () => {
+  test('reads the format, size, the alpha of the four corners and the transparent border', async () => {
     const opaquePixel = await sharp({
       create: { width: 1, height: 1, channels: 4, background: '#f00' }
     })
@@ -24,7 +24,9 @@ describe('readCatalogImage', () => {
       width: 4,
       height: 3,
       bytes: buffer.length,
-      cornerAlphas: [0, 0, 0, 255]
+      cornerAlphas: [0, 0, 0, 255],
+      // 1 of the 10 border pixels is opaque
+      transparentBorderShare: 0.9
     })
   })
 
@@ -35,8 +37,10 @@ describe('readCatalogImage', () => {
       .jpeg()
       .toBuffer()
 
-    const { cornerAlphas } = await readCatalogImage(buffer)
+    const { cornerAlphas, transparentBorderShare } =
+      await readCatalogImage(buffer)
 
     expect(cornerAlphas).toEqual([255, 255, 255, 255])
+    expect(transparentBorderShare).toBe(0)
   })
 })

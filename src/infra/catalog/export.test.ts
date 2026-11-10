@@ -271,9 +271,7 @@ test('reports the products left out and why', async () => {
     'Produtos que já estão no catálogo:',
     2
   )
-  expect(pending).toContain(
-    '1 · Alface: O fundo da imagem precisa ser transparente'
-  )
+  expect(pending).toContain('1 · Alface: A foto não tem fundo transparente')
   expect(pending).toMatch(/2 · Banana: O lado da imagem precisa ter/)
   expect(inCatalog).toContain('3 · Coxão Mole: A foto é uma imagem do catálogo')
   expect(pending).toContain(
@@ -382,8 +380,6 @@ test('gives each store product its catalog status', async () => {
   expect(checked.get(ready)).toEqual({ kind: 'ready' })
   expect(checked.get(withBackground)).toEqual({
     kind: 'pending',
-    reason: expect.stringContaining(
-      'O fundo da imagem precisa ser transparente'
-    )
+    reason: expect.stringContaining('A foto não tem fundo transparente')
   })
 })
