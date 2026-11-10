@@ -268,8 +268,12 @@ test('moves products between the pages of the offer', async ({ page }) => {
   }
   const openMoveMenu = (name: string) =>
     page
-      .getByRole('button', { name: `Mover ${name} para outra página` })
+      .getByRole('button', {
+        name: `Mover ou copiar ${name} para outra página`
+      })
       .click()
+  const moveTo = (name: string) =>
+    page.getByRole('menuitem', { name: `Mover para ${name}` }).click()
 
   await openEmptyOffer(page)
   await place(1, 0, '10,00')
@@ -285,7 +289,7 @@ test('moves products between the pages of the offer', async ({ page }) => {
 
   // Goes with its price to the first empty slot of the page, and the editor stays on this page
   await openMoveMenu(rice)
-  await page.getByRole('menuitem', { name: 'Página 2' }).click()
+  await moveTo('Página 2')
   await expect(page.getByRole('tab', { name: 'Página 1' })).toHaveAttribute(
     'aria-selected',
     'true'
@@ -295,7 +299,7 @@ test('moves products between the pages of the offer', async ({ page }) => {
 
   // The full page asks: first a trade, which keeps both prices
   await openMoveMenu(beans)
-  await page.getByRole('menuitem', { name: 'Página 2 (cheia)' }).click()
+  await moveTo('Página 2 (cheia)')
   const full = page.getByRole('dialog', { name: 'A página 2 está cheia' })
   // The menu returns the focus when it unmounts, after its exit animation, so this waits for that
   await expect(page.locator('[data-slot="dropdown-menu-content"]')).toHaveCount(
@@ -305,12 +309,14 @@ test('moves products between the pages of the offer', async ({ page }) => {
   await full.getByRole('button', { name: new RegExp(pasta) }).click()
   await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
   await expect(
-    page.getByRole('button', { name: `Mover ${pasta} para outra página` })
+    page.getByRole('button', {
+      name: `Mover ou copiar ${pasta} para outra página`
+    })
   ).toBeFocused()
 
   // Then a new page, past the last one
   await openMoveMenu(pasta)
-  await page.getByRole('menuitem', { name: 'Página 2 (cheia)' }).click()
+  await moveTo('Página 2 (cheia)')
   await full.getByRole('button', { name: 'Criar página nova' }).click()
   await expect(page.getByRole('tab', { name: 'Página 3' })).toBeVisible()
   await expect(page.getByLabel('Produto 2', { exact: true })).toBeFocused()
@@ -364,6 +370,57 @@ test('keeps one price for a product placed on two pages', async ({ page }) => {
   await expect(
     page.getByText(`Produto repetido na página ${newPage}.`)
   ).toBeVisible()
+})
+
+test('copies a product to another page of the offer', async ({ page }) => {
+  test.slow()
+  const code = `E2E-COPY-${Date.now()}`
+  const name = `Óleo ${code}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+  const price = page.getByLabel(`Preço de ${name} (R$)`)
+  const menuButton = page.getByRole('button', {
+    name: `Mover ou copiar ${name} para outra página`
+  })
+
+  await page.goto('/produtos')
+  await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+  await productCode.fill(code)
+  await productCode.press('Enter')
+  await dialog.getByLabel('Descrição').fill(name)
+  await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(page.getByText(`${name} salvo`)).toBeVisible()
+
+  await openEmptyOffer(page)
+  const slot = page.getByLabel('Produto 1', { exact: true })
+  await slot.fill(code)
+  await slot.press('Enter')
+  await price.fill('8,99')
+  // Pages left by other tests stay, so the new page isn't always the second
+  const newPage =
+    (await page.getByRole('tab', { name: /^Página \d+$/ }).count()) + 1
+
+  // The product stays in its slot, and the editor stays on this page
+  await menuButton.click()
+  await page.getByRole('menuitem', { name: 'Copiar para Página nova' }).click()
+  await expect(
+    page.getByText(`${name} copiado para a nova página ${newPage}.`)
+  ).toBeVisible()
+  await expect(price).toHaveValue('8,99')
+  await expect(menuButton).toBeFocused()
+
+  // A page that has the product can't take another copy
+  await menuButton.click()
+  await expect(
+    page.getByRole('menuitem', {
+      name: `Copiar para Página ${newPage} (já tem este produto)`
+    })
+  ).toHaveAttribute('aria-disabled', 'true')
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('tab', { name: `Página ${newPage}` }).click()
+  await expect(price).toHaveValue('8,99')
+  await expect(page.getByText('Produto repetido na página 1.')).toBeVisible()
 })
 
 test('edits a product placed in an offer slot', async ({ page }) => {

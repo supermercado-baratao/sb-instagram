@@ -24,6 +24,8 @@ import {
   addPage,
   clearOfferPrices,
   clearOfferProducts,
+  copySlotToNewPage,
+  copySlotToPage,
   countProducts,
   findPageWithoutPrice,
   getPageConflict,
@@ -196,24 +198,51 @@ export const OfferEditor = ({
     show({ kind: 'info', message: `Página movida para a posição ${to + 1}.` })
   }
 
+  // A toast, since a slot can be too far down the page to see the header's status line
+  const notify = (message: string, warnedPage?: number) => {
+    toast.dismiss()
+    if (warnedPage === undefined) {
+      toast.info(message)
+      return
+    }
+    toast.warning(
+      `${message} A página ${warnedPage + 1} já tem outro produto com um código em comum.`,
+      { duration: 10_000 }
+    )
+  }
+
+  const copyProduct = (position: number, target: MoveTarget) => {
+    const from = { page: selectedIndex, position }
+    const copied = selectedPage.slots[position]
+    if (!copied) return
+    const { description } = copied.product
+
+    if (target.kind === 'new-page') {
+      update({
+        pages: copySlotToNewPage(content.pages, from, templates[0]?.id ?? '')
+      })
+      setPageKeys([...pageKeys, Math.max(...pageKeys) + 1])
+      notify(
+        `${description} copiado para a nova página ${content.pages.length + 1}.`
+      )
+      return
+    }
+
+    const { to } = target
+    update({ pages: copySlotToPage(content.pages, from, to) })
+    const warnsTarget =
+      getPageConflict(content.pages[to.page], copied.product) === 'shared-code'
+    notify(
+      `${description} copiado para a página ${to.page + 1}.`,
+      warnsTarget ? to.page : undefined
+    )
+  }
+
   const moveProduct = (position: number, target: MoveTarget) => {
     const from = { page: selectedIndex, position }
     const moved = selectedPage.slots[position]
     if (!moved) return
     const { description } = moved.product
-
-    // A toast, since a slot can be too far down the page to see the header's status line
-    const notify = (message: string, warnedPage?: number) => {
-      toast.dismiss()
-      if (warnedPage === undefined) {
-        toast.info(message)
-        return
-      }
-      toast.warning(
-        `${message} A página ${warnedPage + 1} já tem outro produto com um código em comum.`,
-        { duration: 10_000 }
-      )
-    }
 
     if (target.kind === 'new-page') {
       update({
@@ -590,6 +619,7 @@ export const OfferEditor = ({
                   onNotice={(message) => show({ kind: 'info', message })}
                   onMove={moveSelectedPage}
                   onMoveProduct={moveProduct}
+                  onCopyProduct={copyProduct}
                   onRemove={removeSelectedPage}
                 />
               </TabsContent>

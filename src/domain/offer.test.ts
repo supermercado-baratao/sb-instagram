@@ -6,6 +6,8 @@ import {
   clearOfferPrices,
   clearOfferProducts,
   clearPageProducts,
+  copySlotToNewPage,
+  copySlotToPage,
   countProducts,
   createOfferContent,
   createOfferPage,
@@ -279,6 +281,59 @@ describe('moving a product between pages', () => {
       expect(moved[2].layout).toBe(4)
       expect(moved[2].slots[0]).toEqual(lavender)
       expect(moved[2].slots.filter(Boolean)).toHaveLength(1)
+    })
+  })
+
+  describe('copySlotToPage', () => {
+    test('copies the product and its price, keeping it in its slot', () => {
+      const pages = [pageWith(lavender), pageWith(rose)]
+      const copied = copySlotToPage(
+        pages,
+        { page: 0, position: 0 },
+        { page: 1, position: 1 }
+      )
+      expect(copied[0]).toBe(pages[0])
+      expect(copied[1].slots[0]).toEqual(rose)
+      expect(copied[1].slots[1]).toEqual(lavender)
+    })
+
+    test('ignores an empty slot and a copy within the same page', () => {
+      const pages = [pageWith(lavender), pageWith(rose)]
+      expect(
+        copySlotToPage(
+          pages,
+          { page: 0, position: 1 },
+          { page: 1, position: 1 }
+        )
+      ).toBe(pages)
+      expect(
+        copySlotToPage(
+          pages,
+          { page: 0, position: 0 },
+          { page: 0, position: 1 }
+        )
+      ).toBe(pages)
+    })
+  })
+
+  describe('copySlotToNewPage', () => {
+    test('adds a page like the last one holding only the copy', () => {
+      const last = {
+        ...pageWith(rose),
+        templateId: 'festa',
+        layout: 4 as const
+      }
+      const copied = copySlotToNewPage(
+        [pageWith(lavender), last],
+        { page: 0, position: 0 },
+        'mercado'
+      )
+      expect(copied).toHaveLength(3)
+      expect(copied[0].slots[0]).toEqual(lavender)
+      expect(copied[2].templateId).toBe('festa')
+      expect(copied[2].layout).toBe(4)
+      expect(copied[2].slots[0]).toEqual(lavender)
+      expect(copied[2].slots.filter(Boolean)).toHaveLength(1)
     })
   })
 
