@@ -352,20 +352,20 @@ export const listProducts = async (
     query = '',
     page = 1,
     filter = 'all',
-    outsideCatalogIds = new Set()
+    catalogExportIds = new Set()
   }: {
     query?: string
     page?: number
     filter?: ProductListFilter
-    // Store products the catalog doesn't hold yet, see listCatalogStatuses
-    outsideCatalogIds?: ReadonlySet<string>
+    // Store products the store still has to send to the catalog, see listCatalogStatuses
+    catalogExportIds?: ReadonlySet<string>
   } = {},
   { catalog = eanDirectory }: ProductDirectories = {}
 ): Promise<ProductPage> => {
   const storeItems = filter === 'catalog' ? [] : listStoreItems(database, query)
   const items = [
     ...(filter === 'outside-catalog'
-      ? storeItems.filter(({ product }) => outsideCatalogIds.has(product.id))
+      ? storeItems.filter(({ product }) => catalogExportIds.has(product.id))
       : storeItems),
     ...(filter === 'all' || filter === 'catalog'
       ? await listCatalogItems(database, query, catalog)

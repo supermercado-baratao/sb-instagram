@@ -578,7 +578,7 @@ describe('listProducts with the catalog', () => {
     })
   })
 
-  test('lists only the store products outside the catalog', async () => {
+  test('lists only the store products the store still has to send to the catalog', async () => {
     const { database, catalog, addProduct } = await setup()
     const outside = addProduct(['2001'], 'Pão Francês')
     addProduct(['2002'], 'Picanha')
@@ -586,7 +586,7 @@ describe('listProducts with the catalog', () => {
     expect(
       await describeItems(database, catalog, {
         filter: 'outside-catalog',
-        outsideCatalogIds: new Set([outside.id])
+        catalogExportIds: new Set([outside.id])
       })
     ).toEqual(['store: Pão Francês'])
   })
