@@ -37,7 +37,7 @@ import {
   type BrandContent,
   type BrandContentError,
   getBrandContentError,
-  INITIAL_TEMPLATES,
+  INITIAL_TEMPLATE,
   normalizeInstagram
 } from '@/domain/brand'
 import { createOfferContent, createOfferPage } from '@/domain/offer'
@@ -155,7 +155,7 @@ export const BrandSettingsForm = ({
 
   const addTemplate = () => {
     const key = Math.max(-1, ...templateKeys) + 1
-    const base = INITIAL_TEMPLATES[0].colors
+    const base = INITIAL_TEMPLATE.colors
     update({
       templates: [
         ...content.templates,
@@ -371,8 +371,10 @@ export const BrandSettingsForm = ({
                   Modelos de arte
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Cada página de oferta usa um modelo. Páginas de um modelo
-                  removido passam a usar o primeiro da lista.
+                  Cada página de oferta usa um modelo. Use as cores da marca: a
+                  principal escura, no fundo do pôster, e a de destaque viva, no
+                  rodapé e no preço. Páginas de um modelo removido passam a usar
+                  o primeiro da lista.
                 </p>
               </div>
               <Button

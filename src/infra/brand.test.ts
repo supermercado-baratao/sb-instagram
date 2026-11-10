@@ -4,11 +4,24 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, test } from 'vitest'
 
-import { INITIAL_TEMPLATES } from '@/domain/brand'
+import type { PosterTemplate } from '@/domain/poster'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 
 import { findBrandSettings, listTemplates, saveBrandSettings } from './brand'
+
+const templates: PosterTemplate[] = [
+  {
+    id: 'mercado',
+    name: 'Mercado',
+    colors: { primary: '#1c398e', accent: '#e7000b' }
+  },
+  {
+    id: 'acougue',
+    name: 'Açougue',
+    colors: { primary: '#82181a', accent: '#e7000b' }
+  }
+]
 
 const storeBrand = {
   name: 'Supermercado Exemplo',
@@ -35,12 +48,12 @@ describe('saveBrandSettings', () => {
 
     saveBrandSettings(database, {
       brand: storeBrand,
-      templates: INITIAL_TEMPLATES
+      templates
     })
 
     expect(findBrandSettings(database)).toEqual({
       brand: { ...storeBrand, updatedAt: expect.any(Date) },
-      templates: INITIAL_TEMPLATES
+      templates
     })
   })
 
@@ -48,9 +61,9 @@ describe('saveBrandSettings', () => {
     const database = setup()
     saveBrandSettings(database, {
       brand: storeBrand,
-      templates: INITIAL_TEMPLATES
+      templates
     })
-    const [mercado, acougue] = INITIAL_TEMPLATES
+    const [mercado, acougue] = templates
 
     saveBrandSettings(database, {
       brand: { ...storeBrand, name: 'Mercado Novo', logo: 'logo.png' },
