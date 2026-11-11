@@ -1,77 +1,36 @@
 import { cn } from 'cn'
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
 
+import { BrandSettingsForm } from '@/app/components/blocks/brand/brand-settings-form'
 import { AppLayout } from '@/app/components/layouts/app'
-import { getLogoUrl, getPosterBrand } from '@/app/helpers/brand-poster'
-import { type HomeTabId, parseHomeTab } from '@/app/helpers/home-tabs'
-import type { BrandSettings } from '@/domain/brand'
+import { getPosterBrand } from '@/app/helpers/brand-poster'
+import { getLegacyTabPath } from '@/app/helpers/navigation'
 import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { findOffer, findOfferBackup, findOrCreateOffer } from '@/infra/offer'
+import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
 import { listNoEanImages } from '@/infra/photo'
-import { listPronunciations } from '@/infra/pronunciation'
-import { findRadioScriptTemplate } from '@/infra/radio-script'
 
-import { BackupPanel } from './_components/backup/backup-panel'
-import { BrandSettingsForm } from './_components/brand/brand-settings-form'
-import { HomeTabs } from './_components/home-tabs'
-import { OfferEditor } from './_components/offer/offer-editor'
-import { VoiceSettingsForm } from './_components/voice/voice-settings-form'
+import { OfferEditor } from './_components/offer-editor'
 
 const MAIN_CLASS_NAME = 'flex w-full flex-1 flex-col px-4 py-10 sm:px-6'
 
-export const generateMetadata = async ({
-  searchParams
-}: PageProps<'/'>): Promise<Metadata> => {
+export const generateMetadata = async (): Promise<Metadata> => {
   await connection()
-  if (!findBrandSettings(database)) return { title: 'Configure a sua marca' }
-  const { aba } = await searchParams
-  return { title: parseHomeTab(aba).label }
-}
-
-const renderTab = async (id: HomeTabId, settings: BrandSettings) => {
-  const { brand, templates } = settings
-  switch (id) {
-    case 'oferta': {
-      return (
-        <OfferEditor
-          offer={findOrCreateOffer(database, templates[0].id)}
-          backup={findOfferBackup(database)}
-          brand={getPosterBrand(brand)}
-          templates={templates}
-          noEanImages={await listNoEanImages()}
-        />
-      )
-    }
-    case 'marca': {
-      return (
-        <BrandSettingsForm
-          firstSetup={false}
-          initialContent={createBrandContent(settings)}
-          initialLogoUrl={getLogoUrl(brand)}
-        />
-      )
-    }
-    case 'comercial': {
-      return (
-        <VoiceSettingsForm
-          offer={findOffer(database)}
-          initialPronunciations={listPronunciations(database)}
-          initialRadioScript={findRadioScriptTemplate(database)}
-        />
-      )
-    }
-    case 'backup': {
-      return <BackupPanel />
-    }
+  return {
+    title: findBrandSettings(database) ? 'Oferta' : 'Configure a sua marca'
   }
 }
 
 const HomePage = async ({ searchParams }: PageProps<'/'>) => {
   // Renders per request, so `next build` never opens the database
   await connection()
+  const { aba } = await searchParams
+  const legacyPath = getLegacyTabPath(aba)
+  if (legacyPath) redirect(legacyPath)
+
   const settings = findBrandSettings(database)
 
   // The first setup has no brand to show yet and nowhere else to go until it is saved
@@ -87,13 +46,18 @@ const HomePage = async ({ searchParams }: PageProps<'/'>) => {
     )
   }
 
-  const { aba } = await searchParams
-  const { id } = parseHomeTab(aba)
+  const { brand, templates } = settings
 
   return (
-    <AppLayout brand={settings.brand} wide>
+    <AppLayout brand={brand}>
       <main className={MAIN_CLASS_NAME}>
-        <HomeTabs current={id}>{await renderTab(id, settings)}</HomeTabs>
+        <OfferEditor
+          offer={findOrCreateOffer(database, templates[0].id)}
+          backup={findOfferBackup(database)}
+          brand={getPosterBrand(brand)}
+          templates={templates}
+          noEanImages={await listNoEanImages()}
+        />
       </main>
     </AppLayout>
   )

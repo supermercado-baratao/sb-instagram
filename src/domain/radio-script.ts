@@ -140,7 +140,7 @@ export const getRadioScriptTemplateError = ({
       )
   if (index !== -1) {
     return {
-      message: `Informe de 1 a ${MAX_BLOCK_PAGE_COUNT} páginas.`,
+      message: `Informe de 1 a ${MAX_BLOCK_PAGE_COUNT} artes.`,
       index
     }
   }
@@ -586,23 +586,23 @@ export const getRadioScriptWarning = ({
   const problems = []
   if (unusedPages.length === 1) {
     problems.push(
-      `o roteiro e a lista de produtos ficaram sem a página ${unusedPages[0]}`
+      `o roteiro e a lista de produtos ficaram sem a arte ${unusedPages[0]}`
     )
   } else if (unusedPages.length > 1) {
     problems.push(
-      `o roteiro e a lista de produtos ficaram sem as páginas ${joinNumbers(unusedPages)}`
+      `o roteiro e a lista de produtos ficaram sem as artes ${joinNumbers(unusedPages)}`
     )
   }
   if (missingPageCount === 1) {
-    problems.push('faltou 1 página para os blocos de produtos do comercial')
+    problems.push('faltou 1 arte para os blocos de produtos do comercial')
   } else if (missingPageCount > 1) {
     problems.push(
-      `faltaram ${missingPageCount} páginas para os blocos de produtos do comercial`
+      `faltaram ${missingPageCount} artes para os blocos de produtos do comercial`
     )
   }
   if (problems.length === 0) return
   // A store read the old warning as if the page itself hadn't been generated (#94)
-  return `As imagens e o PDF estão completos, mas ${problems.join(' e ')}. Ajuste os blocos de produtos na aba Comercial e gere de novo.`
+  return `As artes e o PDF estão completos, mas ${problems.join(' e ')}. Ajuste os blocos de produtos em Comercial e gere de novo.`
 }
 
 // Plain text with no headings, so it is pasted as it is into the voice service or sent to whoever

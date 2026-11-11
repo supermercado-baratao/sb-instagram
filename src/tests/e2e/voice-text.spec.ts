@@ -6,7 +6,7 @@ test('saves the radio ad settings and suggests the voice text through the dictio
   page
 }) => {
   test.slow()
-  await page.goto('/?aba=comercial')
+  await page.goto('/comercial')
   // A reused e2e server keeps the dictionary and the blocks of a previous run
   const removeButtons = page.getByRole('button', { name: /^Remover / })
   while ((await removeButtons.count()) > 0) await removeButtons.first().click()
@@ -99,7 +99,7 @@ test('previews the pages of each block and the radio ad before saving', async ({
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Oferta salva.')).toBeVisible()
 
-  await page.goto('/?aba=comercial')
+  await page.goto('/comercial')
   // A reused e2e server keeps the dictionary and the blocks of a previous run
   const removeButtons = page.getByRole('button', { name: /^Remover / })
   while ((await removeButtons.count()) > 0) await removeButtons.first().click()
@@ -107,10 +107,10 @@ test('previews the pages of each block and the radio ad before saving', async ({
   await page.getByRole('button', { name: 'Adicionar produtos' }).click()
 
   const pageCount = page.getByRole('spinbutton', {
-    name: 'Bloco 1, produtos, página 1'
+    name: 'Bloco 1, produtos, arte 1'
   })
   await expect(pageCount).toHaveAccessibleDescription(
-    /Recebe a página 1: Arroz agulhinha\./
+    /Recebe a arte 1: Arroz agulhinha\./
   )
   const script = page.getByRole('tabpanel', { name: 'Roteiro' })
   await expect(script).toHaveText(
@@ -126,7 +126,7 @@ test('previews the pages of each block and the radio ad before saving', async ({
 
   await pageCount.fill('2')
   await expect(
-    page.getByText('Bloco 1: Falta 1 página com produtos na oferta salva.')
+    page.getByText('Bloco 1: Falta 1 arte com produtos na oferta salva.')
   ).toBeVisible()
 
   await page.getByRole('tab', { name: 'Lista de produtos' }).click()
@@ -205,20 +205,20 @@ test('speaks repeated products once, splits them evenly and moves one to another
   }
   await fill(1, 'Alho', '1,00')
   await fill(2, 'Batata', '2,00')
-  if ((await page.getByRole('tab', { name: 'Página 2' }).count()) === 0) {
-    await page.getByRole('button', { name: 'Adicionar página' }).click()
+  if ((await page.getByRole('tab', { name: 'Arte 2' }).count()) === 0) {
+    await page.getByRole('button', { name: 'Adicionar arte' }).click()
   }
-  await page.getByRole('tab', { name: 'Página 2' }).click()
+  await page.getByRole('tab', { name: 'Arte 2' }).click()
   await fill(1, 'Batata', '')
   await fill(2, 'Cebola', '3,00')
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Oferta salva.')).toBeVisible()
 
-  await page.goto('/?aba=comercial')
+  await page.goto('/comercial')
   const removeButtons = page.getByRole('button', { name: /^Remover / })
   while ((await removeButtons.count()) > 0) await removeButtons.first().click()
   await page.getByLabel('Antes de cada preço').fill('')
-  await page.getByRole('radio', { name: 'Por páginas' }).click()
+  await page.getByRole('radio', { name: 'Por artes' }).click()
   const repeated = page.getByRole('checkbox', {
     name: 'Falar uma vez só os produtos repetidos'
   })
@@ -227,12 +227,12 @@ test('speaks repeated products once, splits them evenly and moves one to another
   await page.getByRole('button', { name: 'Adicionar produtos' }).click()
 
   await expect(
-    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, página 2' })
-  ).toHaveAccessibleDescription(/Recebe a página 2: Cebola\./)
+    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, arte 2' })
+  ).toHaveAccessibleDescription(/Recebe a arte 2: Cebola\./)
   await repeated.click()
   await expect(
-    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, página 2' })
-  ).toHaveAccessibleDescription(/Recebe a página 2: Batata, Cebola\./)
+    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, arte 2' })
+  ).toHaveAccessibleDescription(/Recebe a arte 2: Batata, Cebola\./)
   await repeated.click()
 
   await page.getByRole('radio', { name: 'Por igual' }).click()
@@ -261,7 +261,7 @@ test('speaks repeated products once, splits them evenly and moves one to another
   )
 
   // The next tests expect the blocks to take pages again
-  await page.getByRole('radio', { name: 'Por páginas' }).click()
+  await page.getByRole('radio', { name: 'Por artes' }).click()
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Configurações salvas.')).toBeVisible()
 })

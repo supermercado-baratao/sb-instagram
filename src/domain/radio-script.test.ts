@@ -429,12 +429,12 @@ describe('getRadioScriptWarning', () => {
     expect(
       getRadioScriptWarning({ unusedPages: [2], missingPageCount: 0 })
     ).toBe(
-      'As imagens e o PDF estão completos, mas o roteiro e a lista de produtos ficaram sem a página 2. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+      'As artes e o PDF estão completos, mas o roteiro e a lista de produtos ficaram sem a arte 2. Ajuste os blocos de produtos em Comercial e gere de novo.'
     )
     expect(
       getRadioScriptWarning({ unusedPages: [4, 5, 6], missingPageCount: 0 })
     ).toBe(
-      'As imagens e o PDF estão completos, mas o roteiro e a lista de produtos ficaram sem as páginas 4, 5 e 6. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+      'As artes e o PDF estão completos, mas o roteiro e a lista de produtos ficaram sem as artes 4, 5 e 6. Ajuste os blocos de produtos em Comercial e gere de novo.'
     )
   })
 
@@ -442,12 +442,12 @@ describe('getRadioScriptWarning', () => {
     expect(
       getRadioScriptWarning({ unusedPages: [], missingPageCount: 1 })
     ).toBe(
-      'As imagens e o PDF estão completos, mas faltou 1 página para os blocos de produtos do comercial. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+      'As artes e o PDF estão completos, mas faltou 1 arte para os blocos de produtos do comercial. Ajuste os blocos de produtos em Comercial e gere de novo.'
     )
     expect(
       getRadioScriptWarning({ unusedPages: [], missingPageCount: 2 })
     ).toBe(
-      'As imagens e o PDF estão completos, mas faltaram 2 páginas para os blocos de produtos do comercial. Ajuste os blocos de produtos na aba Comercial e gere de novo.'
+      'As artes e o PDF estão completos, mas faltaram 2 artes para os blocos de produtos do comercial. Ajuste os blocos de produtos em Comercial e gere de novo.'
     )
   })
 })
@@ -458,7 +458,7 @@ describe('getRadioScriptTemplateError', () => {
     const fractionalPages = sequence(products(1.5))
 
     expect(getRadioScriptTemplateError(zeroPages)).toEqual({
-      message: 'Informe de 1 a 20 páginas.',
+      message: 'Informe de 1 a 20 artes.',
       index: 1
     })
     expect(getRadioScriptTemplateError(fractionalPages)?.index).toBe(0)

@@ -1,6 +1,6 @@
 # Backup e restauração
 
-Tudo o que o mercado cadastra no app fica no volume de dados do Docker: o banco (produtos, ofertas, marca, modelos de arte e o comercial), as fotos dos produtos, o logo e as ofertas geradas (imagens e PDFs). O backup é uma cópia de tudo isso num único arquivo.
+Tudo o que o mercado cadastra no app fica no volume de dados do Docker: o banco (produtos, ofertas, marca, modelos e o comercial), as fotos dos produtos, o logo e as ofertas geradas (imagens e PDFs). O backup é uma cópia de tudo isso num único arquivo.
 
 Faça um backup antes de cada [atualização](./atualizacao.md) e, de tempos em tempos, guarde uma cópia fora do computador do app (num pendrive, num HD externo ou na nuvem). Se esse computador quebrar, é essa cópia que salva os dados do mercado.
 
@@ -8,17 +8,17 @@ Faça um backup antes de cada [atualização](./atualizacao.md) e, de tempos em 
 
 ### Fazendo o backup
 
-1. Abra o app no navegador e clique na aba **Backup**.
+1. Abra o app no navegador, clique em **Configurações**, no canto direito do menu, e depois na aba **Backup**.
 2. Clique em **Baixar backup**. O navegador baixa o arquivo `sb-instagram-backup-<data>.zip`, por exemplo `sb-instagram-backup-2026-11-07.zip`.
 
-O app continua funcionando enquanto o backup é baixado. Com muitas gerações, o arquivo pode ficar grande e levar alguns minutos.
+O app continua funcionando enquanto o backup é baixado. Com um histórico grande, o arquivo pode ficar grande e levar alguns minutos.
 
 ### Restaurando
 
 A restauração **apaga todos os dados atuais do app** e coloca no lugar os do backup. Tudo o que foi salvo depois do backup se perde.
 
-1. Na aba **Backup**, em **Restaurar backup**, escolha o arquivo `.zip` do backup.
-2. Clique em **Restaurar backup**. O app lê o arquivo e mostra o que muda: a marca e quantos produtos, páginas da oferta, gerações e termos do dicionário existem agora e no backup.
+1. Em **Configurações** → **Backup**, em **Restaurar backup**, escolha o arquivo `.zip` do backup.
+2. Clique em **Restaurar backup**. O app lê o arquivo e mostra o que muda: a marca e quantos produtos, artes da oferta, ofertas no histórico e termos do dicionário existem agora e no backup.
 3. Confira e clique em **Restaurar backup** de novo para confirmar, ou em **Cancelar** para deixar tudo como está.
 
 Um backup feito numa versão mais antiga do app é atualizado na restauração. Um backup feito numa versão mais nova é recusado: [atualize o app](./atualizacao.md) antes de restaurá-lo.
@@ -28,18 +28,18 @@ Um backup feito numa versão mais antiga do app é atualizado na restauração. 
 Para levar o app para outro computador, ou reinstalá-lo depois de uma pane:
 
 1. Siga a [instalação](./instalacao.md) até abrir o app no navegador.
-2. Configure qualquer marca no primeiro acesso, só para liberar as abas. Ela é substituída pela do backup.
-3. Restaure o backup pela aba **Backup**, como explicado acima.
+2. Configure qualquer marca no primeiro acesso, só para liberar o app. Ela é substituída pela do backup.
+3. Restaure o backup em **Configurações** → **Backup**, como explicado acima.
 
-### Levando só uma geração
+### Levando só uma oferta do histórico
 
-Para levar uma única oferta gerada para outra instalação, sem substituir os dados dela, use a página **Gerações**:
+Para levar uma única oferta gerada para outra instalação, sem substituir os dados dela, use a página **Histórico**:
 
-1. Na geração, clique em **Baixar geração completa**. O navegador baixa o arquivo `geracao-<número>-completa.zip`, com as imagens, o PDF, o JSON dos produtos, o roteiro e a lista de produtos.
-2. Na outra instalação, abra **Gerações** e clique em **Importar geração**. Escolha o arquivo `.zip`.
-3. O app mostra o número da geração no arquivo, quando ela foi gerada, quantas páginas tem, a validade e o número que ela vai receber. Clique em **Importar geração** para confirmar.
+1. Na oferta, clique em **Baixar tudo (ZIP)**. O navegador baixa o arquivo `oferta-<número>-completa.zip`, com as artes, o PDF, o JSON dos dados, o roteiro e a lista de produtos.
+2. Na outra instalação, abra **Histórico** e clique em **Importar para o histórico**. Escolha o arquivo `.zip`.
+3. O app mostra o número da oferta no arquivo, quando ela foi gerada, quantas artes tem, a validade e o número que ela vai receber. Clique em **Importar oferta** para confirmar.
 
-A geração importada sempre entra como uma nova, com o próximo número da instalação e a data em que foi gerada. As outras gerações, a oferta e os produtos não mudam. Importar o mesmo arquivo duas vezes cria duas gerações.
+A oferta importada sempre entra como uma nova, com o próximo número da instalação e a data em que foi gerada. O resto do histórico, a oferta atual e os produtos não mudam. Importar o mesmo arquivo duas vezes cria duas ofertas no histórico.
 
 ## Pelo terminal
 

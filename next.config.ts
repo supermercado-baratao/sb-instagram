@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '11mb'
     }
   },
+  // The history was `/geracoes` before #113, and saved links and bookmarks may still point there
+  redirects: () => [
+    {
+      source: '/geracoes/:path*',
+      destination: '/historico/:path*',
+      permanent: false
+    }
+  ],
   outputFileTracingIncludes: {
     // playwright-core reads the browser revision from this file at runtime, so tracing misses it
     '/*': ['./node_modules/playwright-core/browsers.json']

@@ -47,11 +47,11 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await expect(price).toHaveValue('7,89')
   await expect(page.getByLabel('Válida até')).toHaveValue('2026-11-12')
 
-  await page.getByRole('button', { name: 'Gerar' }).click()
-  await expect(page.getByText(/Geração \d+ pronta\./)).toBeVisible()
+  await page.getByRole('button', { name: 'Gerar oferta' }).click()
+  await expect(page.getByText(/Oferta \d+ gerada\./)).toBeVisible()
   // Edits made after generating must still ask before the toast's link leaves the page
   await page.getByLabel('Título do destaque').fill('Editado depois de gerar')
-  const viewGenerations = page.getByRole('link', { name: 'Ver gerações' })
+  const viewGenerations = page.getByRole('link', { name: 'Ver no histórico' })
   const leaveDialog = page.getByRole('alertdialog', {
     name: 'Sair sem salvar?'
   })
@@ -67,14 +67,14 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await expect(page.getByLabel('Título do destaque')).toBeFocused()
   await viewGenerations.click()
   await leaveDialog.getByRole('button', { name: 'Sair sem salvar' }).click()
-  await expect(page).toHaveURL('/geracoes')
+  await expect(page).toHaveURL('/historico')
   await expect(viewGenerations).toBeHidden()
   // A reused e2e server keeps the generations of a previous run, so the newest one is picked
   const generation = page
     .getByRole('listitem')
     .filter({
       has: page.getByRole('heading', {
-        name: /Geração \d+ · válida até 12\/11\/2026/
+        name: /Oferta \d+ · válida até 12\/11\/2026/
       })
     })
     .first()
@@ -82,7 +82,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   const number = /\d+/.exec(heading ?? '')?.[0]
   await expect(
     generation.getByRole('img', {
-      name: new RegExp(`Página 1 da geração ${number}`)
+      name: new RegExp(`Arte 1 da oferta ${number}`)
     })
   ).toBeVisible()
 
@@ -94,9 +94,9 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await editDialog.getByRole('button', { name: 'Salvar produto' }).click()
   await expect(page.getByText('Feijão preto atualizado.')).toBeVisible()
 
-  await page.goto('/geracoes')
+  await page.goto('/historico')
   const downloadEvent = page.waitForEvent('download')
-  await generation.getByRole('link', { name: 'Baixar páginas (PNG)' }).click()
+  await generation.getByRole('link', { name: 'Baixar artes' }).click()
   const download = await downloadEvent
   const zip = unzipSync(await readFile(await download.path()))
 
@@ -113,7 +113,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
     .waitForEvent('request', (request) =>
       request.url().endsWith('/paginas.pdf')
     )
-  await generation.getByRole('link', { name: /Imprimir páginas/ }).click()
+  await generation.getByRole('link', { name: /Imprimir artes/ }).click()
   const pdfRequest = await pdfEvent
   // A downloaded response has no body to read, so the PDF is fetched again
   const response = await page.request.get(pdfRequest.url())
@@ -127,9 +127,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   const jsonEvent = page.waitForEvent('download', (download) =>
     download.suggestedFilename().endsWith('.json')
   )
-  await generation
-    .getByRole('link', { name: 'Exportar produtos (JSON)' })
-    .click()
+  await generation.getByRole('link', { name: 'Baixar dados (JSON)' }).click()
   const jsonDownload = await jsonEvent
   const json = JSON.parse(await readFile(await jsonDownload.path(), 'utf8'))
   expect(json.pages).toEqual([
@@ -147,10 +145,10 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   ])
 
   await generation
-    .getByRole('button', { name: `Roteiro do comercial da geração ${number}` })
+    .getByRole('button', { name: `Roteiro do comercial da oferta ${number}` })
     .click()
   const scriptDialog = page.getByRole('dialog', {
-    name: `Roteiro do comercial da geração ${number}`
+    name: `Roteiro do comercial da oferta ${number}`
   })
   // A reused e2e server keeps the blocks of a previous run, so only the product line is fixed
   await expect(
@@ -159,15 +157,17 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   await scriptDialog.press('Escape')
 
   await generation
-    .getByRole('button', { name: `Excluir a geração ${number}` })
+    .getByRole('button', { name: `Excluir a oferta ${number}` })
     .click()
   await page
-    .getByRole('alertdialog', { name: `Excluir a geração ${number}?` })
+    .getByRole('alertdialog', { name: `Excluir a oferta ${number}?` })
     .getByRole('button', { name: 'Excluir' })
     .click()
-  await expect(page.getByText(`Geração ${number} excluída.`)).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Gerações', level: 1 })
+    page.getByText(`Oferta ${number} excluída do histórico.`)
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Histórico', level: 1 })
   ).toBeFocused()
 })
 
@@ -224,7 +224,7 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   await expect(page.getByLabel(`Preço de ${name} (R$)`)).toBeFocused()
 
   // With suggestions open but none highlighted, Enter still looks up the exact code, like a scan
-  await page.getByRole('button', { name: `Tirar ${name} da página` }).click()
+  await page.getByRole('button', { name: `Tirar ${name} da arte` }).click()
   await slotCode.fill(code)
   await expect(
     page.getByRole('option', { name: new RegExp(name) })
@@ -236,7 +236,7 @@ test('places a product searched by name in an offer slot', async ({ page }) => {
   const secondSlot = page.getByLabel('Produto 2', { exact: true })
   await secondSlot.fill(code)
   await secondSlot.press('Enter')
-  await expect(page.getByText(`${name} já está nesta página.`)).toBeVisible()
+  await expect(page.getByText(`${name} já está nesta arte.`)).toBeVisible()
   await expect(page.getByLabel(`Preço de ${name} (R$)`)).toHaveCount(1)
 })
 
@@ -269,7 +269,7 @@ test('moves products between the pages of the offer', async ({ page }) => {
   const openMoveMenu = (name: string) =>
     page
       .getByRole('button', {
-        name: `Mover ou copiar ${name} para outra página`
+        name: `Mover ou copiar ${name} para outra arte`
       })
       .click()
   const moveTo = (name: string) =>
@@ -279,28 +279,28 @@ test('moves products between the pages of the offer', async ({ page }) => {
   await place(1, 0, '10,00')
   await place(2, 1, '20,00')
 
-  await page.getByRole('button', { name: 'Adicionar página' }).click()
-  const layout = page.getByRole('group', { name: 'Produtos na página' })
+  await page.getByRole('button', { name: 'Adicionar arte' }).click()
+  const layout = page.getByRole('group', { name: 'Produtos na arte' })
   await layout.getByRole('button', { name: '3' }).click()
   await place(1, 2, '30,00')
   await place(2, 3, '40,00')
 
-  await page.getByRole('tab', { name: 'Página 1' }).click()
+  await page.getByRole('tab', { name: 'Arte 1' }).click()
 
   // Goes with its price to the first empty slot of the page, and the editor stays on this page
   await openMoveMenu(rice)
-  await moveTo('Página 2')
-  await expect(page.getByRole('tab', { name: 'Página 1' })).toHaveAttribute(
+  await moveTo('Arte 2')
+  await expect(page.getByRole('tab', { name: 'Arte 1' })).toHaveAttribute(
     'aria-selected',
     'true'
   )
-  await expect(page.getByText(`${rice} movido para a página 2.`)).toBeVisible()
+  await expect(page.getByText(`${rice} movido para a arte 2.`)).toBeVisible()
   await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
 
   // The full page asks: first a trade, which keeps both prices
   await openMoveMenu(beans)
-  await moveTo('Página 2 (cheia)')
-  const full = page.getByRole('dialog', { name: 'A página 2 está cheia' })
+  await moveTo('Arte 2 (cheia)')
+  const full = page.getByRole('dialog', { name: 'A arte 2 está cheia' })
   // The menu returns the focus when it unmounts, after its exit animation, so this waits for that
   await expect(page.locator('[data-slot="dropdown-menu-content"]')).toHaveCount(
     0
@@ -310,25 +310,25 @@ test('moves products between the pages of the offer', async ({ page }) => {
   await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
   await expect(
     page.getByRole('button', {
-      name: `Mover ou copiar ${pasta} para outra página`
+      name: `Mover ou copiar ${pasta} para outra arte`
     })
   ).toBeFocused()
 
   // Then a new page, past the last one
   await openMoveMenu(pasta)
-  await moveTo('Página 2 (cheia)')
-  await full.getByRole('button', { name: 'Criar página nova' }).click()
-  await expect(page.getByRole('tab', { name: 'Página 3' })).toBeVisible()
+  await moveTo('Arte 2 (cheia)')
+  await full.getByRole('button', { name: 'Criar arte nova' }).click()
+  await expect(page.getByRole('tab', { name: 'Arte 3' })).toBeVisible()
   await expect(page.getByLabel('Produto 2', { exact: true })).toBeFocused()
 
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Oferta salva.')).toBeVisible()
 
   await page.reload()
-  await page.getByRole('tab', { name: 'Página 2' }).click()
+  await page.getByRole('tab', { name: 'Arte 2' }).click()
   await expect(page.getByLabel(`Preço de ${rice} (R$)`)).toHaveValue('10,00')
   await expect(page.getByLabel(`Preço de ${beans} (R$)`)).toHaveValue('20,00')
-  await page.getByRole('tab', { name: 'Página 3' }).click()
+  await page.getByRole('tab', { name: 'Arte 3' }).click()
   await expect(page.getByLabel(`Preço de ${pasta} (R$)`)).toHaveValue('30,00')
 })
 
@@ -355,20 +355,20 @@ test('keeps one price for a product placed on two pages', async ({ page }) => {
   await price.fill('15,90')
 
   // The scan brings the price, selected, so typing replaces it on both pages
-  await page.getByRole('button', { name: 'Adicionar página' }).click()
+  await page.getByRole('button', { name: 'Adicionar arte' }).click()
   await slot.fill(code)
   await slot.press('Enter')
   await expect(price).toHaveValue('15,90')
   await expect(price).toBeFocused()
-  await expect(page.getByText('Produto repetido na página 1.')).toBeVisible()
+  await expect(page.getByText('Produto repetido na arte 1.')).toBeVisible()
   // Pages left by other tests stay, so the new page isn't always the second
-  const newPage = await page.getByRole('tab', { name: /^Página \d+$/ }).count()
+  const newPage = await page.getByRole('tab', { name: /^Arte \d+$/ }).count()
   await page.keyboard.type('13,50')
 
-  await page.getByRole('tab', { name: 'Página 1' }).click()
+  await page.getByRole('tab', { name: 'Arte 1' }).click()
   await expect(price).toHaveValue('13,50')
   await expect(
-    page.getByText(`Produto repetido na página ${newPage}.`)
+    page.getByText(`Produto repetido na arte ${newPage}.`)
   ).toBeVisible()
 })
 
@@ -380,7 +380,7 @@ test('copies a product to another page of the offer', async ({ page }) => {
   const productCode = dialog.getByLabel('Código de barras ou código interno')
   const price = page.getByLabel(`Preço de ${name} (R$)`)
   const menuButton = page.getByRole('button', {
-    name: `Mover ou copiar ${name} para outra página`
+    name: `Mover ou copiar ${name} para outra arte`
   })
 
   await page.goto('/produtos')
@@ -398,13 +398,13 @@ test('copies a product to another page of the offer', async ({ page }) => {
   await price.fill('8,99')
   // Pages left by other tests stay, so the new page isn't always the second
   const newPage =
-    (await page.getByRole('tab', { name: /^Página \d+$/ }).count()) + 1
+    (await page.getByRole('tab', { name: /^Arte \d+$/ }).count()) + 1
 
   // The product stays in its slot, and the editor stays on this page
   await menuButton.click()
-  await page.getByRole('menuitem', { name: 'Copiar para Página nova' }).click()
+  await page.getByRole('menuitem', { name: 'Copiar para Arte nova' }).click()
   await expect(
-    page.getByText(`${name} copiado para a nova página ${newPage}.`)
+    page.getByText(`${name} copiado para a nova arte ${newPage}.`)
   ).toBeVisible()
   await expect(price).toHaveValue('8,99')
   await expect(menuButton).toBeFocused()
@@ -413,14 +413,14 @@ test('copies a product to another page of the offer', async ({ page }) => {
   await menuButton.click()
   await expect(
     page.getByRole('menuitem', {
-      name: `Copiar para Página ${newPage} (já tem este produto)`
+      name: `Copiar para Arte ${newPage} (já tem este produto)`
     })
   ).toHaveAttribute('aria-disabled', 'true')
   await page.keyboard.press('Escape')
 
-  await page.getByRole('tab', { name: `Página ${newPage}` }).click()
+  await page.getByRole('tab', { name: `Arte ${newPage}` }).click()
   await expect(price).toHaveValue('8,99')
-  await expect(page.getByText('Produto repetido na página 1.')).toBeVisible()
+  await expect(page.getByText('Produto repetido na arte 1.')).toBeVisible()
 })
 
 test('edits a product placed in an offer slot', async ({ page }) => {
@@ -489,28 +489,28 @@ test('clears the prices or the products of the offer or of one page', async ({
   await page.getByLabel('Válida até').fill('2026-11-12')
 
   await page
-    .getByRole('button', { name: 'Limpar preços de todas as páginas' })
+    .getByRole('button', { name: 'Limpar preços de todas as artes' })
     .click()
   const pricesDialog = page.getByRole('alertdialog', {
-    name: 'Limpar os preços de todas as páginas?'
+    name: 'Limpar os preços de todas as artes?'
   })
-  await expect(pricesDialog).toContainText('O produto continua na página')
+  await expect(pricesDialog).toContainText('O produto continua na arte')
   await pricesDialog
-    .getByRole('button', { name: 'Limpar preços de todas as páginas' })
+    .getByRole('button', { name: 'Limpar preços de todas as artes' })
     .click()
   await expect(price).toHaveValue('')
   await expect(price).toBeFocused()
   await expect(page.getByLabel('Válida até')).toHaveValue('')
 
   await page
-    .getByRole('button', { name: 'Limpar produtos de todas as páginas' })
+    .getByRole('button', { name: 'Limpar produtos de todas as artes' })
     .click()
   const productsDialog = page.getByRole('alertdialog', {
-    name: 'Limpar os produtos de todas as páginas?'
+    name: 'Limpar os produtos de todas as artes?'
   })
-  await expect(productsDialog).toContainText('O produto sai da página')
+  await expect(productsDialog).toContainText('O produto sai da arte')
   await productsDialog
-    .getByRole('button', { name: 'Limpar produtos de todas as páginas' })
+    .getByRole('button', { name: 'Limpar produtos de todas as artes' })
     .click()
   await expect(price).toBeHidden()
   await expect(page.getByLabel('Produto 1', { exact: true })).toHaveValue('')
@@ -519,13 +519,13 @@ test('clears the prices or the products of the offer or of one page', async ({
   await page.getByLabel('Produto 1', { exact: true }).fill(code)
   await page.getByLabel('Produto 1', { exact: true }).press('Enter')
   await page.getByLabel('Válida até').fill('2026-11-12')
-  await page.getByRole('button', { name: 'Limpar produtos da página' }).click()
+  await page.getByRole('button', { name: 'Limpar produtos da arte' }).click()
   const pageDialog = page.getByRole('alertdialog', {
-    name: 'Limpar os produtos da página 1?'
+    name: 'Limpar os produtos da arte 1?'
   })
-  await expect(pageDialog).toContainText('O produto desta página sai')
+  await expect(pageDialog).toContainText('O produto desta arte sai')
   await pageDialog
-    .getByRole('button', { name: 'Limpar produtos da página' })
+    .getByRole('button', { name: 'Limpar produtos da arte' })
     .click()
   await expect(price).toBeHidden()
   await expect(page.getByLabel('Produto 1', { exact: true })).toBeFocused()
@@ -560,17 +560,17 @@ test('restores the offer saved before a mistaken save, and restoring again undoe
   await expect(price).toBeHidden()
 
   const restore = page.getByRole('button', {
-    name: 'Restaurar oferta anterior'
+    name: 'Voltar à versão anterior'
   })
   await restore.click()
   const restoreDialog = page.getByRole('alertdialog', {
-    name: 'Restaurar a oferta anterior?'
+    name: 'Voltar à versão anterior?'
   })
   await expect(restoreDialog).toContainText(' e 1 produto, com os preços')
   await restoreDialog
-    .getByRole('button', { name: 'Restaurar oferta anterior' })
+    .getByRole('button', { name: 'Voltar à versão anterior' })
     .click()
-  await expect(page.getByText('Oferta anterior restaurada.')).toBeVisible()
+  await expect(page.getByText('Versão anterior restaurada.')).toBeVisible()
   await expect(price).toHaveValue('5,99')
   await expect(page.getByText('Tudo salvo')).toBeVisible()
 
@@ -580,7 +580,7 @@ test('restores the offer saved before a mistaken save, and restoring again undoe
   await restore.click()
   await expect(restoreDialog).toContainText(' e 0 produtos, com os preços')
   await restoreDialog
-    .getByRole('button', { name: 'Restaurar oferta anterior' })
+    .getByRole('button', { name: 'Voltar à versão anterior' })
     .click()
   await expect(price).toBeHidden()
   await expect(page.getByLabel('Produto 1', { exact: true })).toHaveValue('')
