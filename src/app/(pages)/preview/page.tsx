@@ -42,10 +42,7 @@ const Preview = async ({ searchParams }: PageProps<'/preview'>) => {
           </Link>
         ))}
       </nav>
-      <nav
-        aria-label="Modelo de arte"
-        className="flex flex-wrap justify-center gap-2"
-      >
+      <nav aria-label="Modelo" className="flex flex-wrap justify-center gap-2">
         {templates.map(({ id, name }) => (
           <Link
             key={id}

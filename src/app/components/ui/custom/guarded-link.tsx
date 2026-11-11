@@ -24,7 +24,8 @@ export const GuardedLink = ({ href, onLeave, ...props }: GuardedLinkProps) => {
     <Link
       href={href}
       onNavigate={(event) => {
-        // The tabs at `/` differ only by query, so the path alone can't tell the current page
+        // Links such as the product list's pages differ only by query, so the path alone can't
+        // tell the current page
         const { pathname, search } = new URL(href, location.href)
         const isCurrentPage =
           pathname + search === location.pathname + location.search

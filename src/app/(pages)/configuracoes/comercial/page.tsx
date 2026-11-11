@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 
-import { getHomeTabHref } from '@/app/helpers/home-tabs'
+import { RADIO_AD_PATH } from '@/app/helpers/navigation'
 
-const OldVoiceSettingsPage = () => redirect(getHomeTabHref('comercial'))
+const OldRadioAdPage = () => redirect(RADIO_AD_PATH)
 
-export default OldVoiceSettingsPage
+export default OldRadioAdPage

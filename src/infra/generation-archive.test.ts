@@ -258,42 +258,42 @@ describe('prepareGenerationImport refuses', () => {
     [
       'a missing page',
       (files) => delete files['pagina-2.png'],
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'an extra page',
       (files) => (files['pagina-3.png'] = files['pagina-1.png']),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'a page that is not a PNG',
       (files) => (files['pagina-1.png'] = strToU8('not png')),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'a PDF that is not a PDF',
       (files) => (files['paginas.pdf'] = strToU8('nope')),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'a missing manifest',
       (files) => delete files['geracao.json'],
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'a broken offer export',
       (files) => (files['ofertas.json'] = strToU8('{')),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'an unknown entry',
       (files) => (files['notas.txt'] = strToU8('oi')),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'an entry outside the folder',
       (files) => (files['../pagina-1.png'] = files['pagina-1.png']),
-      /não é uma geração/
+      /não é uma oferta do histórico/
     ],
     [
       'a newer version',
@@ -320,7 +320,7 @@ describe('prepareGenerationImport refuses', () => {
       prepareGenerationImport(target.database, archive, {
         directory: target.directory
       })
-    ).rejects.toThrow(/não é uma geração/)
+    ).rejects.toThrow(/não é uma oferta do histórico/)
     expect(await readdir(target.directory)).toEqual([])
   })
 })

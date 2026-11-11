@@ -1,10 +1,16 @@
-import { cn } from 'cn'
+import { Settings } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
+import {
+  BRAND_SETTINGS_PATH,
+  OFFER_PATH,
+  PRODUCTS_PATH,
+  RADIO_AD_PATH
+} from '@/app/helpers/navigation'
 import type { StoreBrand } from '@/domain/brand'
 
 import { NavLink } from './_components/nav-link'
@@ -13,12 +19,10 @@ const CONTENT_ID = 'conteudo'
 
 type AppLayoutProps = {
   brand: StoreBrand
-  // Drops the max width, for a page that needs the whole screen
-  wide?: boolean
   children: ReactNode
 }
 
-export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
+export const AppLayout = ({ brand, children }: AppLayoutProps) => {
   const logoUrl = getLogoUrl(brand)
 
   return (
@@ -33,14 +37,10 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
         Pular para o conteúdo
       </a>
       <header className="border-b border-border">
-        <div
-          className={cn(
-            'mx-auto flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6',
-            !wide && 'max-w-7xl'
-          )}
-        >
+        {/* Always the whole width, so the links never move under the pointer between pages */}
+        <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <GuardedLink
-            href="/"
+            href={OFFER_PATH}
             className="flex h-10 min-w-0 items-center rounded-lg font-semibold outline-none focus-visible:ring-3 focus-visible:ring-muted-foreground"
           >
             {logoUrl ? (
@@ -54,16 +54,26 @@ export const AppLayout = ({ brand, wide, children }: AppLayoutProps) => {
               <span className="truncate">{brand.name}</span>
             )}
           </GuardedLink>
-          <nav aria-label="Principal">
-            <ul className="flex flex-wrap gap-1">
+          <nav aria-label="Principal" className="flex min-w-0 flex-1">
+            {/* Ordered as the week's work goes; settings sit apart, since they are rarely used (#113) */}
+            <ul className="flex flex-1 flex-wrap gap-1">
               <li>
-                <NavLink href="/">Ofertas</NavLink>
+                <NavLink href={OFFER_PATH}>Oferta</NavLink>
               </li>
               <li>
-                <NavLink href="/produtos">Produtos</NavLink>
+                <NavLink href={RADIO_AD_PATH}>Comercial</NavLink>
               </li>
               <li>
-                <NavLink href={GENERATIONS_PATH}>Gerações</NavLink>
+                <NavLink href={PRODUCTS_PATH}>Produtos</NavLink>
+              </li>
+              <li>
+                <NavLink href={GENERATIONS_PATH}>Histórico</NavLink>
+              </li>
+              <li className="ml-auto">
+                <NavLink href={BRAND_SETTINGS_PATH}>
+                  <Settings data-icon="inline-start" aria-hidden />
+                  Configurações
+                </NavLink>
               </li>
             </ul>
           </nav>

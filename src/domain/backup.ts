@@ -100,9 +100,9 @@ export const getBackupChanges = (
     ...(
       [
         ['Produtos', 'productCount'],
-        ['Páginas da oferta', 'offerPageCount'],
+        ['Artes da oferta', 'offerPageCount'],
         ['Produtos na oferta', 'offerProductCount'],
-        ['Gerações', 'generationCount'],
+        ['Ofertas no histórico', 'generationCount'],
         ['Termos do dicionário', 'pronunciationCount']
       ] as const
     ).map(([label, key]): [string, string, string] => [

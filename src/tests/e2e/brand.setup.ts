@@ -3,7 +3,7 @@ import sharp from 'sharp'
 
 setup('configures the brand and shows it on the poster', async ({ page }) => {
   // A reused e2e server keeps the brand from a previous run, so it skips the first-setup redirect
-  await page.goto('/?aba=marca')
+  await page.goto('/configuracoes')
   const heading = await page.getByRole('heading', { level: 1 }).textContent()
   const firstSetup = heading?.startsWith('Boas-vindas') ?? false
 
@@ -44,7 +44,7 @@ setup('configures the brand and shows it on the poster', async ({ page }) => {
   if (firstSetup) await expect(page.getByLabel('Válida até')).toBeVisible()
   else await expect(page.getByText('Configurações salvas.')).toBeVisible()
 
-  await page.goto('/?aba=marca')
+  await page.goto('/configuracoes')
   await expect(
     page.getByRole('textbox', { name: 'Nome do mercado' })
   ).toHaveValue(name)

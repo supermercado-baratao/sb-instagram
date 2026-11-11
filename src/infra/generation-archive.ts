@@ -44,13 +44,13 @@ type GenerationArchiveOptions = { directory?: string }
 export class GenerationArchiveError extends Error {}
 
 const INVALID_ARCHIVE_MESSAGE =
-  'O arquivo não é uma geração do app. Escolha o arquivo .zip baixado em "Baixar geração completa".'
+  'O arquivo não é uma oferta do histórico do app. Escolha o arquivo .zip baixado em "Baixar tudo (ZIP)".'
 
 const NEWER_VERSION_MESSAGE =
-  'Esta geração foi baixada numa versão mais nova do app. Atualize o app antes de importá-la.'
+  'Esta oferta foi baixada numa versão mais nova do app. Atualize o app antes de importá-la.'
 
 const MISSING_IMPORT_MESSAGE =
-  'Arquivo da geração não encontrado. Envie o arquivo de novo.'
+  'Arquivo da oferta não encontrado. Envie o arquivo de novo.'
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
 

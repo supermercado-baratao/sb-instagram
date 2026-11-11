@@ -1,6 +1,6 @@
 import type { Generation } from '@/domain/generation'
 
-export const GENERATIONS_PATH = '/geracoes'
+export const GENERATIONS_PATH = '/historico'
 
 export const GENERATIONS_HEADING_ID = 'generations-heading'
 

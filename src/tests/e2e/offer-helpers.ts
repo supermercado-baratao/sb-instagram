@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test'
 export const openEmptyOffer = async (page: Page) => {
   await page.goto('/')
   const clear = page.getByRole('button', {
-    name: 'Limpar produtos de todas as páginas'
+    name: 'Limpar produtos de todas as artes'
   })
   await expect(page.getByLabel('Válida até')).toBeVisible()
   if (await clear.isDisabled()) return
@@ -12,9 +12,9 @@ export const openEmptyOffer = async (page: Page) => {
   await clear.click()
   await page
     .getByRole('alertdialog', {
-      name: 'Limpar os produtos de todas as páginas?'
+      name: 'Limpar os produtos de todas as artes?'
     })
-    .getByRole('button', { name: 'Limpar produtos de todas as páginas' })
+    .getByRole('button', { name: 'Limpar produtos de todas as artes' })
     .click()
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Oferta salva.')).toBeVisible()

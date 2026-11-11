@@ -106,6 +106,6 @@ export const hasEveryPage = (pageNumbers: Set<number>, pageCount: number) =>
   pageNumbers.size === pageCount &&
   [...pageNumbers].every((pageNumber) => pageNumber <= pageCount)
 
-// paginas.zip already downloads as geracao-<n>.zip
+// paginas.zip already downloads as oferta-<n>-artes.zip
 export const getGenerationArchiveName = (number: number) =>
-  `geracao-${number}-completa.zip`
+  `oferta-${number}-completa.zip`

@@ -1,7 +1,34 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import { connection } from 'next/server'
 
-import { getHomeTabHref } from '@/app/helpers/home-tabs'
+import { BrandSettingsForm } from '@/app/components/blocks/brand/brand-settings-form'
+import { AppLayout } from '@/app/components/layouts/app'
+import { getLogoUrl } from '@/app/helpers/brand-poster'
+import { requireBrandSettings } from '@/app/helpers/brand-settings'
+import { BRAND_SETTINGS_PATH } from '@/app/helpers/navigation'
+import { createBrandContent } from '@/domain/brand'
 
-const OldBrandSettingsPage = () => redirect(getHomeTabHref('marca'))
+import { SettingsTabs } from './_components/settings-tabs'
 
-export default OldBrandSettingsPage
+export const metadata: Metadata = { title: 'Marca' }
+
+const BrandSettingsPage = async () => {
+  await connection()
+  const settings = requireBrandSettings()
+
+  return (
+    <AppLayout brand={settings.brand}>
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-10 sm:px-6">
+        <SettingsTabs current={BRAND_SETTINGS_PATH}>
+          <BrandSettingsForm
+            firstSetup={false}
+            initialContent={createBrandContent(settings)}
+            initialLogoUrl={getLogoUrl(settings.brand)}
+          />
+        </SettingsTabs>
+      </main>
+    </AppLayout>
+  )
+}
+
+export default BrandSettingsPage
