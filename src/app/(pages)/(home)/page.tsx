@@ -9,7 +9,7 @@ import type { BrandSettings } from '@/domain/brand'
 import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
+import { findOffer, findOfferBackup, findOrCreateOffer } from '@/infra/offer'
 import { listNoEanImages } from '@/infra/photo'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
@@ -57,6 +57,7 @@ const renderTab = async (id: HomeTabId, settings: BrandSettings) => {
     case 'comercial': {
       return (
         <VoiceSettingsForm
+          offer={findOffer(database)}
           initialPronunciations={listPronunciations(database)}
           initialRadioScript={findRadioScriptTemplate(database)}
         />

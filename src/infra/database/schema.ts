@@ -196,7 +196,27 @@ export const radioScriptTemplate = sqliteTable(
   {
     id: integer().primaryKey(),
     blocks: text({ mode: 'json' }).$type<RadioScriptBlock[]>().notNull(),
-    priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull()
+    priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull(),
+    speakRepeatedOnce: integer({ mode: 'boolean' }).notNull().default(true),
+    splitEvenly: integer({ mode: 'boolean' }).notNull().default(false)
   },
   (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]
+)
+
+// The products block a product was moved to, kept across offers (#111). `blockId` is the id of a
+// products block inside `radio_script_template.blocks` (JSON), so it has no foreign key; a move to a
+// block that is gone is ignored and dropped on the next save
+export const radioScriptProductBlocks = sqliteTable(
+  'radio_script_product_blocks',
+  {
+    productId: text().notNull(),
+    blockId: integer().notNull()
+  },
+  (table) => [
+    primaryKey({ columns: [table.productId] }),
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [products.id]
+    }).onDelete('cascade')
+  ]
 )

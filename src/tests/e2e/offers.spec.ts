@@ -155,7 +155,7 @@ test('fills an offer page, saves it, generates it and keeps the generation when 
   // A reused e2e server keeps the blocks of a previous run, so only the product line is fixed
   await expect(
     scriptDialog.getByRole('region', { name: 'Roteiro do comercial' })
-  ).toContainText(/- Feijão carioca(, .+)?: sete e oitenta e nove/)
+  ).toContainText(/- feijão carioca(, .+)?: sete e oitenta e nove/)
   await scriptDialog.press('Escape')
 
   await generation

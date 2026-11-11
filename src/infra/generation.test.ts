@@ -122,7 +122,10 @@ describe('createGeneration', () => {
         { type: 'text', text: 'Atenção!' },
         { type: 'products', pageCount: 1 }
       ],
-      priceMarkers: ['somente']
+      priceMarkers: ['somente'],
+      speakRepeatedOnce: true,
+      splitEvenly: false,
+      productBlocks: []
     })
     savePronunciations(database, [{ term: 'Moça', spoken: 'Mossa' }])
     saveOffer(database, twoPages())
@@ -134,11 +137,11 @@ describe('createGeneration', () => {
     expect(findGeneration(database, generation?.id ?? 0)?.radioScript).toEqual({
       version: 2,
       script:
-        'Atenção!\n\n- Leite Condensado Mossa trezentos e noventa e cinco gramas, somente: sete e noventa e nove',
+        'Atenção!\n\n- leite condensado Mossa, trezentos e noventa e cinco gramas, somente: sete e noventa e nove',
       list: [
         {
           number: 1,
-          text: 'Leite Condensado Mossa trezentos e noventa e cinco gramas',
+          text: 'leite condensado Mossa, trezentos e noventa e cinco gramas',
           price: '7,99'
         }
       ],

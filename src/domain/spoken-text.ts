@@ -208,10 +208,18 @@ export const suggestVoiceText = (
   { description, unit }: ProductDetails,
   pronunciations: Pronunciation[]
 ) => {
-  const words = hasSpokenText(description) ? [description] : []
-  if (unit) words.push(unit)
+  const parts = [hasSpokenText(description) ? description : '', unit ?? '']
+    .map((part) => part.trim())
+    .filter((part) => part !== '')
+  // Stores often write descriptions in capitals, which the voice may read as emphasis or spell out
+  // as an acronym (#111); the dictionary's own text keeps its case, so an acronym can go back there.
+  // Each part is spelled on its own, so the comma between them, a pause for the voice (#111), is
+  // never read as a decimal separator
+  const text = parts
+    .map((part) => spellNumbers(part.toLocaleLowerCase('pt-BR')))
+    .join(', ')
   // Numbers first, so the dictionary can change how a unit sounds ("mililitros" → "eme éli")
-  return applyPronunciations(spellNumbers(words.join(' ')), pronunciations)
+  return applyPronunciations(text, pronunciations)
     .replaceAll(/\s+/g, ' ')
     .trim()
 }

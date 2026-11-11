@@ -85,6 +85,22 @@ export const findProductById = (
   return row && attachCodes(database, [row])[0]
 }
 
+// Only the voice text, so the Comercial tab never rewrites the codes or the photo (#111). A blank
+// text goes back to the suggestion
+export const saveProductVoiceText = (
+  database: Database,
+  id: string,
+  voiceText: string
+): Product | undefined => {
+  const row = database
+    .update(products)
+    .set({ voiceText: voiceText.trim() || null })
+    .where(eq(products.id, id))
+    .returning()
+    .get()
+  return row && attachCodes(database, [row])[0]
+}
+
 const findInstanceProducts = (
   database: Database | Transaction,
   code: string

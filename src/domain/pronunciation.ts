@@ -7,7 +7,10 @@ export type Pronunciation = {
 // Until the store first saves the Comercial tab, also as an example of what the dictionary takes
 export const INITIAL_PRONUNCIATIONS: Pronunciation[] = [
   { term: 'Cream cracker', spoken: 'kreme cráquer' },
-  { term: 'mililitros', spoken: 'eme éli' }
+  { term: 'mililitros', spoken: 'eme éli' },
+  // A unit with no number, as meat is sold, is said "o quilo"; a measure such as "1kg" is spelled
+  // out before the dictionary, so it still says "um quilo"
+  { term: 'kg', spoken: 'o quilo' }
 ]
 
 export type PronunciationError = {
