@@ -134,9 +134,9 @@ const GenerationCard = ({ generation }: { generation: Generation }) => {
               href={getGenerationHref(generation, 'roteiro.md')}
             />
             <RadioTextDialog
-              title="Lista da rádio"
+              title="Lista de produtos"
               description="Os produtos do comercial, numerados em sequência, com o texto da locução e o preço."
-              copiedMessage="Lista da rádio copiada."
+              copiedMessage="Lista de produtos copiada."
               icon={<ListOrdered data-icon="inline-start" aria-hidden />}
               generationNumber={generation.number}
               text={getRadioListMarkdown(generation.radioScript)}

@@ -39,6 +39,7 @@ import {
   previewMerge,
   renameOutdatedPhotos,
   saveProduct,
+  saveProductVoiceText,
   searchProducts
 } from './product'
 
@@ -426,6 +427,29 @@ describe('saveProduct', () => {
     )
 
     expect(saved.photo).toBe(null)
+  })
+})
+
+describe('saveProductVoiceText', () => {
+  test('changes only the voice text, and clears it when blank', async () => {
+    const { database, addProduct } = await setup()
+    const product = addProduct(['2', '1'], 'Arroz', { unit: '1 kg' })
+
+    const saved = saveProductVoiceText(database, product.id, ' Arrôz ')
+
+    expect(saved).toEqual({ ...product, voiceText: 'Arrôz' })
+    expect(findProductById(database, product.id)).toEqual(saved)
+    expect(saveProductVoiceText(database, product.id, '  ')?.voiceText).toBe(
+      null
+    )
+  })
+
+  test('returns nothing for a product that is gone', async () => {
+    const { database } = await setup()
+
+    expect(saveProductVoiceText(database, randomUUID(), 'Arroz')).toBe(
+      undefined
+    )
   })
 })
 

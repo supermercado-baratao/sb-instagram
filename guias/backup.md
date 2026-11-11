@@ -35,7 +35,7 @@ Para levar o app para outro computador, ou reinstalá-lo depois de uma pane:
 
 Para levar uma única oferta gerada para outra instalação, sem substituir os dados dela, use a página **Gerações**:
 
-1. Na geração, clique em **Baixar geração completa**. O navegador baixa o arquivo `geracao-<número>-completa.zip`, com as imagens, o PDF, o JSON dos produtos, o roteiro e a lista da rádio.
+1. Na geração, clique em **Baixar geração completa**. O navegador baixa o arquivo `geracao-<número>-completa.zip`, com as imagens, o PDF, o JSON dos produtos, o roteiro e a lista de produtos.
 2. Na outra instalação, abra **Gerações** e clique em **Importar geração**. Escolha o arquivo `.zip`.
 3. O app mostra o número da geração no arquivo, quando ela foi gerada, quantas páginas tem, a validade e o número que ela vai receber. Clique em **Importar geração** para confirmar.
 

@@ -337,9 +337,9 @@ export const ProductForm = ({
                 </Button>
               </div>
               <FieldDescription id={`${id}-voice-text-description`}>
-                Como o produto é falado no comercial da rádio, com números e
-                medidas por extenso. Vazio, o comercial usa a sugestão. Sugerir
-                troca o texto do campo.
+                Como o produto é falado no comercial, com números e medidas por
+                extenso. Vazio, o comercial usa a sugestão. Sugerir troca o
+                texto do campo.
               </FieldDescription>
             </Field>
             {codeField && codesField}

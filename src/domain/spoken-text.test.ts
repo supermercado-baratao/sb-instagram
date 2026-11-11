@@ -89,13 +89,13 @@ describe('spellNumbers', () => {
 
 describe('suggestVoiceText', () => {
   test('leaves out a description with no letters or digits', () => {
-    expect(suggestVoiceText({ description: '-', unit: 'Kg' }, [])).toBe('Kg')
+    expect(suggestVoiceText({ description: '-', unit: 'Kg' }, [])).toBe('kg')
   })
 
   test('joins description and unit, with numbers spelled out', () => {
     expect(
       suggestVoiceText({ description: 'Arroz Tio João', unit: '5 kg' }, [])
-    ).toBe('Arroz Tio João cinco quilos')
+    ).toBe('arroz tio joão, cinco quilos')
   })
 
   test('applies the dictionary after spelling, so it can change a unit', () => {
@@ -107,6 +107,26 @@ describe('suggestVoiceText', () => {
           { term: 'mililitros', spoken: 'eme éli' }
         ]
       )
-    ).toBe('Biscoito kreme cráquer Vitarella novecentos eme éli')
+    ).toBe('biscoito kreme cráquer vitarella, novecentos eme éli')
+  })
+
+  test('writes the description in lowercase, keeping the dictionary’s own case', () => {
+    expect(
+      suggestVoiceText({ description: 'LEITE EM PÓ UHT ÇÃO', unit: '1 L' }, [
+        { term: 'uht', spoken: 'U agá tê' }
+      ])
+    ).toBe('leite em pó U agá tê ção, um litro')
+  })
+
+  test('separates the unit with a comma that is never read as a decimal separator', () => {
+    expect(
+      suggestVoiceText(
+        { description: 'Refrigerante Cola 2', unit: '1,5 L' },
+        []
+      )
+    ).toBe('refrigerante cola dois, um litro e meio')
+    expect(suggestVoiceText({ description: 'Arroz', unit: ' ' }, [])).toBe(
+      'arroz'
+    )
   })
 })

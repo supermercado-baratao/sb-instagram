@@ -346,3 +346,35 @@ test('merge-name-and-brand joins name and brand into the description', async () 
     { productId: 'a', code: '7896006716112' }
   ])
 })
+
+test('lowercase-voice-texts writes the saved voice texts in lowercase, accents included', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_lowercase-voice-texts')
+  })
+
+  sqlite.exec(`
+    INSERT INTO products (id, description, voiceText) VALUES
+      ('a', 'LEITE EM PÓ', 'LEITE EM PÓ INTEGRAL AÇÚCAR ÃÉÍÕÜÑ um quilo'),
+      ('b', 'ARROZ', NULL),
+      ('c', 'Café', 'Café Pilão');
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  expect(
+    sqlite
+      .prepare('SELECT id, description, voiceText FROM products ORDER BY id')
+      .all()
+  ).toEqual([
+    {
+      id: 'a',
+      description: 'LEITE EM PÓ',
+      voiceText: 'leite em pó integral açúcar ãéíõüñ um quilo'
+    },
+    { id: 'b', description: 'ARROZ', voiceText: null },
+    { id: 'c', description: 'Café', voiceText: 'café pilão' }
+  ])
+})

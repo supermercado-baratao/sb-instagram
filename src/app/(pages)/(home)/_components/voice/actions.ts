@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { isValidProductId, type Product } from '@/domain/product'
 import {
   getPronunciationsError,
   isPronunciationList,
@@ -16,6 +17,7 @@ import {
   type RadioScriptTemplate
 } from '@/domain/radio-script'
 import { database } from '@/infra/database/client'
+import { saveProductVoiceText } from '@/infra/product'
 import { savePronunciations } from '@/infra/pronunciation'
 import { saveRadioScriptTemplate } from '@/infra/radio-script'
 
@@ -79,4 +81,37 @@ export const saveVoiceSettingsAction = async (
     pronunciations: normalized,
     radioScript: template
   }
+}
+
+export type SaveVoiceTextResult =
+  { status: 'saved'; product: Product } | { status: 'error'; message: string }
+
+// Saved at once, apart from the tab's own "Salvar", since it belongs to the product, like the
+// product dialog of the offer editor (#111)
+export const saveProductVoiceTextAction = async (
+  id: unknown,
+  voiceText: unknown
+): Promise<SaveVoiceTextResult> => {
+  // A Server Action is a public endpoint, so the arguments are checked again here
+  if (
+    typeof voiceText !== 'string' ||
+    typeof id !== 'string' ||
+    !isValidProductId(id)
+  ) {
+    return {
+      status: 'error',
+      message: 'Não foi possível salvar. Recarregue a página e tente de novo.'
+    }
+  }
+  const product = saveProductVoiceText(database, id, voiceText)
+  if (!product) {
+    return {
+      status: 'error',
+      message:
+        'Este produto foi excluído. Recarregue a página para ver a oferta atual.'
+    }
+  }
+  revalidatePath('/')
+  revalidatePath('/produtos')
+  return { status: 'saved', product }
 }
