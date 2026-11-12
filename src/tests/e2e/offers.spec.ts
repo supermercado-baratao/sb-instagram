@@ -612,3 +612,57 @@ test('asks before leaving the offer editor with unsaved changes', async ({
   await dialog.getByRole('button', { name: 'Sair sem salvar' }).click()
   await expect(page).toHaveURL('/produtos')
 })
+
+test('keeps the products outside the page layout on screen and brings them back', async ({
+  page
+}) => {
+  const stamp = Date.now()
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const productCode = dialog.getByLabel('Código de barras ou código interno')
+  const names = ['Óleo', 'Farinha'].map((name) => `${name} ${stamp}`)
+  const [oil, flour] = names
+
+  await page.goto('/produtos')
+  for (const [index, name] of names.entries()) {
+    await page.getByRole('button', { name: 'Cadastrar produto' }).click()
+    await productCode.fill(`E2E-OUTSIDE-${stamp}-${index}`)
+    await productCode.press('Enter')
+    await dialog.getByLabel('Descrição').fill(name)
+    await dialog.getByRole('button', { name: 'Salvar produto' }).click()
+    await expect(page.getByText(`${name} salvo`)).toBeVisible()
+  }
+
+  await openEmptyOffer(page)
+  for (const [index, position] of [1, 5].entries()) {
+    const slot = page.getByLabel(`Produto ${position}`, { exact: true })
+    await slot.fill(`E2E-OUTSIDE-${stamp}-${index}`)
+    await slot.press('Enter')
+    await page.getByLabel(`Preço de ${names[index]} (R$)`).fill('9,90')
+  }
+
+  await page
+    .getByRole('group', { name: 'Produtos na arte' })
+    .getByRole('button', { name: '4' })
+    .click()
+  const outside = page.getByRole('region', { name: 'Fora da arte' })
+  await expect(outside.getByRole('group', { name: 'Produto 5' })).toContainText(
+    flour
+  )
+  await expect(outside.getByText(oil)).toHaveCount(0)
+
+  // Crosses the poster's edge like any other slot, and the focus stays on the button
+  const moveBefore = page.getByRole('button', {
+    name: `Mover ${flour} para antes`
+  })
+  await moveBefore.click()
+  await expect(outside.getByText(flour)).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Produto 4' })).toContainText(
+    flour
+  )
+  await expect(moveBefore).toBeFocused()
+
+  await page.getByRole('button', { name: `Mover ${flour} para depois` }).click()
+  await expect(outside.getByRole('group', { name: 'Produto 5' })).toContainText(
+    flour
+  )
+})
