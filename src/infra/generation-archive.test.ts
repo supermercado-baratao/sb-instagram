@@ -16,6 +16,7 @@ import { relations } from '@/infra/database/relations'
 import {
   createGeneration,
   findGenerationExport,
+  findGenerationTexts,
   listGenerations,
   type OfferRenderer
 } from './generation'
@@ -101,7 +102,8 @@ describe('createGenerationArchive', () => {
         number: generation.number,
         pageCount: 2,
         createdAt: generation.createdAt.toISOString(),
-        radioScript: generation.radioScript
+        radioScript: generation.radioScript,
+        pages: findGenerationTexts(instance.database, generation.id)?.pages
       }
     )
     expect(new TextDecoder().decode(files['ofertas.json'])).toBe(
@@ -162,8 +164,8 @@ describe('prepareGenerationImport and importGeneration', () => {
       radioScript: generation.radioScript,
       createdAt: generation.createdAt
     })
-    expect(findGenerationExport(target.database, imported.id)).toBe(
-      findGenerationExport(source.database, generation.id)
+    expect(findGenerationTexts(target.database, imported.id)).toEqual(
+      findGenerationTexts(source.database, generation.id)
     )
     const folder = path.join(target.directory, String(imported.id))
     expect(await listSorted(folder)).toEqual([

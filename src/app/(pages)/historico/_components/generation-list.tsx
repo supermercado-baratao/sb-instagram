@@ -28,6 +28,7 @@ import {
   getRadioScriptWarning
 } from '@/domain/radio-script'
 
+import { CopyPagesButton } from './copy-pages-button'
 import { DeleteGenerationButton } from './delete-generation-button'
 import { GeneratedAt } from './generated-at'
 import { RadioTextDialog } from './radio-text-dialog'
@@ -81,6 +82,7 @@ const GenerationCard = ({ generation }: { generation: Generation }) => {
         </ul>
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
+        <CopyPagesButton generation={generation} />
         <a
           href={getGenerationHref(generation, 'paginas.zip')}
           download

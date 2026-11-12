@@ -12,11 +12,18 @@ import { createOfferContent, type OfferContent } from '@/domain/offer'
 import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
-import { productCodes, products } from '@/infra/database/schema'
+import {
+  generations,
+  productCodes,
+  products,
+  templates
+} from '@/infra/database/schema'
+import { registerSearchText } from '@/infra/database/search-text'
 import { savePronunciations } from '@/infra/pronunciation'
 import { saveRadioScriptTemplate } from '@/infra/radio-script'
 
 import {
+  copyGenerationPages,
   createGeneration,
   deleteGeneration,
   findGeneration,
@@ -25,7 +32,7 @@ import {
   type OfferRenderer,
   removeUnfinishedGenerations
 } from './generation'
-import { saveOffer } from './offer'
+import { findOffer, findOfferBackup, saveOffer } from './offer'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
@@ -45,6 +52,7 @@ const renderer: OfferRenderer = {
 const setup = async () => {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
+  registerSearchText(sqlite)
   const database = drizzle({ client: sqlite, relations })
   migrate(database, { migrationsFolder })
   const { codes, ...row } = product
@@ -52,6 +60,16 @@ const setup = async () => {
   database
     .insert(productCodes)
     .values(codes.map((code) => ({ productId: product.id, code })))
+    .run()
+  database
+    .insert(templates)
+    .values({
+      id: 'mercado',
+      name: 'Mercado',
+      primaryColor: '#1e3a8a',
+      accentColor: '#dc2626',
+      position: 0
+    })
     .run()
 
   const directory = await mkdtemp(path.join(tmpdir(), 'generations-'))
@@ -267,5 +285,142 @@ describe('removeUnfinishedGenerations', () => {
     await expect(
       removeUnfinishedGenerations(path.join(directory, 'missing'))
     ).resolves.toBeUndefined()
+  })
+})
+
+const butchery = (): OfferContent => {
+  const content = createOfferContent('mercado')
+  content.pages[0] = {
+    ...content.pages[0],
+    layout: 4,
+    slots: content.pages[0].slots.with(1, { product, priceInCents: 3990 })
+  }
+  return content
+}
+
+describe('copyGenerationPages', () => {
+  test('appends the chosen pages after the current ones, keeping the generation', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, { ...twoPages(), validUntil: '2026-11-12' })
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+    saveOffer(database, { ...createOfferContent('mercado'), validUntil: null })
+
+    expect(copyGenerationPages(database, generation?.id ?? 0, [1])).toEqual({
+      status: 'copied',
+      pageCount: 1,
+      missingProductCount: 0
+    })
+
+    const offer = findOffer(database)
+    expect(offer?.validUntil).toBeNull()
+    expect(offer?.pages).toHaveLength(2)
+    expect(offer?.pages[1].slots[0]).toEqual({ product, priceInCents: 799 })
+    expect(findOfferBackup(database)?.pageCount).toBe(1)
+    expect(findGeneration(database, generation?.id ?? 0)?.pageCount).toBe(2)
+  })
+
+  test('keeps the layout and slot of each product', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, butchery())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+
+    copyGenerationPages(database, generation?.id ?? 0, [1])
+
+    const copied = findOffer(database)?.pages[1]
+    expect(copied?.layout).toBe(4)
+    expect(copied?.slots[1]?.product.id).toBe(product.id)
+  })
+
+  test('keeps the price the offer already shows for the same product', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, butchery())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+    const current = butchery()
+    current.pages[0].slots[1] = { product, priceInCents: 4290 }
+    saveOffer(database, current)
+
+    copyGenerationPages(database, generation?.id ?? 0, [1])
+
+    expect(findOffer(database)?.pages[1].slots[1]?.priceInCents).toBe(4290)
+  })
+
+  test('finds the product by its codes when the id is gone', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, butchery())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+    saveOffer(database, createOfferContent('mercado'))
+    database.delete(products).run()
+    const { codes, ...row } = product
+    const otherId = '9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d'
+    database
+      .insert(products)
+      .values({ ...row, id: otherId })
+      .run()
+    database
+      .insert(productCodes)
+      .values(codes.map((code) => ({ productId: otherId, code })))
+      .run()
+
+    copyGenerationPages(database, generation?.id ?? 0, [1])
+
+    expect(findOffer(database)?.pages[1].slots[1]?.product.id).toBe(otherId)
+  })
+
+  test('leaves the slot of a product that no longer exists empty', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, butchery())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+    saveOffer(database, createOfferContent('mercado'))
+    database.delete(products).run()
+
+    expect(copyGenerationPages(database, generation?.id ?? 0, [1])).toEqual({
+      status: 'copied',
+      pageCount: 1,
+      missingProductCount: 1
+    })
+    expect(findOffer(database)?.pages[1].slots.every((slot) => !slot)).toBe(
+      true
+    )
+  })
+
+  test('rebuilds the pages of a generation recorded before they were stored', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, butchery())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+    database.update(generations).set({ pages: null }).run()
+
+    copyGenerationPages(database, generation?.id ?? 0, [1])
+
+    const copied = findOffer(database)?.pages[1]
+    expect(copied?.layout).toBe(3)
+    expect(copied?.slots[0]).toEqual({ product, priceInCents: 3990 })
+  })
+
+  test('refuses a page the generation does not have', async () => {
+    const { database, directory } = await setup()
+    saveOffer(database, twoPages())
+    const generation = await createGeneration(database, renderer, {
+      directory
+    })
+
+    expect(copyGenerationPages(database, generation?.id ?? 0, [3])).toEqual({
+      status: 'missing'
+    })
+    expect(copyGenerationPages(database, 999, [1])).toEqual({
+      status: 'missing'
+    })
+    expect(findOffer(database)?.pages).toHaveLength(2)
   })
 })
