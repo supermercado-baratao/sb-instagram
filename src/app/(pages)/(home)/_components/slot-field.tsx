@@ -13,7 +13,10 @@ import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
-import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
+import {
+  CreateProductDialog,
+  type CreateProductStart
+} from '@/app/components/blocks/product/create-product-dialog'
 import { EditProductDialog } from '@/app/components/blocks/product/edit-product-dialog'
 import {
   type ProductChoice,
@@ -35,7 +38,7 @@ import {
   type OfferPage,
   type OfferSlot
 } from '@/domain/offer'
-import type { Product } from '@/domain/product'
+import { getCodeType, type Product } from '@/domain/product'
 
 import { lookupSlotProduct } from './actions'
 import { MoveProductButton, type MoveTarget } from './move-product-button'
@@ -87,7 +90,9 @@ export const SlotField = ({
   const [priceBrought, setPriceBrought] = useState(false)
   const [searching, startSearch] = useTransition()
   // Holds the code the dialog starts from, if any, while it is open
-  const [creating, setCreating] = useState<{ missingCode?: string }>()
+  const [creating, setCreating] = useState<{
+    initialLookup?: CreateProductStart
+  }>()
   const [choice, setChoice] = useState<ProductChoice>()
   const [choosing, setChoosing] = useState(false)
   const codeInput = useRef<HTMLInputElement>(null)
@@ -157,7 +162,7 @@ export const SlotField = ({
         onOpenChange={(open) => {
           if (!open) setCreating(undefined)
         }}
-        missingCode={creating?.missingCode}
+        initialLookup={creating?.initialLookup}
         noEanImages={noEanImages}
         onSaved={(product, outcome) => {
           // The dialog moves the focus to the price once it closes
@@ -290,7 +295,15 @@ export const SlotField = ({
                     <Button
                       variant="link"
                       className="h-auto p-0 text-destructive"
-                      onClick={() => setCreating({ missingCode: error.code })}
+                      onClick={() =>
+                        setCreating({
+                          initialLookup: {
+                            status: 'new',
+                            code: error.code,
+                            codeType: getCodeType(error.code)
+                          }
+                        })
+                      }
                     >
                       Cadastrar produto
                       <span className="sr-only"> ({label})</span>

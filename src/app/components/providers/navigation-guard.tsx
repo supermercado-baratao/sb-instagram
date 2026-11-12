@@ -1,12 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { createContext, type ReactNode, useState } from 'react'
+import { createContext, type ReactNode, useCallback, useState } from 'react'
 
 import { LeaveWithoutSavingDialog } from '@/app/components/blocks/leave-without-saving-dialog'
 
 type NavigationGuard = {
-  setBlocked: (blocked: boolean) => void
+  // A count, not a flag: a dialog with changes may open over a page with changes of its own, and
+  // closing it must keep the page's guard
+  block: () => () => void
   requestNavigation: (href: string, onLeave?: () => void) => boolean
 }
 
@@ -33,7 +35,8 @@ export const NavigationGuardProvider = ({
   children: ReactNode
 }) => {
   const router = useRouter()
-  const [blocked, setBlocked] = useState(false)
+  const [blockers, setBlockers] = useState(0)
+  const blocked = blockers > 0
   const [pending, setPending] = useState<{
     href: string
     onLeave?: () => void
@@ -47,6 +50,11 @@ export const NavigationGuardProvider = ({
     return !blocked
   }
 
+  const block = useCallback(() => {
+    setBlockers((count) => count + 1)
+    return () => setBlockers((count) => count - 1)
+  }, [])
+
   const leave = () => {
     if (pending === undefined) return
     setPending(undefined)
@@ -55,7 +63,7 @@ export const NavigationGuardProvider = ({
   }
 
   return (
-    <NavigationGuardContext value={{ setBlocked, requestNavigation }}>
+    <NavigationGuardContext value={{ block, requestNavigation }}>
       {children}
       <LeaveWithoutSavingDialog
         open={pending !== undefined}

@@ -23,7 +23,8 @@ type ProductChoiceDialogProps = {
   choice: ProductChoice | undefined
   onOpenChange: (open: boolean) => void
   onChoose: (product: Product) => void
-  getFocusAfterChoice?: () => HTMLElement | null
+  // False leaves the focus alone, for a dialog the choice opens
+  getFocusAfterChoice?: () => HTMLElement | false | null
 }
 
 const getCodeSummary = ({ codes }: Product) =>

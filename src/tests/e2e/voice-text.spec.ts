@@ -153,6 +153,11 @@ test('previews the pages of each block and the radio ad before saving', async ({
   })
   await expect(voiceText).toHaveValue('arroz agulhínha')
   await voiceText.fill('Arroz tipo um')
+  // Leaving with changes asks first, and staying keeps what was typed
+  await voiceDialog.getByRole('button', { name: 'Cancelar' }).click()
+  const leave = page.getByRole('alertdialog', { name: 'Sair sem salvar?' })
+  await leave.getByRole('button', { name: 'Continuar editando' }).click()
+  await expect(voiceText).toHaveValue('Arroz tipo um')
   await voiceDialog.getByRole('button', { name: 'Salvar' }).click()
   await expect(
     page.getByText('Locução de Arroz agulhinha salva.')
@@ -171,7 +176,9 @@ test('previews the pages of each block and the radio ad before saving', async ({
   await page.getByLabel('Buscar produto').fill(code)
   await page.getByLabel('Buscar produto').press('Enter')
   await expect(
-    page.getByRole('textbox', { name: 'Texto da locução' })
+    page
+      .getByRole('dialog', { name: 'Editar produto' })
+      .getByRole('textbox', { name: 'Texto da locução' })
   ).toHaveValue('Arroz tipo um')
 })
 

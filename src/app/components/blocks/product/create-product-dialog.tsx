@@ -4,6 +4,7 @@ import { CircleAlert, Info } from 'lucide-react'
 import {
   type KeyboardEvent,
   type RefObject,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -21,7 +22,8 @@ import {
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { getCatalogPhotoUrl } from '@/app/helpers/product-photo'
-import { getCodeType, normalizeCode, type Product } from '@/domain/product'
+import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
+import { normalizeCode, type Product } from '@/domain/product'
 
 import { lookupProduct, type LookupResult } from './actions'
 import { AddCodeToProduct } from './add-code-to-product'
@@ -31,10 +33,18 @@ import { getLookupMessage } from './product-lookup'
 
 type SaveOutcome = 'saved' | 'unchanged'
 
+type DialogLookup = Exclude<LookupResult, { status: 'error' }>
+
+// What the dialog can start from: a code no product has, or a catalog product to register
+export type CreateProductStart = Extract<
+  DialogLookup,
+  { status: 'new' | 'catalog' }
+>
+
 type CreateProductDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  missingCode?: string
+  initialLookup?: CreateProductStart
   noEanImages: string[]
   onSaved: (product: Product, outcome: SaveOutcome) => void
   getFocusAfterSave: () => HTMLElement | null
@@ -42,17 +52,17 @@ type CreateProductDialogProps = {
   onOpenExisting: (choice: ProductChoice) => void
   openExistingLabel: string
   getFocusAfterOpen: () => HTMLElement | null
+  getFocusAfterClose?: () => HTMLElement | null
 }
 
 type CreateProductContentProps = Pick<
   CreateProductDialogProps,
-  'missingCode' | 'noEanImages' | 'onSaved' | 'openExistingLabel'
+  'initialLookup' | 'noEanImages' | 'onSaved' | 'openExistingLabel'
 > & {
   onOpenExisting: (choice: ProductChoice) => void
+  onDirtyChange: (dirty: boolean) => void
   codeInput: RefObject<HTMLInputElement | null>
 }
-
-type DialogLookup = Exclude<LookupResult, { status: 'error' }>
 
 // A scanner sends Enter after the code, which would submit the form before the lookup
 const goToDescription = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -67,7 +77,7 @@ const getLookedUpCode = (lookup: DialogLookup | undefined) => lookup?.code ?? ''
 
 const getDescription = (lookup: DialogLookup | undefined) => {
   if (!lookup) return 'Bipe ou digite o código e preencha os dados do produto.'
-  if (lookup.status !== 'found') return getLookupMessage({ ...lookup, id: 0 })
+  if (lookup.status !== 'found') return getLookupMessage(lookup)
 
   const [first, ...others] = lookup.products
   return others.length === 0
@@ -76,19 +86,20 @@ const getDescription = (lookup: DialogLookup | undefined) => {
 }
 
 const CreateProductContent = ({
-  missingCode,
+  initialLookup,
   noEanImages,
   onSaved,
   onOpenExisting,
+  onDirtyChange,
   openExistingLabel,
   codeInput
 }: CreateProductContentProps) => {
-  const [code, setCode] = useState(missingCode ?? '')
-  const [lookup, setLookup] = useState<DialogLookup | undefined>(() =>
-    missingCode
-      ? { status: 'new', code: missingCode, codeType: getCodeType(missingCode) }
-      : undefined
-  )
+  const [code, setCode] = useState(initialLookup?.code ?? '')
+  const [lookup, setLookup] = useState<DialogLookup | undefined>(initialLookup)
+  // A catalog product fills the form, so what changed is told from what it brought
+  const [filledCode, setFilledCode] = useState(initialLookup?.code ?? '')
+  const [formDirty, setFormDirty] = useState(false)
+  const dirty = formDirty || normalizeCode(code) !== filledCode
   // Only a catalog product refills the form: a new code keeps what was typed, and a code the
   // store already has keeps it too, so saving can show what would change before replacing it
   const [filledCount, setFilledCount] = useState(0)
@@ -115,9 +126,16 @@ const CreateProductContent = ({
       setError(undefined)
       setLookup(result)
       setCode(getLookedUpCode(result))
-      if (result.status === 'catalog') setFilledCount((count) => count + 1)
+      if (result.status === 'catalog') {
+        setFilledCount((count) => count + 1)
+        setFilledCode(result.code)
+      }
     })
   }
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   return (
     <>
@@ -146,7 +164,8 @@ const CreateProductContent = ({
         noEanImages={noEanImages}
         onSaved={onSaved}
         askBeforeReplacing
-        focusDescription={filledCount > 0 || missingCode !== undefined}
+        focusDescription={filledCount > 0 || initialLookup !== undefined}
+        onDirtyChange={setFormDirty}
         // The looked-up code, so the picker doesn't come and go on every keystroke
         typedCode={lookedUpCode}
         codeField={
@@ -213,21 +232,30 @@ const CreateProductContent = ({
 export const CreateProductDialog = ({
   open,
   onOpenChange,
-  missingCode,
+  initialLookup,
   noEanImages,
   onSaved,
   getFocusAfterSave,
   onOpenExisting,
   openExistingLabel,
-  getFocusAfterOpen
+  getFocusAfterOpen,
+  getFocusAfterClose
 }: CreateProductDialogProps) => {
   const closedBy = useRef<'save' | 'open'>(undefined)
   const codeInput = useRef<HTMLInputElement>(null)
+  const [dirty, setDirty] = useState(false)
+  const [wasOpen, setWasOpen] = useState(open)
+  const guard = useGuardedDialog({ open, dirty, onOpenChange })
+
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setDirty(false)
+  }
 
   return (
     <Dialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={guard.onOpenChange}
       onOpenChangeComplete={(isOpen) => {
         if (isOpen) closedBy.current = undefined
       }}
@@ -236,19 +264,20 @@ export const CreateProductDialog = ({
         className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto sm:max-w-2xl sm:p-6"
         // The photo input comes first in the form, so the code (or, when it is known, the description
         // the form focuses itself) has to be picked explicitly
-        initialFocus={missingCode === undefined ? codeInput : false}
+        initialFocus={initialLookup === undefined ? codeInput : false}
         finalFocus={() => {
           if (closedBy.current === 'save') return getFocusAfterSave()
           // A product choice that opens next takes the focus itself
           if (closedBy.current === 'open') return getFocusAfterOpen() ?? false
-          return true
+          return getFocusAfterClose?.() ?? true
         }}
       >
-        {/* The popup unmounts when closed, so every opening starts from an empty form */}
+        {/* The popup unmounts when closed, so every opening starts from what it is given */}
         <CreateProductContent
-          missingCode={missingCode}
+          initialLookup={initialLookup}
           noEanImages={noEanImages}
           codeInput={codeInput}
+          onDirtyChange={setDirty}
           onSaved={(product, outcome) => {
             closedBy.current = 'save'
             onSaved(product, outcome)
@@ -261,6 +290,7 @@ export const CreateProductDialog = ({
           }}
           openExistingLabel={openExistingLabel}
         />
+        {guard.leaveDialog}
       </DialogContent>
     </Dialog>
   )

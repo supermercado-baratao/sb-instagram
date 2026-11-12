@@ -15,8 +15,9 @@ type ProductListProps = {
   busy: boolean
   selectedIds: Set<string>
   onSelect: (product: Product, selected: boolean) => void
-  onOpen: (product: Product) => void
-  onOpenCatalog: (product: CatalogMatch) => void
+  // The row's button, where the focus goes back when the product's dialog closes
+  onOpen: (product: Product, row: HTMLElement) => void
+  onOpenCatalog: (product: CatalogMatch, row: HTMLElement) => void
   onDeleted: (product: Product) => void
 }
 
@@ -64,10 +65,10 @@ export const ProductList = ({
           <button
             type="button"
             aria-describedby={catalogStatus ? catalogStatusId : undefined}
-            onClick={() =>
+            onClick={(event) =>
               item.origin === 'store'
-                ? onOpen(item.product)
-                : onOpenCatalog(item.product)
+                ? onOpen(item.product, event.currentTarget)
+                : onOpenCatalog(item.product, event.currentTarget)
             }
             className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-muted-foreground focus-visible:ring-inset"
           >

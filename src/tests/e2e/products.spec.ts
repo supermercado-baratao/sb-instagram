@@ -8,13 +8,15 @@ const PHOTO = Buffer.from(
   'base64'
 )
 
-test('saves a scanned product and fills the form when it is scanned again', async ({
+test('saves a scanned product and opens it in a dialog when it is scanned again', async ({
   page
 }) => {
   // A reused e2e server keeps its data between runs, so each run uses a code it never saw
   const code = `E2E-${Date.now()}`
   const codeField = page.getByLabel('Buscar produto')
   const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  const leave = page.getByRole('alertdialog', { name: 'Sair sem salvar?' })
 
   await page.goto('/produtos')
   await codeField.fill(code)
@@ -41,12 +43,34 @@ test('saves a scanned product and fills the form when it is scanned again', asyn
   await codeField.fill(code)
   await codeField.press('Enter')
 
-  await expect(page.getByText('Produto já cadastrado')).toBeVisible()
-  await expect(page.getByLabel('Descrição')).toHaveValue('Picanha bovina')
-  await expect(page.getByLabel('Unidade')).toHaveValue('1 kg')
+  await expect(editDialog.getByText('Produto já cadastrado')).toBeVisible()
+  await expect(editDialog.getByLabel('Descrição')).toHaveValue('Picanha bovina')
+  await expect(editDialog.getByLabel('Unidade')).toHaveValue('1 kg')
   await expect(
-    page.getByAltText('Foto do produto Picanha bovina')
+    editDialog.getByAltText('Foto do produto Picanha bovina')
   ).toHaveJSProperty('naturalWidth', 1)
+
+  // Closing with changes asks first: staying keeps them, leaving drops them
+  await editDialog.getByLabel('Unidade').fill('500 g')
+  await page.keyboard.press('Escape')
+  await leave.getByRole('button', { name: 'Continuar editando' }).click()
+  await expect(editDialog.getByLabel('Unidade')).toHaveValue('500 g')
+  await editDialog.getByRole('button', { name: 'Fechar' }).click()
+  await leave.getByRole('button', { name: 'Sair sem salvar' }).click()
+  await expect(editDialog).toBeHidden()
+  await expect(codeField).toBeFocused()
+
+  await codeField.fill(code)
+  await codeField.press('Enter')
+  await expect(editDialog.getByLabel('Unidade')).toHaveValue('1 kg')
+  await editDialog.getByLabel('Unidade').fill('500 g')
+  await editDialog.getByRole('button', { name: 'Salvar produto' }).click()
+  await expect(editDialog).toBeHidden()
+  // The first notice is still fading out
+  await expect(
+    page.getByText('Picanha bovina salvo. Bipe o próximo código.').last()
+  ).toBeVisible()
+  await expect(codeField).toBeFocused()
 })
 
 test('finds a saved product by name and opens it from the list', async ({
@@ -70,11 +94,18 @@ test('finds a saved product by name and opens it from the list', async ({
 
   await expect(page).toHaveURL(/\?q=/)
   await expect(page.getByText('1 produto', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: new RegExp(`^${name}`) }).click()
+  const row = page.getByRole('button', { name: new RegExp(`^${name}`) })
+  await row.click()
 
-  await expect(page.getByText('Produto já cadastrado')).toBeVisible()
-  await expect(page.getByLabel('Descrição')).toHaveValue(name)
-  await expect(page.getByLabel('Descrição')).toBeFocused()
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await expect(editDialog.getByText('Produto já cadastrado')).toBeVisible()
+  await expect(editDialog.getByLabel('Descrição')).toHaveValue(name)
+  await expect(editDialog.getByLabel('Descrição')).toBeFocused()
+
+  // Nothing changed, so it closes without asking and the focus goes back to the row
+  await page.keyboard.press('Escape')
+  await expect(editDialog).toBeHidden()
+  await expect(row).toBeFocused()
 })
 
 test('registers a product from the create dialog', async ({ page }) => {
@@ -128,8 +159,15 @@ test('opens the registered product when its code is typed in the create dialog',
   await dialog.getByRole('button', { name: 'Abrir produto cadastrado' }).click()
 
   await expect(dialog).toBeHidden()
-  await expect(page.getByLabel('Descrição')).toHaveValue(name)
-  await expect(page.getByLabel('Descrição')).toBeFocused()
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await expect(editDialog.getByLabel('Descrição')).toHaveValue(name)
+  await expect(editDialog.getByLabel('Descrição')).toBeFocused()
+
+  await editDialog.press('Escape')
+  await expect(editDialog).toBeHidden()
+  await expect(
+    page.getByRole('button', { name: 'Cadastrar produto' })
+  ).toBeFocused()
 })
 
 test('asks before replacing a product registered again with other data', async ({
@@ -219,11 +257,14 @@ test('chooses between a single product and a group with the same code', async ({
   ])
   await choice.getByRole('button', { name: new RegExp(`^${group}`) }).click()
 
-  await expect(page.getByLabel('Descrição')).toHaveValue(group)
-  await expect(page.getByLabel('Descrição')).toBeFocused()
-  await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await expect(editDialog.getByLabel('Descrição')).toHaveValue(group)
+  await expect(editDialog.getByLabel('Descrição')).toBeFocused()
+  await expect(editDialog.getByRole('list', { name: 'Códigos' })).toHaveText(
     new RegExp(`${fennel}.*${lavender}`)
   )
+  await page.keyboard.press('Escape')
+  await expect(editDialog).toBeHidden()
 
   await openEmptyOffer(page)
   const slotCode = page.getByLabel('Produto 1', { exact: true })
@@ -279,8 +320,9 @@ test('merges two products and finds the kept one by the merged code', async ({
 
   await codeField.fill(fennel)
   await codeField.press('Enter')
-  await expect(page.getByLabel('Descrição')).toHaveValue(kept)
-  await expect(page.getByRole('list', { name: 'Códigos' })).toHaveText(
+  const editDialog = page.getByRole('dialog', { name: 'Editar produto' })
+  await expect(editDialog.getByLabel('Descrição')).toHaveValue(kept)
+  await expect(editDialog.getByRole('list', { name: 'Códigos' })).toHaveText(
     new RegExp(`${fennel}.*${lavender}`)
   )
 })
@@ -320,5 +362,34 @@ test('adds a new code to an existing product from the create dialog', async ({
   const codeField = page.getByLabel('Buscar produto')
   await codeField.fill(variation)
   await codeField.press('Enter')
-  await expect(page.getByLabel('Descrição')).toHaveValue(name)
+  await expect(
+    page.getByRole('dialog', { name: 'Editar produto' }).getByLabel('Descrição')
+  ).toHaveValue(name)
+})
+
+test('asks before closing the create dialog with a typed code', async ({
+  page
+}) => {
+  const code = `E2E-LEAVE-${Date.now()}`
+  const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
+  const leave = page.getByRole('alertdialog', { name: 'Sair sem salvar?' })
+
+  await page.goto('/produtos')
+  const create = page.getByRole('button', { name: 'Cadastrar produto' })
+  const dialogCode = dialog.getByLabel('Código de barras ou código interno')
+  await create.click()
+  await expect(dialogCode).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+
+  await create.click()
+  await expect(dialogCode).toBeFocused()
+  await dialogCode.fill(code)
+  await page.keyboard.press('Escape')
+  await leave.getByRole('button', { name: 'Continuar editando' }).click()
+  await expect(dialogCode).toHaveValue(code)
+  await page.keyboard.press('Escape')
+  await leave.getByRole('button', { name: 'Sair sem salvar' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(create).toBeFocused()
 })

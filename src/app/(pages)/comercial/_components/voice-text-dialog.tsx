@@ -22,6 +22,7 @@ import {
 } from '@/app/components/ui/shadcn/field'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
+import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
 import type { Product } from '@/domain/product'
 import type { Pronunciation } from '@/domain/pronunciation'
 import { getEditedVoiceText } from '@/domain/radio-script'
@@ -47,7 +48,19 @@ export const VoiceTextDialog = ({
   // Starts from what the script speaks, since the change is usually small
   const spoken = product.voiceText ?? suggestion
   const [value, setValue] = useState(spoken)
+  const [openedWith, setOpenedWith] = useState(spoken)
   const [saving, startSave] = useTransition()
+  const guard = useGuardedDialog({
+    open,
+    dirty: value !== openedWith,
+    onOpenChange: (isOpen) => {
+      if (isOpen) {
+        setValue(spoken)
+        setOpenedWith(spoken)
+      }
+      setOpen(isOpen)
+    }
+  })
 
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -69,13 +82,7 @@ export const VoiceTextDialog = ({
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (isOpen) setValue(spoken)
-        setOpen(isOpen)
-      }}
-    >
+    <Dialog open={open} onOpenChange={guard.onOpenChange}>
       <DialogTrigger
         render={
           <Button
@@ -135,6 +142,7 @@ export const VoiceTextDialog = ({
             </Button>
           </DialogFooter>
         </form>
+        {guard.leaveDialog}
       </DialogContent>
     </Dialog>
   )
