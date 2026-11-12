@@ -37,7 +37,7 @@ export type Offer = {
   highlightMessage: string
 }
 
-export type PosterLayout = 9 | 6 | 4 | 3
+export type PosterLayout = 12 | 9 | 6 | 4 | 3
 
 export type PosterLayoutConfig = {
   id: PosterLayout
@@ -49,7 +49,7 @@ export type PosterLayoutConfig = {
 
 // A page always keeps PAGE_PRODUCT_COUNT products and the layout only decides how many are shown,
 // so switching to a smaller layout and back never loses what was filled in
-export const PAGE_PRODUCT_COUNT = 9
+export const PAGE_PRODUCT_COUNT = 12
 
 export type Page = {
   templateId: string
@@ -58,6 +58,7 @@ export type Page = {
 }
 
 export const posterLayouts: PosterLayoutConfig[] = [
+  { id: 12, columns: 4, rows: 3, scale: 0.8, orientation: 'vertical' },
   { id: 9, columns: 3, rows: 3, scale: 1, orientation: 'vertical' },
   { id: 6, columns: 3, rows: 2, scale: 1.15, orientation: 'vertical' },
   { id: 4, columns: 2, rows: 2, scale: 1.4, orientation: 'vertical' },

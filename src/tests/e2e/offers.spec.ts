@@ -633,6 +633,10 @@ test('keeps the products outside the page layout on screen and brings them back'
   }
 
   await openEmptyOffer(page)
+  const outside = page.getByRole('region', { name: 'Fora da arte' })
+  const layout = page.getByRole('group', { name: 'Produtos na arte' })
+  // An empty page shows only its layout, with no empty slots past it
+  await expect(outside).toHaveCount(0)
   for (const [index, position] of [1, 5].entries()) {
     const slot = page.getByLabel(`Produto ${position}`, { exact: true })
     await slot.fill(`E2E-OUTSIDE-${stamp}-${index}`)
@@ -640,14 +644,11 @@ test('keeps the products outside the page layout on screen and brings them back'
     await page.getByLabel(`Preço de ${names[index]} (R$)`).fill('9,90')
   }
 
-  await page
-    .getByRole('group', { name: 'Produtos na arte' })
-    .getByRole('button', { name: '4' })
-    .click()
-  const outside = page.getByRole('region', { name: 'Fora da arte' })
+  await layout.getByRole('button', { name: '4' }).click()
   await expect(outside.getByRole('group', { name: 'Produto 5' })).toContainText(
     flour
   )
+  await expect(outside.getByRole('listitem')).toHaveCount(1)
   await expect(outside.getByText(oil)).toHaveCount(0)
 
   // Crosses the poster's edge like any other slot, and the focus stays on the button
@@ -665,4 +666,13 @@ test('keeps the products outside the page layout on screen and brings them back'
   await expect(outside.getByRole('group', { name: 'Produto 5' })).toContainText(
     flour
   )
+
+  // The emptied slot leaves the screen, so the focus goes back to the poster's last slot
+  await page.getByRole('button', { name: `Tirar ${flour} da arte` }).click()
+  await expect(outside).toHaveCount(0)
+  await expect(page.getByLabel('Produto 4', { exact: true })).toBeFocused()
+
+  await layout.getByRole('button', { name: '6' }).click()
+  await layout.getByRole('button', { name: '4' }).click()
+  await expect(outside).toHaveCount(0)
 })

@@ -65,5 +65,8 @@ export const products: OfferProduct[] = [
   product('6', 'Café torrado e moído', '500g', 1890),
   product('7', 'Óleo de soja Liza', '900ml', 799),
   product('8', '', '', 0),
-  product('9', 'Macarrão espaguete Renata Superiore Grano Duro', '500g', 105)
+  product('9', 'Macarrão espaguete Renata Superiore Grano Duro', '500g', 105),
+  product('10', 'Leite integral Italac', '1L', 489),
+  product('11', 'Sabão em pó Omo lavagem perfeita', '1,6Kg', 2790),
+  product('12', 'Banana prata', 'Kg', 599)
 ]
