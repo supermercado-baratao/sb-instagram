@@ -1,29 +1,21 @@
 'use client'
 
-import {
-  CircleAlert,
-  CircleCheck,
-  Info,
-  Merge,
-  Plus,
-  Search
-} from 'lucide-react'
+import { CircleAlert, CircleCheck, Merge, Plus, Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
 import { lookupProduct } from '@/app/components/blocks/product/actions'
-import { CreateProductDialog } from '@/app/components/blocks/product/create-product-dialog'
+import {
+  CreateProductDialog,
+  type CreateProductStart
+} from '@/app/components/blocks/product/create-product-dialog'
+import { EditProductDialog } from '@/app/components/blocks/product/edit-product-dialog'
 import {
   type ProductChoice,
   ProductChoiceDialog
 } from '@/app/components/blocks/product/product-choice-dialog'
-import { ProductForm } from '@/app/components/blocks/product/product-form'
-import {
-  getLookupMessage,
-  getProductFormProps,
-  type ProductLookup
-} from '@/app/components/blocks/product/product-lookup'
+import { getLookupMessage } from '@/app/components/blocks/product/product-lookup'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
@@ -33,7 +25,7 @@ import {
 } from '@/app/components/ui/shadcn/toggle-group'
 import type { CatalogStatus } from '@/domain/catalog-export'
 import {
-  type CatalogMatch,
+  getCodeType,
   isValidCode,
   normalizeCode,
   type Product,
@@ -102,11 +94,21 @@ export const ProductEditor = ({
   const router = useRouter()
   const [value, setValue] = useState(query)
   const [syncedQuery, setSyncedQuery] = useState(query)
-  const [lookup, setLookup] = useState<ProductLookup>()
+  // Kept after closing, so the dialog keeps its content during the closing animation
+  const [editing, setEditing] = useState<{
+    product: Product
+    photoVersion: number
+  }>()
+  const [editOpen, setEditOpen] = useState(false)
   const [choice, setChoice] = useState<ProductChoice>()
   const [choosing, setChoosing] = useState(false)
-  // Holds the code the dialog starts from, if any, while it is open
-  const [creating, setCreating] = useState<{ missingCode?: string }>()
+  const choseProduct = useRef(false)
+  // Holds what the dialog starts from, if anything, while it is open
+  const [creating, setCreating] = useState<{
+    initialLookup?: CreateProductStart
+  }>()
+  // The button that opened the dialog, or none for a scan
+  const openedFrom = useRef<HTMLElement>(undefined)
   const [error, setError] = useState<string>()
   const [deleted, setDeleted] = useState<Product>()
   const savedToast = useRef<string | number>(undefined)
@@ -120,7 +122,6 @@ export const ProductEditor = ({
   const mergeButton = useRef<HTMLButtonElement>(null)
   const [searching, startSearch] = useTransition()
   const codeInput = useRef<HTMLInputElement>(null)
-  const formArea = useRef<HTMLDivElement>(null)
 
   // Synced during render rather than remounted with a key, so a search keeps the focus in the field
   // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
@@ -153,37 +154,41 @@ export const ProductEditor = ({
       return next
     })
 
-  const openProduct = (product: Product) => {
+  const openProduct = (product: Product, row?: HTMLElement) => {
     clearMessages()
-    setLookup({
-      status: 'instance',
-      product,
-      id: Date.now()
-    })
+    openedFrom.current = row
+    // The photo keeps its URL after an upload, so each opening asks for it again
+    setEditing({ product, photoVersion: Date.now() })
+    setEditOpen(true)
   }
 
-  const openExisting = ({ code, products }: ProductChoice) => {
+  // Taken from the create dialog, the product keeps the button or row that opened that dialog,
+  // so closing returns the focus there (#115); a scan passes none and goes back to the field
+  const openExisting = (
+    { code, products }: ProductChoice,
+    from?: HTMLElement
+  ) => {
     if (products.length === 1) {
-      openProduct(products[0])
+      openProduct(products[0], from)
       return
     }
-    setLookup(undefined)
+    openedFrom.current = from
+    choseProduct.current = false
     setChoice({ code, products })
     setChoosing(true)
   }
 
-  const getDescriptionInput = () =>
-    formArea.current?.querySelector<HTMLElement>('[name="description"]') ?? null
-
-  const openCatalogProduct = (product: CatalogMatch) => {
+  const openCreate = (
+    initialLookup?: CreateProductStart,
+    row?: HTMLElement
+  ) => {
     clearMessages()
-    setLookup({
-      status: 'catalog',
-      code: product.ean,
-      product,
-      id: Date.now()
-    })
+    openedFrom.current = row
+    setCreating({ initialLookup })
   }
+
+  const getFocusAfterClose = () =>
+    openedFrom.current?.isConnected ? openedFrom.current : codeInput.current
 
   // Enter (what a scanner sends after the code) opens the product with that code, or registers
   // an unknown EAN; anything else, a name or an internal code no product has, filters the list
@@ -200,7 +205,6 @@ export const ProductEditor = ({
       const result = await lookupProduct(text)
       if (result.status === 'error') {
         setError(result.message)
-        setLookup(undefined)
         // A scanner types the next code where the cursor is, so the wrong one must be replaced
         codeInput.current?.select()
         return
@@ -212,11 +216,8 @@ export const ProductEditor = ({
       // The next scan starts from an empty field, and the list goes back to every product
       setValue('')
       if (query !== '') showList('')
-      if (result.status !== 'found') {
-        setLookup({ ...result, id: Date.now() })
-        return
-      }
-      openExisting(result)
+      if (result.status === 'found') openExisting(result)
+      else openCreate(result)
     })
   }
 
@@ -231,29 +232,15 @@ export const ProductEditor = ({
     )
   }
 
-  const handleSaved = (product: Product) => {
-    clearMessages()
-    showSaved(product, 'saved')
-    setLookup(undefined)
-    codeInput.current?.focus()
-  }
-
-  const handleCreated = (product: Product, outcome: 'saved' | 'unchanged') => {
+  const handleSaved = (product: Product, outcome: 'saved' | 'unchanged') => {
     clearMessages()
     showSaved(product, outcome)
-    // Only a form open for the same product is outdated; any other keeps its unsaved edits
-    if (lookup?.status === 'instance' && lookup.product.id === product.id) {
-      setLookup(undefined)
-    }
   }
 
   const handleDeleted = (product: Product) => {
     clearMessages()
     setDeleted(product)
     unselect([product.id])
-    if (lookup?.status === 'instance' && lookup.product.id === product.id) {
-      setLookup(undefined)
-    }
   }
 
   const getHeading = () =>
@@ -270,17 +257,10 @@ export const ProductEditor = ({
     getHeading()?.focus()
   }
 
-  const handleMerged = (product: Product, mergedIds: string[]) => {
+  const handleMerged = (product: Product) => {
     clearMessages()
     setMerged(product)
     setSelected(new Map())
-    // A form open for any of the merged products shows codes or a product that changed
-    if (
-      lookup?.status === 'instance' &&
-      [product.id, ...mergedIds].includes(lookup.product.id)
-    ) {
-      setLookup(undefined)
-    }
   }
 
   return (
@@ -293,7 +273,7 @@ export const ProductEditor = ({
             aperte Enter.
           </p>
         </div>
-        <Button onClick={() => setCreating({})}>
+        <Button onClick={(event) => openCreate(undefined, event.currentTarget)}>
           <Plus data-icon="inline-start" />
           Cadastrar produto
         </Button>
@@ -303,21 +283,44 @@ export const ProductEditor = ({
         onOpenChange={(open) => {
           if (!open) setCreating(undefined)
         }}
-        missingCode={creating?.missingCode}
+        initialLookup={creating?.initialLookup}
         noEanImages={noEanImages}
-        onSaved={handleCreated}
+        onSaved={handleSaved}
         getFocusAfterSave={() => codeInput.current}
-        onOpenExisting={openExisting}
+        onOpenExisting={(choice) => openExisting(choice, openedFrom.current)}
         openExistingLabel="Abrir produto cadastrado"
-        getFocusAfterOpen={getDescriptionInput}
+        // The product's dialog or the choice that opens next takes the focus
+        getFocusAfterOpen={() => null}
+        getFocusAfterClose={getFocusAfterClose}
       />
       <ProductChoiceDialog
         open={choosing}
         choice={choice}
         onOpenChange={setChoosing}
-        onChoose={openProduct}
-        getFocusAfterChoice={() => getDescriptionInput() ?? codeInput.current}
+        onChoose={(product) => {
+          choseProduct.current = true
+          openProduct(product, openedFrom.current)
+        }}
+        getFocusAfterChoice={() =>
+          !choseProduct.current && getFocusAfterClose()
+        }
       />
+      {editing && (
+        <EditProductDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          product={editing.product}
+          photoVersion={editing.photoVersion}
+          description={getLookupMessage({
+            status: 'instance',
+            product: editing.product
+          })}
+          noEanImages={noEanImages}
+          onSaved={(product) => handleSaved(product, 'saved')}
+          getFocusAfterSave={() => codeInput.current}
+          getFocusAfterClose={getFocusAfterClose}
+        />
+      )}
 
       <form onSubmit={search} role="search" className="flex items-end gap-2">
         <Field className="flex-1" data-invalid={error ? true : undefined}>
@@ -371,25 +374,7 @@ export const ProductEditor = ({
             Produtos mesclados em {merged.description}.
           </p>
         )}
-        {lookup && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Info className="size-4 shrink-0" />
-            {getLookupMessage(lookup)}
-          </p>
-        )}
       </div>
-
-      {lookup && (
-        <div ref={formArea}>
-          <ProductForm
-            key={lookup.id}
-            {...getProductFormProps(lookup)}
-            noEanImages={noEanImages}
-            onSaved={handleSaved}
-            className="rounded-xl border border-border p-4 sm:p-6"
-          />
-        </div>
-      )}
 
       <section
         aria-labelledby={PRODUCTS_HEADING_ID}
@@ -478,9 +463,13 @@ export const ProductEditor = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCreating({ missingCode: normalizeCode(query) })
-                }
+                onClick={(event) => {
+                  const code = normalizeCode(query)
+                  openCreate(
+                    { status: 'new', code, codeType: getCodeType(code) },
+                    event.currentTarget
+                  )
+                }}
               >
                 <Plus data-icon="inline-start" aria-hidden />
                 Cadastrar produto com o código {query}
@@ -495,7 +484,9 @@ export const ProductEditor = ({
             selectedIds={new Set(selected.keys())}
             onSelect={select}
             onOpen={openProduct}
-            onOpenCatalog={openCatalogProduct}
+            onOpenCatalog={(product, row) =>
+              openCreate({ status: 'catalog', code: product.ean, product }, row)
+            }
             onDeleted={handleDeleted}
           />
         )}

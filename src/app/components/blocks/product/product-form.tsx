@@ -34,6 +34,7 @@ import {
 import { saveProductForm, suggestProductVoiceText } from './actions'
 import { CatalogImagePicker } from './catalog-image-picker'
 import { CodesField } from './codes-field'
+import { hasProductFormChanges } from './product-form-changes'
 import {
   ReplaceProductDialog,
   type ReplaceRequest
@@ -56,6 +57,7 @@ type ProductFormProps = {
   // The value of codeField, which decides like the other codes whether the picker shows
   typedCode?: string
   focusDescription?: boolean
+  onDirtyChange?: (dirty: boolean) => void
   className?: string
 }
 
@@ -71,6 +73,7 @@ export const ProductForm = ({
   codeField,
   typedCode = '',
   focusDescription = true,
+  onDirtyChange,
   className
 }: ProductFormProps) => {
   const [uploadPreview, setUploadPreview] = useState<string>()
@@ -81,6 +84,16 @@ export const ProductForm = ({
   const [photoError, setPhotoError] = useState<string>()
   const [saving, startSave] = useTransition()
   const [voiceText, setVoiceText] = useState(product?.voiceText ?? '')
+  // The inputs stay uncontrolled, so these copies only tell whether something changed
+  const [description, setDescription] = useState(product?.description ?? '')
+  const [unit, setUnit] = useState(product?.unit ?? '')
+  const [initialValues] = useState(() => ({
+    description: product?.description ?? '',
+    unit: product?.unit ?? '',
+    voiceText: product?.voiceText ?? '',
+    codes: initialCodes,
+    newPhoto: false
+  }))
   const [suggesting, startSuggest] = useTransition()
   const [replaceRequest, setReplaceRequest] = useState<ReplaceRequest>()
   const [replaceOpen, setReplaceOpen] = useState(false)
@@ -90,7 +103,7 @@ export const ProductForm = ({
   const voiceInput = useRef<HTMLInputElement>(null)
   const suggestButton = useRef<HTMLButtonElement>(null)
   const photoInput = useRef<HTMLInputElement>(null)
-  // The dialog can open over the form on /produtos, so ids must not repeat
+  // One product dialog can open while another closes, so ids must not repeat
   const id = useId()
   // A later lookup in the dialog takes back the codes a catalog product brought, keeping the typed ones
   if (!isSameCodeSet(seededCodes, initialCodes)) {
@@ -123,6 +136,17 @@ export const ProductForm = ({
   const catalogPreview =
     showPicker && catalogImage ? `/catalogo/sem-ean/${catalogImage}` : undefined
   const preview = uploadPreview ?? catalogPreview ?? photoUrl
+  const dirty = hasProductFormChanges(initialValues, {
+    description,
+    unit,
+    voiceText,
+    codes,
+    newPhoto: uploadPreview !== undefined || catalogPreview !== undefined
+  })
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
 
   const choosePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0]
@@ -288,6 +312,7 @@ export const ProductForm = ({
                   autoComplete="off"
                   placeholder="Ex.: Café Pilão, Picanha bovina"
                   defaultValue={product?.description}
+                  onChange={(event) => setDescription(event.target.value)}
                 />
               </Field>
               <Field>
@@ -298,6 +323,7 @@ export const ProductForm = ({
                   autoComplete="off"
                   placeholder="Ex.: 1 kg, 395 g, 2 L"
                   defaultValue={product?.unit ?? ''}
+                  onChange={(event) => setUnit(event.target.value)}
                 />
               </Field>
             </div>
