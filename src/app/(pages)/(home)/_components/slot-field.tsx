@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from 'cn'
 import {
   ArrowLeft,
   ArrowRight,
@@ -27,6 +28,7 @@ import {
   Autocomplete,
   AutocompleteInput
 } from '@/app/components/ui/custom/autocomplete'
+import { Badge } from '@/app/components/ui/shadcn/badge'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
@@ -52,6 +54,8 @@ type SlotFieldProps = {
   pageIndex: number
   noEanImages: string[]
   photoVersion?: number
+  // Past the page layout, so the poster leaves it out (#117)
+  outside: boolean
   // How far the slot can move, given the slots the page layout shows
   canMoveBefore: boolean
   canMoveAfter: boolean
@@ -75,6 +79,7 @@ export const SlotField = ({
   pageIndex,
   noEanImages,
   photoVersion,
+  outside,
   canMoveBefore,
   canMoveAfter,
   onChange,
@@ -227,7 +232,10 @@ export const SlotField = ({
       <>
         <form
           onSubmit={search}
-          className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3"
+          className={cn(
+            'flex flex-col gap-2 rounded-lg border border-dashed border-border p-3',
+            outside && 'bg-muted/50'
+          )}
         >
           <Field data-invalid={error ? true : undefined}>
             <FieldLabel htmlFor={`${id}-code`}>{label}</FieldLabel>
@@ -338,7 +346,10 @@ export const SlotField = ({
       <div
         role="group"
         aria-labelledby={labelId}
-        className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3"
+        className={cn(
+          'flex flex-col gap-3 rounded-lg border border-border p-3',
+          outside ? 'border-dashed bg-muted/50' : 'bg-card'
+        )}
       >
         <div className="flex items-start gap-3">
           <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -347,16 +358,22 @@ export const SlotField = ({
               <img
                 src={getPhotoUrl(product.id, photoVersion)}
                 alt=""
-                className="size-full object-contain"
+                className={cn(
+                  'size-full object-contain',
+                  outside && 'opacity-50 grayscale'
+                )}
               />
             ) : (
               <ImageOff className="size-5 text-muted-foreground" aria-hidden />
             )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <p id={labelId} className="text-xs text-muted-foreground">
-              {label}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p id={labelId} className="text-xs text-muted-foreground">
+                {label}
+              </p>
+              {outside && <Badge variant="outline">Fora da arte</Badge>}
+            </div>
             <p className="font-medium wrap-break-word">{product.description}</p>
             {product.unit && (
               <p className="text-sm text-muted-foreground">{product.unit}</p>
@@ -389,6 +406,7 @@ export const SlotField = ({
           priceInCents={priceInCents}
           autoFocus={focusPrice}
           selectOnFocus={priceBrought}
+          required={!outside}
           otherPages={findOtherPagesWithProduct(pages, product.id, pageIndex)}
           onChange={(cents) => onPriceChange(product.id, cents)}
         />

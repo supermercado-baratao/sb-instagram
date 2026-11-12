@@ -13,6 +13,8 @@ type PriceFieldProps = {
   autoFocus: boolean
   // A price brought from another page is selected on the first focus, so typing replaces it
   selectOnFocus: boolean
+  // A slot outside the poster isn't printed, so its empty price never holds a save or a generation
+  required: boolean
   otherPages: number[]
   onChange: (priceInCents: number) => void
 }
@@ -33,6 +35,7 @@ export const PriceField = ({
   priceInCents,
   autoFocus,
   selectOnFocus,
+  required,
   otherPages,
   onChange
 }: PriceFieldProps) => {
@@ -61,7 +64,10 @@ export const PriceField = ({
         autoFocus={autoFocus}
         placeholder="0,00"
         value={text}
-        {...{ [PRICE_MISSING_ATTRIBUTE]: priceInCents === 0 ? '' : undefined }}
+        {...{
+          [PRICE_MISSING_ATTRIBUTE]:
+            required && priceInCents === 0 ? '' : undefined
+        }}
         aria-invalid={invalid ? true : undefined}
         aria-describedby={
           describedBy.length > 0 ? describedBy.join(' ') : undefined

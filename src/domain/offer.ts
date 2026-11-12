@@ -97,13 +97,14 @@ export const setSlot = (
   slot: OfferSlot
 ): OfferPage => ({ ...page, slots: page.slots.with(position, slot) })
 
-// Swaps with the slot already there, so the grid keeps its gaps and nothing else shifts
+// Swaps with the slot already there, so the grid keeps its gaps and nothing else shifts. Crosses the
+// layout freely, so a product left out of the poster can come back in (#117)
 export const moveSlot = (
   page: OfferPage,
   from: number,
   to: number
 ): OfferPage => {
-  if (from === to || to < 0 || to >= page.layout) return page
+  if (from === to || to < 0 || to >= page.slots.length) return page
   return {
     ...page,
     slots: page.slots.with(from, page.slots[to]).with(to, page.slots[from])
@@ -304,7 +305,7 @@ export const isOfferContent = (value: unknown): value is OfferContent =>
   value.pages.every(isPage)
 
 // A product placed on a page starts without a price, which the poster would print as R$ 0,00. A
-// slot past the layout has no price field to fill, and asks again if the layout grows back
+// slot past the layout isn't printed, and asks again if the layout grows back
 export const findPageWithoutPrice = (pages: OfferPage[]) =>
   pages.findIndex((page) =>
     page.slots

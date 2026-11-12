@@ -21,6 +21,7 @@ import {
   clearPageProducts,
   moveSlot,
   type OfferPage,
+  type OfferSlot,
   setSlot
 } from '@/domain/offer'
 import {
@@ -36,16 +37,18 @@ import type { MoveTarget } from './move-product-button'
 import { RemovePageButton } from './remove-page-button'
 import { SlotField } from './slot-field'
 
-// Counts the hidden slots too, which clearing also empties, so the number matches what leaves
-const describeCleared = (productCount: number, hiddenCount: number) => {
+const SLOT_GRID_CLASS_NAME = 'grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3'
+
+// Counts the slots outside the poster too, which clearing also empties, so the number matches what leaves
+const describeCleared = (productCount: number, outsideCount: number) => {
   const removed =
     productCount === 1
       ? 'O produto desta arte sai, com o preço'
       : `Os ${productCount} produtos desta arte saem, com os preços`
-  if (hiddenCount === 0) return `${removed}.`
-  return hiddenCount === 1
-    ? `${removed}, incluindo o guardado fora desta quantidade.`
-    : `${removed}, incluindo os ${hiddenCount} guardados fora desta quantidade.`
+  if (outsideCount === 0) return `${removed}.`
+  return outsideCount === 1
+    ? `${removed}, incluindo o que está fora da arte.`
+    : `${removed}, incluindo os ${outsideCount} que estão fora da arte.`
 }
 
 type PagePanelProps = {
@@ -88,14 +91,39 @@ export const PagePanel = ({
     page.slots.map((_, position) => position)
   )
   const productCount = page.slots.filter((slot) => slot !== null).length
-  const hiddenCount = page.slots
+  const outsideCount = page.slots
     .slice(page.layout)
     .filter((slot) => slot !== null).length
+
+  const renderSlot = (slot: OfferSlot, position: number) => (
+    <li key={slotKeys[position]}>
+      <SlotField
+        id={`${id}-slot-${position}`}
+        position={position}
+        slot={slot}
+        pages={pages}
+        pageIndex={index}
+        noEanImages={noEanImages}
+        photoVersion={photoVersion}
+        outside={position >= page.layout}
+        canMoveBefore={position > 0}
+        canMoveAfter={position < page.slots.length - 1}
+        onChange={(next) => onChange(setSlot(page, position, next))}
+        onPriceChange={onPriceChange}
+        onMove={(to) => moveSlotTo(position, to)}
+        onMoveToPage={(target) => onMoveProduct(position, target)}
+        onCopyToPage={(target) => onCopyProduct(position, target)}
+        onProductSaved={onProductSaved}
+        onNotice={onNotice}
+      />
+    </li>
+  )
 
   const moveSlotTo = (from: number, to: number) => {
     const moved = moveSlot(page, from, to)
     if (moved === page) return
-    // React moves the slot's node, which drops the focus, so it goes back to the same button
+    // React moves the slot's node, or remounts it across the poster's edge, which drops the focus,
+    // so it goes back to the same button
     flushSync(() => {
       onChange(moved)
       setSlotKeys(slotKeys.with(from, slotKeys[to]).with(to, slotKeys[from]))
@@ -182,7 +210,7 @@ export const PagePanel = ({
             size="sm"
             icon={Eraser}
             title={`Limpar os produtos da arte ${index + 1}?`}
-            description={`${describeCleared(productCount, hiddenCount)} As outras artes, a validade e os textos do destaque continuam. ${CLEAR_NOTE}`}
+            description={`${describeCleared(productCount, outsideCount)} As outras artes, a validade e os textos do destaque continuam. ${CLEAR_NOTE}`}
             disabled={productCount === 0}
             getNextField={() =>
               document.querySelector<HTMLElement>(`#${id}-slot-0-code`)
@@ -203,37 +231,34 @@ export const PagePanel = ({
         </div>
       </div>
 
-      <ul className="grid gap-3 @md:grid-cols-2 @3xl:grid-cols-3">
-        {page.slots.slice(0, page.layout).map((slot, position) => (
-          <li key={slotKeys[position]}>
-            <SlotField
-              id={`${id}-slot-${position}`}
-              position={position}
-              slot={slot}
-              pages={pages}
-              pageIndex={index}
-              noEanImages={noEanImages}
-              photoVersion={photoVersion}
-              canMoveBefore={position > 0}
-              canMoveAfter={position < page.layout - 1}
-              onChange={(next) => onChange(setSlot(page, position, next))}
-              onPriceChange={onPriceChange}
-              onMove={(to) => moveSlotTo(position, to)}
-              onMoveToPage={(target) => onMoveProduct(position, target)}
-              onCopyToPage={(target) => onCopyProduct(position, target)}
-              onProductSaved={onProductSaved}
-              onNotice={onNotice}
-            />
-          </li>
-        ))}
+      <ul className={SLOT_GRID_CLASS_NAME}>
+        {page.slots
+          .slice(0, page.layout)
+          .map((slot, position) => renderSlot(slot, position))}
       </ul>
 
-      {hiddenCount > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {hiddenCount === 1
-            ? '1 produto fica guardado fora desta quantidade e volta se você escolher mais produtos.'
-            : `${hiddenCount} produtos ficam guardados fora desta quantidade e voltam se você escolher mais produtos.`}
-        </p>
+      {/* Slots past the layout stay on screen, so the store sees what the poster leaves out and can
+          bring it back (#117) */}
+      {page.layout < page.slots.length && (
+        <section
+          aria-labelledby={`${id}-outside`}
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-col gap-1">
+            <h3 id={`${id}-outside`} className="font-semibold">
+              Fora da arte
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Estes espaços não aparecem na arte. Use Antes e Depois para trazer
+              um produto para ela, ou escolha mais produtos na arte.
+            </p>
+          </div>
+          <ul className={SLOT_GRID_CLASS_NAME}>
+            {page.slots
+              .slice(page.layout)
+              .map((slot, offset) => renderSlot(slot, page.layout + offset))}
+          </ul>
+        </section>
       )}
     </div>
   )

@@ -161,9 +161,11 @@ describe('moveSlot', () => {
     expect(moveSlot(page, 0, to)).toBe(page)
   })
 
-  test('ignores a move past the slots the layout shows', () => {
+  test('moves across the slots the layout shows', () => {
     const small = { ...page, layout: 3 as const }
-    expect(moveSlot(small, 2, 3)).toBe(small)
+    const moved = moveSlot(small, 1, 3)
+    expect(moved.slots[1]).toBeNull()
+    expect(moved.slots[3]).toBe(other)
   })
 })
 
