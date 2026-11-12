@@ -1,4 +1,8 @@
 import { GENERATION_PDF_FILE_NAME } from '@/domain/generation'
+import {
+  type GenerationPage,
+  isGenerationPages
+} from '@/domain/generation-pages'
 import { isRadioScript, type RadioScript } from '@/domain/radio-script'
 
 export const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
@@ -23,6 +27,8 @@ export type GenerationManifest = {
   pageCount: number
   createdAt: string
   radioScript: RadioScript | null
+  // Optional within version 1: generations recorded before #119 have none
+  pages?: GenerationPage[]
 }
 
 export type GenerationImportPreview = {
@@ -60,25 +66,29 @@ export const isGenerationManifest = (
   value.pageCount <= MAX_GENERATION_PAGE_COUNT &&
   typeof value.createdAt === 'string' &&
   !Number.isNaN(Date.parse(value.createdAt)) &&
-  (value.radioScript === null || isRadioScript(value.radioScript))
+  (value.radioScript === null || isRadioScript(value.radioScript)) &&
+  (value.pages === undefined || isGenerationPages(value.pages))
 
 export const createGenerationManifest = ({
   number,
   pageCount,
   createdAt,
-  radioScript
+  radioScript,
+  pages
 }: {
   number: number
   pageCount: number
   createdAt: Date
   radioScript: RadioScript | null
+  pages: GenerationPage[] | null
 }): GenerationManifest => ({
   format: GENERATION_ARCHIVE_FORMAT,
   version: GENERATION_ARCHIVE_VERSION,
   number,
   pageCount,
   createdAt: createdAt.toISOString(),
-  radioScript
+  radioScript,
+  ...(pages && { pages })
 })
 
 const PAGE_FILE_PATTERN = /^pagina-([1-9]\d*)\.png$/

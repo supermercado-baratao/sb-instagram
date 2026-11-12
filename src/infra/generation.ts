@@ -16,15 +16,26 @@ import {
   GENERATION_PDF_FILE_NAME,
   getGenerationPageFileName
 } from '@/domain/generation'
+import {
+  appendGenerationPages,
+  type GenerationPage,
+  getGenerationPages,
+  getGenerationPagesFromExport,
+  isGenerationPages,
+  resolveGenerationProduct,
+  selectGenerationPages
+} from '@/domain/generation-pages'
 import { getOfferExport } from '@/domain/offer-export'
 import { getRadioScript } from '@/domain/radio-script'
+import { listTemplates } from '@/infra/brand'
 import type { Database } from '@/infra/database/relations'
 import { generations } from '@/infra/database/schema'
 import {
   generationsDirectory,
   getGenerationFolder
 } from '@/infra/generations-directory'
-import { findOffer } from '@/infra/offer'
+import { findOffer, saveOffer } from '@/infra/offer'
+import { findProductById, findProductWithCodes } from '@/infra/product'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
 
@@ -66,11 +77,67 @@ export const findGeneration = (
     .get()
 
 export const findGenerationExport = (database: Database, id: number) =>
+  findGenerationTexts(database, id)?.offerExport
+
+export const findGenerationTexts = (database: Database, id: number) =>
   database
-    .select({ offerExport: generations.offerExport })
+    .select({ offerExport: generations.offerExport, pages: generations.pages })
     .from(generations)
     .where(eq(generations.id, id))
-    .get()?.offerExport
+    .get()
+
+// A generation recorded before #119 has no pages of its own, so they are rebuilt from its export
+export const findGenerationPages = (
+  database: Database,
+  id: number
+): GenerationPage[] | undefined => {
+  const row = findGenerationTexts(database, id)
+  if (!row) return
+  if (row.pages !== null) {
+    return isGenerationPages(row.pages) ? row.pages : undefined
+  }
+  try {
+    return getGenerationPagesFromExport(JSON.parse(row.offerExport))
+  } catch {
+    return
+  }
+}
+
+export type CopyGenerationPagesResult =
+  | { status: 'copied'; pageCount: number; missingProductCount: number }
+  | { status: 'missing' }
+
+// The generation never changes: its pages are appended to the current offer, which keeps the
+// version it replaces, so "Voltar à versão anterior" undoes the copy
+export const copyGenerationPages = (
+  database: Database,
+  id: number,
+  pageNumbers: number[]
+): CopyGenerationPagesResult => {
+  const pages = findGenerationPages(database, id)
+  const selected = pages && selectGenerationPages(pages, pageNumbers)
+  const offer = findOffer(database)
+  const templateIds = listTemplates(database).map((template) => template.id)
+  if (!selected || !offer || templateIds.length === 0) {
+    return { status: 'missing' }
+  }
+
+  const { content, missingProductCount } = appendGenerationPages(
+    offer,
+    selected,
+    {
+      templateIds,
+      findProduct: (item) =>
+        resolveGenerationProduct(
+          item,
+          (productId) => findProductById(database, productId),
+          (codes) => findProductWithCodes(database, codes)
+        )
+    }
+  )
+  saveOffer(database, content)
+  return { status: 'copied', pageCount: selected.length, missingProductCount }
+}
 
 export const getTemporaryGenerationFolder = (
   token: string,
@@ -139,6 +206,7 @@ export const createGeneration = async (
         // Indented, since the store opens the file to read or edit it by hand
         offerExport: JSON.stringify(getOfferExport(offer), null, 2),
         pageCount: offer.pages.length,
+        pages: getGenerationPages(offer),
         radioScript: getRadioScript(
           offer,
           findRadioScriptTemplate(transaction),

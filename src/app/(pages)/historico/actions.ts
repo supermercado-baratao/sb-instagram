@@ -1,9 +1,10 @@
 'use server'
 
-import { refresh } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 
+import { OFFER_PATH, RADIO_AD_PATH } from '@/app/helpers/navigation'
 import { database } from '@/infra/database/client'
-import { deleteGeneration } from '@/infra/generation'
+import { copyGenerationPages, deleteGeneration } from '@/infra/generation'
 import {
   discardGenerationImport,
   GenerationArchiveError,
@@ -59,5 +60,41 @@ export const discardGenerationImportAction = async (token: string) => {
     await discardGenerationImport(token)
   } catch {
     // Left for removeUnfinishedGenerations on the next start
+  }
+}
+
+export type CopyGenerationPagesResult =
+  | { status: 'copied'; pageCount: number; missingProductCount: number }
+  | { status: 'error'; message: string }
+
+export const copyGenerationPagesAction = async (
+  id: number,
+  pageNumbers: number[]
+): Promise<CopyGenerationPagesResult> => {
+  if (
+    !Number.isSafeInteger(id) ||
+    !Array.isArray(pageNumbers) ||
+    pageNumbers.some((pageNumber) => !Number.isSafeInteger(pageNumber))
+  ) {
+    return { status: 'error', message: 'Escolha as artes de novo.' }
+  }
+  try {
+    const result = copyGenerationPages(database, id, pageNumbers)
+    if (result.status === 'missing') {
+      return {
+        status: 'error',
+        message:
+          'Não foi possível copiar estas artes. Recarregue a página e tente de novo.'
+      }
+    }
+    // The radio ad previews the saved offer, so both pages show the copy
+    revalidatePath(OFFER_PATH)
+    revalidatePath(RADIO_AD_PATH)
+    return result
+  } catch {
+    return {
+      status: 'error',
+      message: 'Não foi possível copiar as artes. Tente de novo.'
+    }
   }
 }

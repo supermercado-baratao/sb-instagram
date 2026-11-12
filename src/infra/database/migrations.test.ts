@@ -247,6 +247,7 @@ test('independent-generations keeps every generation and its id sequence', async
         offerExport: '{"validUntil":"2026-10-01"}',
         pageCount: 1,
         radioScript: null,
+        pages: null,
         createdAt: 100
       },
       {
@@ -255,6 +256,7 @@ test('independent-generations keeps every generation and its id sequence', async
         offerExport: '{"validUntil":"2026-11-12"}',
         pageCount: 2,
         radioScript: '{"version":2}',
+        pages: null,
         createdAt: 200
       }
     ]

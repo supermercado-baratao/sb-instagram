@@ -31,7 +31,7 @@ import type { Database } from '@/infra/database/relations'
 import { generations } from '@/infra/database/schema'
 import {
   findGeneration,
-  findGenerationExport,
+  findGenerationTexts,
   getTemporaryGenerationFolder,
   readGenerationFile,
   recordGeneration
@@ -64,10 +64,11 @@ export const createGenerationArchive = async (
   { directory = generationsDirectory }: GenerationArchiveOptions = {}
 ) => {
   const generation = findGeneration(database, id)
-  const offerExport = findGenerationExport(database, id)
-  if (!generation || offerExport === undefined) return
+  const stored = findGenerationTexts(database, id)
+  if (!generation || !stored) return
 
-  const manifest = createGenerationManifest(generation)
+  const { offerExport, pages } = stored
+  const manifest = createGenerationManifest({ ...generation, pages })
   // PNG and PDF are already compressed, so only the texts are deflated
   const files: Zippable = {
     [GENERATION_MANIFEST_NAME]: encoder.encode(
@@ -261,6 +262,7 @@ export const importGeneration = async (
         offerExport,
         pageCount: manifest.pageCount,
         radioScript: manifest.radioScript,
+        pages: manifest.pages ?? null,
         createdAt: new Date(manifest.createdAt)
       }),
       directory

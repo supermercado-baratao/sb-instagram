@@ -11,7 +11,8 @@ const manifest = createGenerationManifest({
   number: 4,
   pageCount: 2,
   createdAt: new Date('2026-11-02T13:00:00.000Z'),
-  radioScript: null
+  radioScript: null,
+  pages: null
 })
 
 describe('isGenerationManifest', () => {
@@ -29,6 +30,28 @@ describe('isGenerationManifest', () => {
         }
       })
     ).toBe(true)
+  })
+
+  test('accepts the pages to copy, and a manifest written before them', () => {
+    const pages = [
+      {
+        templateId: 'padrao',
+        layout: 4,
+        items: [
+          {
+            position: 0,
+            productId: '6f1f8c1e-4a7b-4d8e-9a3a-1b2c3d4e5f60',
+            codes: ['7891234567895'],
+            priceInCents: 1290
+          }
+        ]
+      }
+    ]
+    expect(isGenerationManifest({ ...manifest, pages })).toBe(true)
+    expect(isGenerationManifest(manifest)).toBe(true)
+    expect(isGenerationManifest({ ...manifest, pages: [{ items: [] }] })).toBe(
+      false
+    )
   })
 
   test('accepts a newer version, which the import refuses with its own message', () => {
