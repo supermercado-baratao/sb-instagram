@@ -111,6 +111,29 @@ export const moveSlot = (
   }
 }
 
+export type SlotMoveDirection = 'before' | 'after'
+
+// Past the layout only filled slots are on screen, so a move there skips the empty ones and never
+// lands a product somewhere the store can't see (#121)
+export const getSlotMoveTarget = (
+  page: OfferPage,
+  from: number,
+  direction: SlotMoveDirection
+): number | null => {
+  const filledOutside = page.slots
+    .map((slot, position) => (slot && position >= page.layout ? position : -1))
+    .filter((position) => position >= 0)
+  if (direction === 'after') {
+    if (from < page.layout)
+      return from + 1 < page.slots.length ? from + 1 : null
+    return filledOutside.find((position) => position > from) ?? null
+  }
+  if (from <= page.layout) return from > 0 ? from - 1 : null
+  return (
+    filledOutside.findLast((position) => position < from) ?? page.layout - 1
+  )
+}
+
 export type SlotLocation = {
   page: number
   position: number

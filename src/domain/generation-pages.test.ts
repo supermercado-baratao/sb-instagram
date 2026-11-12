@@ -110,6 +110,26 @@ describe('getGenerationPagesFromExport', () => {
     ])
   })
 
+  test('rebuilds a page of more than 9 products in the 12-product layout', () => {
+    const pages = getGenerationPagesFromExport({
+      version: 1,
+      name: 'Semana',
+      pages: [
+        {
+          number: 1,
+          products: Array.from({ length: 10 }, (_, index) => ({
+            name: 'Picanha',
+            codes: [`10${index}`],
+            price: '39,90'
+          }))
+        }
+      ]
+    })
+
+    expect(pages?.[0].layout).toBe(12)
+    expect(pages?.[0].items).toHaveLength(10)
+  })
+
   test.each([
     ['no pages', { version: 3 }],
     ['a product without codes', { pages: [{ products: [{ price: '1,00' }] }] }],

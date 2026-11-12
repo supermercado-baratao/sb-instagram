@@ -5,6 +5,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, test } from 'vitest'
 
 import { createOfferContent, type OfferContent } from '@/domain/offer'
+import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
 import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
@@ -202,7 +203,7 @@ describe('the offer backup', () => {
     expect(restored?.validUntil).toBe('2026-11-12')
     expect(restored?.pages.map((page) => page.layout)).toEqual([9, 4])
     expect(restored?.pages.flatMap((page) => page.slots)).toEqual(
-      Array.from({ length: 18 }, () => null)
+      Array.from({ length: PAGE_PRODUCT_COUNT * 2 }, () => null)
     )
   })
 

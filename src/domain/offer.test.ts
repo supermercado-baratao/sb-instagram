@@ -19,6 +19,7 @@ import {
   formatPrice,
   formatValidUntil,
   getPageConflict,
+  getSlotMoveTarget,
   isOfferContent,
   isOfferSnapshot,
   isSameOfferSnapshot,
@@ -141,6 +142,39 @@ describe('movePage', () => {
   })
 })
 
+describe('getSlotMoveTarget', () => {
+  // Layout 4 with products at positions 1, 5 and 8 (the 2nd, 6th and 9th slots)
+  const empty = createOfferPage('mercado')
+  const page = {
+    ...empty,
+    layout: 4 as const,
+    slots: empty.slots.map((slot, position) =>
+      [1, 5, 8].includes(position) ? item : slot
+    )
+  }
+
+  test('moves to the neighboring slot inside the layout, filled or empty', () => {
+    expect(getSlotMoveTarget(page, 1, 'before')).toBe(0)
+    expect(getSlotMoveTarget(page, 1, 'after')).toBe(2)
+    expect(getSlotMoveTarget(page, 0, 'before')).toBeNull()
+  })
+
+  test('leaves the layout from its last slot', () => {
+    expect(getSlotMoveTarget(page, 3, 'after')).toBe(4)
+  })
+
+  test('skips the empty slots past the layout', () => {
+    expect(getSlotMoveTarget(page, 5, 'after')).toBe(8)
+    expect(getSlotMoveTarget(page, 8, 'before')).toBe(5)
+    expect(getSlotMoveTarget(page, 8, 'after')).toBeNull()
+  })
+
+  test('goes back to the last slot of the layout from the first product past it', () => {
+    expect(getSlotMoveTarget(page, 5, 'before')).toBe(3)
+    expect(getSlotMoveTarget({ ...page, layout: 6 }, 6, 'before')).toBe(5)
+  })
+})
+
 describe('moveSlot', () => {
   const other = { ...item, priceInCents: 500 }
   const page = setSlot(setSlot(createOfferPage('mercado'), 0, item), 1, other)
@@ -157,9 +191,12 @@ describe('moveSlot', () => {
     expect(moved.slots[2]).toBe(other)
   })
 
-  test.each([-1, 9])('ignores a move to %i, outside the slots', (to) => {
-    expect(moveSlot(page, 0, to)).toBe(page)
-  })
+  test.each([-1, PAGE_PRODUCT_COUNT])(
+    'ignores a move to %i, outside the slots',
+    (to) => {
+      expect(moveSlot(page, 0, to)).toBe(page)
+    }
+  )
 
   test('moves across the slots the layout shows', () => {
     const small = { ...page, layout: 3 as const }
@@ -686,7 +723,12 @@ describe('offer snapshots', () => {
         pages: [
           {
             ...snapshot.pages[0],
-            items: [{ ...snapshot.pages[0].items[0], position: 9 }]
+            items: [
+              {
+                ...snapshot.pages[0].items[0],
+                position: PAGE_PRODUCT_COUNT
+              }
+            ]
           }
         ]
       })

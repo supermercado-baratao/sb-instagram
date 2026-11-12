@@ -38,7 +38,8 @@ import {
   findProductPrice,
   getPageConflict,
   type OfferPage,
-  type OfferSlot
+  type OfferSlot,
+  type SlotMoveDirection
 } from '@/domain/offer'
 import { getCodeType, type Product } from '@/domain/product'
 
@@ -61,7 +62,8 @@ type SlotFieldProps = {
   canMoveAfter: boolean
   onChange: (slot: OfferSlot) => void
   onPriceChange: (productId: string, priceInCents: number) => void
-  onMove: (to: number) => void
+  onMove: (direction: SlotMoveDirection) => void
+  onEmptied: () => void
   onMoveToPage: (target: MoveTarget) => void
   onCopyToPage: (target: MoveTarget) => void
   onProductSaved: (product: Product) => void
@@ -85,6 +87,7 @@ export const SlotField = ({
   onChange,
   onPriceChange,
   onMove,
+  onEmptied,
   onMoveToPage,
   onCopyToPage,
   onProductSaved,
@@ -138,6 +141,12 @@ export const SlotField = ({
     document.querySelector<HTMLElement>(`#${CSS.escape(priceId)}`) ??
     codeInput.current
 
+  // An empty slot past the layout isn't rendered, so it has no code field to take the focus
+  const focusEmptiedSlot = () => {
+    if (codeInput.current) codeInput.current.focus()
+    else onEmptied()
+  }
+
   const moveToPage = (target: MoveTarget) => {
     // The product that comes in a trade must not take the focus from a scan that is long gone
     setFocusPrice(false)
@@ -146,7 +155,7 @@ export const SlotField = ({
       target.kind === 'new-page' ||
       pages[target.to.page].slots[target.to.position] === null
     flushSync(() => onMoveToPage(target))
-    if (emptiesSlot) codeInput.current?.focus()
+    if (emptiesSlot) focusEmptiedSlot()
   }
 
   const dialog = (
@@ -392,7 +401,7 @@ export const SlotField = ({
             onClick={() => {
               // The button goes away with the product, so focus moves to the slot's code field
               flushSync(() => onChange(null))
-              codeInput.current?.focus()
+              focusEmptiedSlot()
             }}
           >
             <X aria-hidden />
@@ -418,7 +427,7 @@ export const SlotField = ({
             disabled={!canMoveBefore}
             focusableWhenDisabled
             aria-label={`Mover ${product.description} para antes`}
-            onClick={() => onMove(position - 1)}
+            onClick={() => onMove('before')}
           >
             <ArrowLeft data-icon="inline-start" aria-hidden />
             Antes
@@ -430,7 +439,7 @@ export const SlotField = ({
             disabled={!canMoveAfter}
             focusableWhenDisabled
             aria-label={`Mover ${product.description} para depois`}
-            onClick={() => onMove(position + 1)}
+            onClick={() => onMove('after')}
           >
             Depois
             <ArrowRight data-icon="inline-end" aria-hidden />

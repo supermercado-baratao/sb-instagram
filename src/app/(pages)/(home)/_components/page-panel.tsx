@@ -19,6 +19,7 @@ import {
 } from '@/app/components/ui/shadcn/toggle-group'
 import {
   clearPageProducts,
+  getSlotMoveTarget,
   moveSlot,
   type OfferPage,
   type OfferSlot,
@@ -106,11 +107,15 @@ export const PagePanel = ({
         noEanImages={noEanImages}
         photoVersion={photoVersion}
         outside={position >= page.layout}
-        canMoveBefore={position > 0}
-        canMoveAfter={position < page.slots.length - 1}
+        canMoveBefore={getSlotMoveTarget(page, position, 'before') !== null}
+        canMoveAfter={getSlotMoveTarget(page, position, 'after') !== null}
         onChange={(next) => onChange(setSlot(page, position, next))}
         onPriceChange={onPriceChange}
-        onMove={(to) => moveSlotTo(position, to)}
+        onMove={(direction) => {
+          const to = getSlotMoveTarget(page, position, direction)
+          if (to !== null) moveSlotTo(position, to)
+        }}
+        onEmptied={() => focusNearEmptiedSlot(position)}
         onMoveToPage={(target) => onMoveProduct(position, target)}
         onCopyToPage={(target) => onCopyProduct(position, target)}
         onProductSaved={onProductSaved}
@@ -130,6 +135,22 @@ export const PagePanel = ({
     })
     const button = to < from ? 'move-before' : 'move-after'
     document.querySelector<HTMLElement>(`#${id}-slot-${to}-${button}`)?.focus()
+  }
+
+  // An emptied slot past the layout leaves the screen with its own fields, so the focus goes to the
+  // nearest product still out of the poster, or back to the poster's last slot (#121)
+  const focusNearEmptiedSlot = (position: number) => {
+    const outside = page.slots
+      .map((slot, other) => (slot ? other : -1))
+      .filter((other) => other >= page.layout && other !== position)
+    const near = outside.find((other) => other > position) ?? outside.at(-1)
+    const last = `${id}-slot-${page.layout - 1}`
+    const target =
+      near === undefined
+        ? (document.querySelector<HTMLElement>(`#${last}-code`) ??
+          document.querySelector<HTMLElement>(`#${last}-move-after`))
+        : document.querySelector<HTMLElement>(`#${id}-slot-${near}-move-before`)
+    target?.focus()
   }
 
   return (
@@ -237,9 +258,10 @@ export const PagePanel = ({
           .map((slot, position) => renderSlot(slot, position))}
       </ul>
 
-      {/* Slots past the layout stay on screen, so the store sees what the poster leaves out and can
-          bring it back (#117) */}
-      {page.layout < page.slots.length && (
+      {/* Products past the layout stay on screen, so the store sees what the poster leaves out and can
+          bring it back (#117). Empty slots there stay hidden, so a page that never held more products
+          shows only its layout (#121) */}
+      {outsideCount > 0 && (
         <section
           aria-labelledby={`${id}-outside`}
           className="flex flex-col gap-3"
@@ -249,14 +271,16 @@ export const PagePanel = ({
               Fora da arte
             </h3>
             <p className="text-sm text-muted-foreground">
-              Estes espaços não aparecem na arte. Use Antes e Depois para trazer
-              um produto para ela, ou escolha mais produtos na arte.
+              Estes produtos não aparecem na arte. Use Antes para trazer um
+              produto para ela, ou escolha mais produtos na arte.
             </p>
           </div>
           <ul className={SLOT_GRID_CLASS_NAME}>
             {page.slots
               .slice(page.layout)
-              .map((slot, offset) => renderSlot(slot, page.layout + offset))}
+              .map((slot, offset) =>
+                slot ? renderSlot(slot, page.layout + offset) : null
+              )}
           </ul>
         </section>
       )}

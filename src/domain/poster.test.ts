@@ -34,7 +34,7 @@ const templates: PosterTemplate[] = [
 ]
 
 describe('getVisibleProducts', () => {
-  test.each<PosterLayout>([9, 6, 4, 3])(
+  test.each<PosterLayout>([12, 9, 6, 4, 3])(
     'shows the first %i products',
     (layout) => {
       const visible = getVisibleProducts({ layout, products })
@@ -53,7 +53,7 @@ describe('getPosterLayout', () => {
   })
 
   test('has room for every visible product in each layout', () => {
-    for (const layout of [9, 6, 4, 3] as const) {
+    for (const layout of [12, 9, 6, 4, 3] as const) {
       const { columns, rows } = getPosterLayout(layout)
       expect(columns * rows).toBe(layout)
     }
