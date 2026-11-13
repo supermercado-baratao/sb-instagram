@@ -14,7 +14,7 @@ export const getCatalogImageFile = (ean: string, directory = eanDirectory) =>
   path.join(directory, `${ean}${CATALOG_IMAGE_EXTENSION}`)
 
 // CI rejects an invalid catalog file, but a lookup must not break the form if one slips through
-export const readCatalogProduct = async (
+const readCatalogProduct = async (
   ean: string,
   directory = eanDirectory
 ): Promise<CatalogProduct | undefined> => {
@@ -38,7 +38,7 @@ export type CatalogEntry = {
   product: CatalogProduct
 }
 
-export const readCatalogEntries = async (
+const readCatalogEntries = async (
   directory = eanDirectory
 ): Promise<CatalogEntry[]> => {
   let fileNames: string[]

@@ -290,7 +290,7 @@ export type RadioScriptPart =
   | { type: 'text'; text: string }
   | { type: 'products'; pageNumber: number; lines: RadioScriptLine[] }
 
-export const getProductVoiceText = (
+const getProductVoiceText = (
   product: OfferItem['product'],
   pronunciations: Pronunciation[]
 ) => product.voiceText?.trim() || suggestVoiceText(product, pronunciations)
@@ -366,7 +366,7 @@ export const getRadioScript = (
   }
 }
 
-export const joinNumbers = (numbers: number[]) =>
+const joinNumbers = (numbers: number[]) =>
   numbers.length === 1
     ? String(numbers[0])
     : `${numbers.slice(0, -1).join(', ')} e ${numbers.at(-1)}`

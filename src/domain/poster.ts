@@ -84,7 +84,7 @@ export const getPageTemplate = (
   templates.find((template) => template.id === templateId) ?? templates[0]
 
 // An empty field shows the placeholder, so hiding a line needs an explicit marker
-export const HIDDEN_FIELD_MARKER = '-'
+const HIDDEN_FIELD_MARKER = '-'
 
 export const isHiddenField = (value: string) =>
   value.trim() === HIDDEN_FIELD_MARKER

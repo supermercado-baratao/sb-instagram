@@ -27,6 +27,7 @@ import {
   getRadioListMarkdown,
   getRadioScriptMarkdown
 } from '@/domain/radio-script'
+import { isUuid } from '@/domain/uuid'
 import type { Database } from '@/infra/database/relations'
 import { generations } from '@/infra/database/schema'
 import {
@@ -98,11 +99,8 @@ export const createGenerationArchive = async (
   return { generation, archive: zipSync(files) }
 }
 
-const isImportToken = (token: string) =>
-  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(token)
-
 const getImportFolder = (token: string, directory: string) => {
-  if (!isImportToken(token)) {
+  if (!isUuid(token)) {
     throw new GenerationArchiveError(MISSING_IMPORT_MESSAGE)
   }
   return getTemporaryGenerationFolder(token, directory)

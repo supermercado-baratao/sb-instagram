@@ -47,7 +47,7 @@ export const LOGO_MAX_SIDE = 600
 
 const HEX_COLOR_PATTERN = /^#[\da-f]{6}$/i
 
-export const isHexColor = (value: string) => HEX_COLOR_PATTERN.test(value)
+const isHexColor = (value: string) => HEX_COLOR_PATTERN.test(value)
 
 // Brand manuals list colors as "#1A1D6B" or "1a1d6b", and people paste them with spaces
 export const normalizeHexColor = (value: string) => {
@@ -68,7 +68,7 @@ export const normalizeInstagram = (value: string) => {
   return handle === '' ? '' : `@${handle}`
 }
 
-export const isInstagramHandle = (value: string) =>
+const isInstagramHandle = (value: string) =>
   INSTAGRAM_HANDLE_PATTERN.test(value)
 
 const FALLBACK_TEMPLATE_ID = 'modelo'

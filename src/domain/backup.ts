@@ -1,6 +1,6 @@
 import { LOGO_FILE_NAME } from '@/domain/brand'
 
-export const BACKUP_FORMAT = 'sb-instagram-backup'
+const BACKUP_FORMAT = 'sb-instagram-backup'
 
 export const BACKUP_VERSION = 1
 

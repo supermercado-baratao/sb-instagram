@@ -1,5 +1,4 @@
-import { ImageOff } from 'lucide-react'
-
+import { ProductThumbnail } from '@/app/components/blocks/product/product-thumbnail'
 import {
   AutocompleteContent,
   AutocompleteItem,
@@ -17,18 +16,10 @@ type ProductSuggestionsProps = {
 const ProductSuggestion = ({ product }: { product: Product }) => {
   return (
     <>
-      <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-muted">
-        {product.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- the photo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy
-          <img
-            src={getPhotoUrl(product.id)}
-            alt=""
-            className="size-full object-contain"
-          />
-        ) : (
-          <ImageOff className="size-4 text-muted-foreground" aria-hidden />
-        )}
-      </span>
+      <ProductThumbnail
+        size="sm"
+        src={product.photo ? getPhotoUrl(product.id) : undefined}
+      />
       <span className="flex min-w-0 flex-col">
         <span className="font-medium wrap-break-word">
           {product.description}

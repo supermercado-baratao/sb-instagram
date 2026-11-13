@@ -5,7 +5,7 @@ import {
 } from '@/domain/generation-pages'
 import { isRadioScript, type RadioScript } from '@/domain/radio-script'
 
-export const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
+const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
 
 export const GENERATION_ARCHIVE_VERSION = 1
 
@@ -18,7 +18,7 @@ export const RADIO_SCRIPT_FILE_NAME = 'roteiro.md'
 export const RADIO_LIST_FILE_NAME = 'lista.md'
 
 // Far above any real offer, only so a crafted file can't ask for an endless list of pages
-export const MAX_GENERATION_PAGE_COUNT = 500
+const MAX_GENERATION_PAGE_COUNT = 500
 
 export type GenerationManifest = {
   format: typeof GENERATION_ARCHIVE_FORMAT
