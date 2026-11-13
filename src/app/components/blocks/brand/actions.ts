@@ -4,11 +4,11 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { getLogoUrl } from '@/app/helpers/brand-poster'
-import type { PosterTemplate } from '@/domain/poster'
 import { runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
 import type { BrandContentError } from '@/models/brand/brand'
 import { brandModel } from '@/models/brand/model'
+import type { PosterTemplate } from '@/models/poster/poster'
 
 export type SaveBrandResult =
   | { status: 'saved'; logoUrl: string | null; templates: PosterTemplate[] }

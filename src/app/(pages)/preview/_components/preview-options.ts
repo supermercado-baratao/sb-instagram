@@ -3,7 +3,7 @@ import {
   DEFAULT_POSTER_LAYOUT,
   getPageTemplate,
   isPosterLayout
-} from '@/domain/poster'
+} from '@/models/poster/poster'
 
 type SearchParameters = Record<string, string | string[] | undefined>
 

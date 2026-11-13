@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
 import {
-  createOfferContent,
-  createOfferPage,
-  type OfferItem,
-  setSlot
-} from '@/domain/offer'
-import {
   convertLegacyBlocks,
   getClosingSequence,
   getEditedVoiceText,
@@ -24,6 +18,12 @@ import {
   type RadioScriptClosingSequence,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
+import {
+  createOfferContent,
+  createOfferPage,
+  type OfferItem,
+  setSlot
+} from '@/models/offer/offer'
 
 const item = (
   description: string,

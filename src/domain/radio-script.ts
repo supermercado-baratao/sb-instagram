@@ -1,6 +1,10 @@
-import { formatPrice, type OfferContent, type OfferItem } from '@/domain/offer'
 import type { Pronunciation } from '@/domain/pronunciation'
 import { spellPrice, suggestVoiceText } from '@/domain/spoken-text'
+import {
+  formatPrice,
+  type OfferContent,
+  type OfferItem
+} from '@/models/offer/offer'
 
 // Each offer page with products is a round of the ad: the opening, the page's products and a
 // closing chosen by the round's position (#123). Tone marks ("[animado]") are written into the

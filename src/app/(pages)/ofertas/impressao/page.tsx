@@ -5,10 +5,10 @@ import { connection } from 'next/server'
 import { Poster } from '@/app/components/blocks/poster'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
-import { getPageTemplate, getPosterFitScale } from '@/domain/poster'
 import { database } from '@/infra/database/client'
-import { findOffer } from '@/infra/offer'
 import { brandModel } from '@/models/brand/model'
+import { offerModel } from '@/models/offer/model'
+import { getPageTemplate, getPosterFitScale } from '@/models/poster/poster'
 
 export const metadata: Metadata = {
   title: 'Impressão',
@@ -31,7 +31,7 @@ const printScale = getPosterFitScale({
 const OfferPrint = async () => {
   await connection()
   const settings = brandModel.findSettings(database)
-  const offer = findOffer(database)
+  const offer = offerModel.findCurrent(database)
   if (!settings || !offer) notFound()
 
   const brand = getPosterBrand(settings.brand)

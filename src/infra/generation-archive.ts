@@ -22,7 +22,6 @@ import {
   RADIO_LIST_FILE_NAME,
   RADIO_SCRIPT_FILE_NAME
 } from '@/domain/generation-archive'
-import { isStoredOfferExport } from '@/domain/offer-export'
 import {
   getRadioListMarkdown,
   getRadioScriptMarkdown
@@ -39,6 +38,7 @@ import {
 } from '@/infra/generation'
 import { generationsDirectory } from '@/infra/generations-directory'
 import { extractZip } from '@/infra/zip'
+import { storedOfferExportSchema } from '@/models/offer/schema'
 
 type GenerationArchiveOptions = { directory?: string }
 
@@ -138,14 +138,14 @@ const readTexts = async (folder: string): Promise<ImportedTexts> => {
     path.join(folder, OFFER_EXPORT_FILE_NAME),
     'utf8'
   )
-  const exported: unknown = JSON.parse(offerExport)
-  if (!isStoredOfferExport(exported)) {
+  const exported = storedOfferExportSchema.safeParse(JSON.parse(offerExport))
+  if (!exported.success) {
     throw new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
   }
   return {
     manifest,
     offerExport,
-    validUntil: exported.validUntil
+    validUntil: exported.data.validUntil
   }
 }
 

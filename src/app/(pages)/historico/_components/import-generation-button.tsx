@@ -18,7 +18,7 @@ import { Button } from '@/app/components/ui/shadcn/button'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
 import type { PrepareGenerationImportResponse } from '@/domain/generation-archive'
-import { formatValidUntil } from '@/domain/offer'
+import { formatValidUntil } from '@/models/offer/offer'
 
 import {
   discardGenerationImportAction,

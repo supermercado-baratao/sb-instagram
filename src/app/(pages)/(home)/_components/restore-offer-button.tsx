@@ -16,7 +16,7 @@ import {
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
-import type { OfferBackupSummary } from '@/domain/offer'
+import type { OfferBackupSummary } from '@/models/offer/offer'
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
 const timeFormatter = new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' })

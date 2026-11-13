@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
+import { POSTER_SIZE } from '@/constants/poster'
+
 import {
   getPageTemplate,
   getPosterFitScale,
@@ -9,7 +11,6 @@ import {
   isPosterLayout,
   type OfferProduct,
   PAGE_PRODUCT_COUNT,
-  POSTER_SIZE,
   type PosterLayout,
   type PosterTemplate,
   resolvePosterField,

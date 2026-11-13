@@ -1,15 +1,9 @@
 import {
   DEFAULT_POSTER_LAYOUT,
-  isPosterLayout,
   PAGE_PRODUCT_COUNT,
   type PosterLayout
-} from '@/domain/poster'
-import {
-  isSameCodeSet,
-  isValidCode,
-  type Product
-} from '@/models/product/product'
-import { isProductId } from '@/models/product/schema'
+} from '@/models/poster/poster'
+import { isSameCodeSet, type Product } from '@/models/product/product'
 
 export type OfferItem = {
   product: Product
@@ -61,7 +55,7 @@ export const placeSlots = (
   return slots
 }
 
-const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
+export const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 
 export const formatValidUntil = (validUntil: string | null) => {
   const match = validUntil ? ISO_DATE_PATTERN.exec(validUntil) : null
@@ -284,49 +278,6 @@ export const parsePrice = (text: string) => {
 export const formatPrice = (priceInCents: number) =>
   `${Math.trunc(priceInCents / 100)},${String(priceInCents % 100).padStart(2, '0')}`
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isOptionalText = (value: unknown) =>
-  value === null || typeof value === 'string'
-
-const isProduct = (value: unknown): value is Product =>
-  isRecord(value) &&
-  typeof value.id === 'string' &&
-  isProductId(value.id) &&
-  Array.isArray(value.codes) &&
-  value.codes.every((code) => typeof code === 'string' && isValidCode(code)) &&
-  typeof value.description === 'string' &&
-  isOptionalText(value.unit) &&
-  isOptionalText(value.photo)
-
-const isSlot = (value: unknown): value is OfferSlot =>
-  value === null ||
-  (isRecord(value) &&
-    isProduct(value.product) &&
-    Number.isSafeInteger(value.priceInCents) &&
-    (value.priceInCents as number) >= 0)
-
-const isPage = (value: unknown): value is OfferPage =>
-  isRecord(value) &&
-  typeof value.templateId === 'string' &&
-  isPosterLayout(value.layout) &&
-  Array.isArray(value.slots) &&
-  value.slots.length === PAGE_PRODUCT_COUNT &&
-  value.slots.every(isSlot)
-
-// A Server Action is a public endpoint, so the editor's content is checked again on the server
-export const isOfferContent = (value: unknown): value is OfferContent =>
-  isRecord(value) &&
-  (value.validUntil === null ||
-    (typeof value.validUntil === 'string' &&
-      ISO_DATE_PATTERN.test(value.validUntil))) &&
-  typeof value.highlightTitle === 'string' &&
-  typeof value.highlightMessage === 'string' &&
-  Array.isArray(value.pages) &&
-  value.pages.length > 0 &&
-  value.pages.every(isPage)
-
 // A product placed on a page starts without a price, which the poster would print as R$ 0,00. A
 // slot past the layout isn't printed, and asks again if the layout grows back
 export const findPageWithoutPrice = (pages: OfferPage[]) =>
@@ -425,33 +376,6 @@ export const isSameOfferSnapshot = (a: OfferSnapshot, b: OfferSnapshot) =>
       )
     )
   })
-
-const isSnapshotItem = (value: unknown): value is OfferSnapshotItem =>
-  isRecord(value) &&
-  Number.isSafeInteger(value.position) &&
-  (value.position as number) >= 0 &&
-  (value.position as number) < PAGE_PRODUCT_COUNT &&
-  typeof value.productId === 'string' &&
-  isProductId(value.productId) &&
-  Number.isSafeInteger(value.priceInCents) &&
-  (value.priceInCents as number) >= 0
-
-const isSnapshotPage = (value: unknown): value is OfferSnapshotPage =>
-  isRecord(value) &&
-  typeof value.templateId === 'string' &&
-  isPosterLayout(value.layout) &&
-  Array.isArray(value.items) &&
-  value.items.every(isSnapshotItem)
-
-// The stored copy is JSON, so one written by a future version or edited by hand is never restored
-export const isOfferSnapshot = (value: unknown): value is OfferSnapshot =>
-  isRecord(value) &&
-  isOptionalText(value.validUntil) &&
-  typeof value.highlightTitle === 'string' &&
-  typeof value.highlightMessage === 'string' &&
-  Array.isArray(value.pages) &&
-  value.pages.length > 0 &&
-  value.pages.every(isSnapshotPage)
 
 export const getSnapshotProductIds = (snapshot: OfferSnapshot) => [
   ...new Set(

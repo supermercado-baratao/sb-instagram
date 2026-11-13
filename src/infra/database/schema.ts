@@ -11,7 +11,6 @@ import {
 } from 'drizzle-orm/sqlite-core'
 
 import type { GenerationPage } from '@/domain/generation-pages'
-import type { OfferSnapshot } from '@/domain/offer'
 import type {
   LegacyRadioScriptBlock,
   RadioScript,
@@ -127,7 +126,7 @@ export const offerBackup = sqliteTable(
   'offer_backup',
   {
     id: integer().primaryKey(),
-    content: text({ mode: 'json' }).$type<OfferSnapshot>().notNull(),
+    content: text({ mode: 'json' }).$type<unknown>().notNull(),
     replacedAt: integer({ mode: 'timestamp_ms' }).notNull()
   },
   (table) => [check('offer_backup_single_row', sql`${table.id} = 1`)]

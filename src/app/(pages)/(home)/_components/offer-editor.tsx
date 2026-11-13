@@ -38,8 +38,8 @@ import {
   replaceProduct,
   setProductPrice,
   setSlot
-} from '@/domain/offer'
-import type { Brand, PosterTemplate } from '@/domain/poster'
+} from '@/models/offer/offer'
+import type { Brand, PosterTemplate } from '@/models/poster/poster'
 import type { Product } from '@/models/product/product'
 
 import {

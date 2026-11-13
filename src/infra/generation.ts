@@ -25,7 +25,6 @@ import {
   resolveGenerationProduct,
   selectGenerationPages
 } from '@/domain/generation-pages'
-import { getOfferExport } from '@/domain/offer-export'
 import { getRadioScript } from '@/domain/radio-script'
 import type { Database } from '@/infra/database/relations'
 import { generations } from '@/infra/database/schema'
@@ -33,10 +32,11 @@ import {
   generationsDirectory,
   getGenerationFolder
 } from '@/infra/generations-directory'
-import { findOffer, saveOffer } from '@/infra/offer'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
 import { brandModel } from '@/models/brand/model'
+import { offerModel } from '@/models/offer/model'
+import { getOfferExport } from '@/models/offer/offer-export'
 import { productModel } from '@/models/product/model'
 
 export type OfferRenderer = {
@@ -116,7 +116,7 @@ export const copyGenerationPages = (
 ): CopyGenerationPagesResult => {
   const pages = findGenerationPages(database, id)
   const selected = pages && selectGenerationPages(pages, pageNumbers)
-  const offer = findOffer(database)
+  const offer = offerModel.findCurrent(database)
   const templateIds = brandModel
     .listTemplates(database)
     .map((template) => template.id)
@@ -137,7 +137,7 @@ export const copyGenerationPages = (
         )
     }
   )
-  saveOffer(database, content)
+  offerModel.save(database, content)
   return { status: 'copied', pageCount: selected.length, missingProductCount }
 }
 
@@ -182,7 +182,7 @@ export const createGeneration = async (
   renderer: OfferRenderer,
   { directory = generationsDirectory }: GenerationOptions = {}
 ): Promise<Generation | undefined> => {
-  const offer = findOffer(database)
+  const offer = offerModel.findCurrent(database)
   if (!offer) return undefined
 
   const temporary = getTemporaryGenerationFolder(randomUUID(), directory)

@@ -5,7 +5,7 @@ import {
   getPosterProducts,
   VALIDITY_PLACEHOLDER
 } from '@/app/helpers/offer-poster'
-import { createOfferContent } from '@/domain/offer'
+import { createOfferContent } from '@/models/offer/offer'
 import type { Product } from '@/models/product/product'
 
 const product: Product = {

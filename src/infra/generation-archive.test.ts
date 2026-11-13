@@ -9,9 +9,10 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { strToU8, unzipSync, type Zippable, zipSync } from 'fflate'
 import { describe, expect, onTestFinished, test } from 'vitest'
 
-import { createOfferContent } from '@/domain/offer'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
+import { offerModel } from '@/models/offer/model'
+import { createOfferContent } from '@/models/offer/offer'
 
 import {
   createGeneration,
@@ -27,7 +28,6 @@ import {
   importGeneration,
   prepareGenerationImport
 } from './generation-archive'
-import { saveOffer } from './offer'
 
 const PNG = [137, 80, 78, 71, 13, 10, 26, 10]
 
@@ -54,7 +54,7 @@ const generate = async ({
   const content = createOfferContent('mercado')
   content.validUntil = '2026-11-12'
   content.pages.push(createOfferContent('mercado').pages[0])
-  saveOffer(database, content)
+  offerModel.save(database, content)
   const generation = await createGeneration(database, renderer, { directory })
   if (!generation) throw new Error('No generation')
   return generation

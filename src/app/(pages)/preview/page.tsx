@@ -12,7 +12,7 @@ import {
 import { getPreviewOptions } from '@/app/(pages)/preview/_components/preview-options'
 import { Poster } from '@/app/components/blocks/poster'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
-import { posterLayouts } from '@/domain/poster'
+import { posterLayouts } from '@/models/poster/poster'
 
 export const metadata: Metadata = {
   title: 'Pré-visualização do pôster'

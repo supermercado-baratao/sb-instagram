@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-import { POSTER_SIZE } from '@/domain/poster'
+import { POSTER_SIZE } from '@/constants/poster'
 
 test('downloads the poster as a PNG at its real size', async ({ request }) => {
   const response = await request.get('/preview/poster.png?layout=4')

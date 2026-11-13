@@ -4,8 +4,6 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, test } from 'vitest'
 
-import { createOfferContent, type OfferContent } from '@/domain/offer'
-import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import {
@@ -15,15 +13,11 @@ import {
   productCodes,
   products
 } from '@/infra/database/schema'
+import { AppError } from '@/infra/errors'
+import { offerModel } from '@/models/offer/model'
+import { createOfferContent, type OfferContent } from '@/models/offer/offer'
+import { PAGE_PRODUCT_COUNT } from '@/models/poster/poster'
 import type { Product } from '@/models/product/product'
-
-import {
-  findOffer,
-  findOfferBackup,
-  findOrCreateOffer,
-  restoreOfferBackup,
-  saveOffer
-} from './offer'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',
@@ -71,51 +65,51 @@ const withProduct = (): OfferContent => {
   return content
 }
 
-describe('saveOffer and findOffer', () => {
+describe('save and findCurrent', () => {
   test('keep pages in order and each product in its slot', () => {
     const database = setup()
     const content = withProduct()
 
-    saveOffer(database, content)
+    offerModel.save(database, content)
 
-    expect(findOffer(database)).toEqual(content)
+    expect(offerModel.findCurrent(database)).toEqual(content)
   })
 
-  test('findOffer returns nothing before the first save', () => {
-    expect(findOffer(setup())).toBe(undefined)
+  test('findCurrent returns nothing before the first save', () => {
+    expect(offerModel.findCurrent(setup())).toBe(undefined)
   })
 
   test('saving again replaces the texts, pages and items of the single offer', () => {
     const database = setup()
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
     const changed = withProduct()
     changed.validUntil = '2026-10-31'
     changed.pages.reverse()
     changed.pages[1].slots = changed.pages[1].slots.toReversed()
 
-    saveOffer(database, changed)
+    offerModel.save(database, changed)
 
-    expect(findOffer(database)).toEqual(changed)
+    expect(offerModel.findCurrent(database)).toEqual(changed)
     expect(database.select().from(offers).all()).toHaveLength(1)
     expect(database.select().from(offerPageItems).all()).toHaveLength(1)
   })
 })
 
-describe('findOrCreateOffer', () => {
+describe('findOrCreate', () => {
   test('creates the offer once, on the given template', () => {
     const database = setup()
 
-    const created = findOrCreateOffer(database, 'mercado')
+    const created = offerModel.findOrCreate(database, 'mercado')
     expect(created).toEqual(createOfferContent('mercado'))
-    expect(findOrCreateOffer(database, 'acougue')).toEqual(created)
+    expect(offerModel.findOrCreate(database, 'acougue')).toEqual(created)
     expect(database.select().from(offers).all()).toHaveLength(1)
   })
 
   test('keeps the saved offer', () => {
     const database = setup()
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
 
-    expect(findOrCreateOffer(database, 'mercado')).toEqual(withProduct())
+    expect(offerModel.findOrCreate(database, 'mercado')).toEqual(withProduct())
   })
 })
 
@@ -130,11 +124,11 @@ describe('the offer backup', () => {
   test('keeps the version a save replaces', () => {
     const database = setup()
     insertProduct(database, other)
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
 
-    saveOffer(database, withOther())
+    offerModel.save(database, withOther())
 
-    expect(findOfferBackup(database)).toEqual({
+    expect(offerModel.findBackup(database)).toEqual({
       replacedAt: expect.any(Number),
       pageCount: 2,
       productCount: 1,
@@ -144,62 +138,67 @@ describe('the offer backup', () => {
 
   test('is not written by the first save or a save that changes nothing', () => {
     const database = setup()
-    saveOffer(database, withProduct())
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
+    offerModel.save(database, withProduct())
 
-    expect(findOfferBackup(database)).toBe(undefined)
+    expect(offerModel.findBackup(database)).toBe(undefined)
   })
 
   test('a save that changes nothing keeps the stored version', () => {
     const database = setup()
     insertProduct(database, other)
-    saveOffer(database, withProduct())
-    saveOffer(database, withOther())
+    offerModel.save(database, withProduct())
+    offerModel.save(database, withOther())
 
-    saveOffer(database, withOther())
-    restoreOfferBackup(database)
+    offerModel.save(database, withOther())
+    offerModel.restoreBackup(database)
 
-    expect(findOffer(database)).toEqual(withProduct())
+    expect(offerModel.findCurrent(database)).toEqual(withProduct())
   })
 
   test('restoring swaps the offer with the stored version, so restoring again undoes it', () => {
     const database = setup()
     insertProduct(database, other)
-    saveOffer(database, withProduct())
-    saveOffer(database, withOther())
+    offerModel.save(database, withProduct())
+    offerModel.save(database, withOther())
 
-    expect(restoreOfferBackup(database)).toEqual({ missingProductCount: 0 })
-    expect(findOffer(database)).toEqual(withProduct())
-    expect(findOfferBackup(database)).toMatchObject({ productCount: 2 })
+    expect(offerModel.restoreBackup(database)).toEqual({
+      content: withProduct(),
+      missingProductCount: 0
+    })
+    expect(offerModel.findCurrent(database)).toEqual(withProduct())
+    expect(offerModel.findBackup(database)).toMatchObject({ productCount: 2 })
 
-    restoreOfferBackup(database)
-    expect(findOffer(database)).toEqual(withOther())
+    offerModel.restoreBackup(database)
+    expect(offerModel.findCurrent(database)).toEqual(withOther())
   })
 
   test('restoring with nothing stored changes nothing', () => {
     const database = setup()
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
 
-    expect(restoreOfferBackup(database)).toBe(undefined)
-    expect(findOffer(database)).toEqual(withProduct())
+    expect(() => offerModel.restoreBackup(database)).toThrow(AppError)
+    expect(offerModel.findCurrent(database)).toEqual(withProduct())
   })
 
   test('leaves out the products deleted after the version was stored', () => {
     const database = setup()
     insertProduct(database, other)
-    saveOffer(database, withOther())
-    saveOffer(database, createOfferContent('mercado'))
+    offerModel.save(database, withOther())
+    offerModel.save(database, createOfferContent('mercado'))
     // The stored version has no foreign key, so it never keeps a product from being deleted
     database.delete(productCodes).run()
     database.delete(products).run()
 
-    expect(findOfferBackup(database)).toMatchObject({
+    expect(offerModel.findBackup(database)).toMatchObject({
       pageCount: 2,
       productCount: 0,
       missingProductCount: 2
     })
-    expect(restoreOfferBackup(database)).toEqual({ missingProductCount: 2 })
-    const restored = findOffer(database)
+    expect(offerModel.restoreBackup(database)).toMatchObject({
+      missingProductCount: 2
+    })
+    const restored = offerModel.findCurrent(database)
     expect(restored?.validUntil).toBe('2026-11-12')
     expect(restored?.pages.map((page) => page.layout)).toEqual([9, 4])
     expect(restored?.pages.flatMap((page) => page.slots)).toEqual(
@@ -209,7 +208,7 @@ describe('the offer backup', () => {
 
   test('ignores a stored version that is not a valid offer', () => {
     const database = setup()
-    saveOffer(database, withProduct())
+    offerModel.save(database, withProduct())
     database
       .insert(offerBackup)
       .values({
@@ -219,7 +218,7 @@ describe('the offer backup', () => {
       })
       .run()
 
-    expect(findOfferBackup(database)).toBe(undefined)
-    expect(restoreOfferBackup(database)).toBe(undefined)
+    expect(offerModel.findBackup(database)).toBe(undefined)
+    expect(() => offerModel.restoreBackup(database)).toThrow(AppError)
   })
 })

@@ -40,7 +40,7 @@ import {
   type OfferPage,
   type OfferSlot,
   type SlotMoveDirection
-} from '@/domain/offer'
+} from '@/models/offer/offer'
 import { getCodeType, type Product } from '@/models/product/product'
 
 import { lookupSlotProduct } from './actions'

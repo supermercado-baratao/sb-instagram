@@ -3,21 +3,12 @@
 import { revalidatePath } from 'next/cache'
 
 import { OFFER_PATH, RADIO_AD_PATH } from '@/app/helpers/navigation'
-import {
-  isOfferContent,
-  type OfferBackupSummary,
-  type OfferContent
-} from '@/domain/offer'
 import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
 import { createGeneration } from '@/infra/generation'
-import {
-  findOffer,
-  findOfferBackup,
-  restoreOfferBackup,
-  saveOffer
-} from '@/infra/offer'
 import { offerRenderer } from '@/infra/poster-renderer'
+import { offerModel } from '@/models/offer/model'
+import type { OfferBackupSummary, OfferContent } from '@/models/offer/offer'
 import {
   productModel,
   type SlotLookupResult as ProductSlotLookup
@@ -51,55 +42,42 @@ export const lookupSlotProduct = async (
 
 export const saveOfferAction = async (
   content: unknown
-): Promise<SaveOfferResult> => {
-  if (!isOfferContent(content)) {
-    return {
-      status: 'error',
-      message: 'Confira os dados da oferta e tente de novo.'
-    }
-  }
-
-  try {
-    saveOffer(database, content)
-    // A page keeps its old content for the browser's Back button, and saving that again would undo
-    // this. The radio ad previews the saved offer, so it changes too
-    revalidatePath(OFFER_PATH)
-    revalidatePath(RADIO_AD_PATH)
-    return { status: 'saved', backup: findOfferBackup(database) }
-  } catch {
-    // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
-    return {
-      status: 'error',
-      message: 'Não foi possível salvar. Algum produto não está cadastrado.'
-    }
-  }
-}
-
-export const restoreOfferAction = async (): Promise<RestoreOfferResult> => {
-  try {
-    const restored = restoreOfferBackup(database)
-    const content = restored && findOffer(database)
-    if (!content) {
+): Promise<SaveOfferResult> =>
+  runAction(
+    {
+      // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
+      fallback: 'Não foi possível salvar. Algum produto não está cadastrado.',
+      invalid: 'Confira os dados da oferta e tente de novo.'
+    },
+    () => {
+      offerModel.save(database, content)
+      // A page keeps its old content for the browser's Back button, and saving that again would
+      // undo this. The radio ad previews the saved offer, so it changes too
+      revalidatePath(OFFER_PATH)
+      revalidatePath(RADIO_AD_PATH)
       return {
-        status: 'error',
-        message: 'Não há uma versão anterior da oferta para voltar.'
+        status: 'saved' as const,
+        backup: offerModel.findBackup(database)
       }
     }
-    revalidatePath(OFFER_PATH)
-    revalidatePath(RADIO_AD_PATH)
-    return {
-      status: 'restored',
-      content,
-      backup: findOfferBackup(database),
-      missingProductCount: restored.missingProductCount
+  )
+
+export const restoreOfferAction = async (): Promise<RestoreOfferResult> =>
+  runAction(
+    { fallback: 'Não foi possível voltar à versão anterior. Tente de novo.' },
+    () => {
+      const { content, missingProductCount } =
+        offerModel.restoreBackup(database)
+      revalidatePath(OFFER_PATH)
+      revalidatePath(RADIO_AD_PATH)
+      return {
+        status: 'restored' as const,
+        content,
+        backup: offerModel.findBackup(database),
+        missingProductCount
+      }
     }
-  } catch {
-    return {
-      status: 'error',
-      message: 'Não foi possível voltar à versão anterior. Tente de novo.'
-    }
-  }
-}
+  )
 
 export const generateOfferAction = async (): Promise<GenerateOfferResult> => {
   try {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { createOfferContent, type OfferContent } from '@/domain/offer'
+import { createOfferContent, type OfferContent } from '@/models/offer/offer'
 import type { Product } from '@/models/product/product'
 
 import {

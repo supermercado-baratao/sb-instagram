@@ -8,10 +8,10 @@ import { AppLayout } from '@/app/components/layouts/app'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { getLegacyTabPath } from '@/app/helpers/navigation'
 import { database } from '@/infra/database/client'
-import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
 import { createBrandContent } from '@/models/brand/brand'
 import { brandModel } from '@/models/brand/model'
 import { catalogModel } from '@/models/catalog/model'
+import { offerModel } from '@/models/offer/model'
 
 import { OfferEditor } from './_components/offer-editor'
 
@@ -54,8 +54,8 @@ const HomePage = async ({ searchParams }: PageProps<'/'>) => {
     <AppLayout brand={brand}>
       <main className={MAIN_CLASS_NAME}>
         <OfferEditor
-          offer={findOrCreateOffer(database, templates[0].id)}
-          backup={findOfferBackup(database)}
+          offer={offerModel.findOrCreate(database, templates[0].id)}
+          backup={offerModel.findBackup(database)}
           brand={getPosterBrand(brand)}
           templates={templates}
           noEanImages={await catalogModel.listNoEanImages()}

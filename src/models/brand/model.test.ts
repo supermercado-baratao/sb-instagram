@@ -4,9 +4,9 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, test } from 'vitest'
 
-import type { PosterTemplate } from '@/domain/poster'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
+import type { PosterTemplate } from '@/models/poster/poster'
 
 import { brandModel } from './model'
 

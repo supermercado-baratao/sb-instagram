@@ -27,7 +27,7 @@ import {
   getPageConflict,
   type OfferPage,
   type SlotLocation
-} from '@/domain/offer'
+} from '@/models/offer/offer'
 import type { Product } from '@/models/product/product'
 
 export type MoveTarget =

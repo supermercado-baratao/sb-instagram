@@ -1,3 +1,5 @@
+import { POSTER_SIZE } from '@/constants/poster'
+
 export type Brand = {
   name: string
   logo: string | null
@@ -88,9 +90,6 @@ const HIDDEN_FIELD_MARKER = '-'
 
 export const isHiddenField = (value: string) =>
   value.trim() === HIDDEN_FIELD_MARKER
-
-// Instagram's portrait ratio (4:5), the tallest a feed post is shown without cropping
-export const POSTER_SIZE = { width: 1080, height: 1350 }
 
 // Never above 1, since an enlarged poster would show blurrier photos than the PNG
 export const getPosterFitScale = ({

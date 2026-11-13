@@ -21,12 +21,12 @@ import {
   getGenerationPageHref
 } from '@/app/helpers/generation'
 import type { Generation } from '@/domain/generation'
-import { formatValidUntil } from '@/domain/offer'
 import {
   getRadioListMarkdown,
   getRadioScriptMarkdown,
   getRadioScriptWarning
 } from '@/domain/radio-script'
+import { formatValidUntil } from '@/models/offer/offer'
 
 import { CopyPagesButton } from './copy-pages-button'
 import { DeleteGenerationButton } from './delete-generation-button'

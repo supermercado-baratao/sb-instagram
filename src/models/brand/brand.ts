@@ -1,4 +1,4 @@
-import type { PosterTemplate } from '@/domain/poster'
+import type { PosterTemplate } from '@/models/poster/poster'
 
 export type StoreBrand = {
   name: string

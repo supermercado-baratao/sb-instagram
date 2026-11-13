@@ -19,7 +19,6 @@ import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
-import { type OfferContent, replaceProduct } from '@/domain/offer'
 import {
   getPronunciationsError,
   INITIAL_PRONUNCIATIONS,
@@ -35,6 +34,7 @@ import {
   type RadioScriptClosingField,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
+import { type OfferContent, replaceProduct } from '@/models/offer/offer'
 
 import { saveRadioAdAction } from './actions'
 import { ClosingSequenceField } from './closing-sequence-field'

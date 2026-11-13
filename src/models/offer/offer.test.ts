@@ -20,8 +20,6 @@ import {
   formatValidUntil,
   getPageConflict,
   getSlotMoveTarget,
-  isOfferContent,
-  isOfferSnapshot,
   isSameOfferSnapshot,
   movePage,
   moveSlot,
@@ -37,8 +35,10 @@ import {
   setProductPrice,
   setSlot,
   toOfferSnapshot
-} from '@/domain/offer'
-import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
+} from '@/models/offer/offer'
+import { PAGE_PRODUCT_COUNT } from '@/models/poster/poster'
+
+import { offerContentSchema, offerSnapshotSchema } from './schema'
 
 const emptySlots = Array.from({ length: PAGE_PRODUCT_COUNT }, () => null)
 
@@ -530,7 +530,10 @@ describe('formatPrice', () => {
   })
 })
 
-describe('isOfferContent', () => {
+const isOfferSnapshot = (value: unknown) =>
+  offerSnapshotSchema.safeParse(value).success
+
+describe('offerContentSchema', () => {
   const content = {
     ...createOfferContent('mercado'),
     validUntil: '2026-10-20',
@@ -538,7 +541,7 @@ describe('isOfferContent', () => {
   }
 
   test('accepts the content of the editor', () => {
-    expect(isOfferContent(content)).toBe(true)
+    expect(offerContentSchema.safeParse(content).success).toBe(true)
   })
 
   test.each([
@@ -584,7 +587,7 @@ describe('isOfferContent', () => {
       }
     ]
   ])('rejects %s', (_case, value) => {
-    expect(isOfferContent(value)).toBe(false)
+    expect(offerContentSchema.safeParse(value).success).toBe(false)
   })
 })
 
@@ -713,7 +716,7 @@ describe('offer snapshots', () => {
     expect(snapshot.validUntil).toBe('2026-11-12')
   })
 
-  test('isOfferSnapshot refuses an offer with no pages or a slot past the page', () => {
+  test('offerSnapshotSchema refuses an offer with no pages or a slot past the page', () => {
     const snapshot = toOfferSnapshot(filled())
 
     expect(isOfferSnapshot({ ...snapshot, pages: [] })).toBe(false)

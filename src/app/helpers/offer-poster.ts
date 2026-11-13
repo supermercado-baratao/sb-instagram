@@ -3,8 +3,8 @@ import {
   formatValidUntil,
   type OfferContent,
   type OfferSlot
-} from '@/domain/offer'
-import { type Offer, type OfferProduct } from '@/domain/poster'
+} from '@/models/offer/offer'
+import { type Offer, type OfferProduct } from '@/models/poster/poster'
 import { getCodeType } from '@/models/product/product'
 
 // Keeps the date line readable on the poster while the offer has no validity yet

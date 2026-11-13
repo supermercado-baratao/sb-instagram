@@ -4,14 +4,14 @@ import {
   type OfferPage,
   parsePrice,
   setSlot
-} from '@/domain/offer'
+} from '@/models/offer/offer'
 import {
   DEFAULT_POSTER_LAYOUT,
   isPosterLayout,
   PAGE_PRODUCT_COUNT,
   type PosterLayout,
   posterLayouts
-} from '@/domain/poster'
+} from '@/models/poster/poster'
 import {
   isValidCode,
   normalizeCodes,
