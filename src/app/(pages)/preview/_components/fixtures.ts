@@ -3,7 +3,7 @@ import {
   type Offer,
   type OfferProduct,
   type PosterTemplate
-} from '@/domain/poster'
+} from '@/models/poster/poster'
 
 // The preview shows the poster art apart from any store, so it doesn't read the saved brand
 export const brand: Brand = {

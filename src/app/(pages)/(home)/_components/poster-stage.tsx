@@ -6,12 +6,12 @@ import { useRef } from 'react'
 import { Poster } from '@/app/components/blocks/poster'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
 import { usePosterFitScale } from '@/app/hooks/use-poster-fit-scale'
-import type { OfferContent } from '@/domain/offer'
+import type { OfferContent } from '@/models/offer/offer'
 import {
   type Brand,
   getPageTemplate,
   type PosterTemplate
-} from '@/domain/poster'
+} from '@/models/poster/poster'
 
 export type PosterStageProps = {
   content: OfferContent

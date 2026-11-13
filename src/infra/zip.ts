@@ -5,8 +5,6 @@ import { finished } from 'node:stream/promises'
 
 import { Unzip, UnzipInflate } from 'fflate'
 
-export class InvalidZipError extends Error {}
-
 // Segments of the entry's path inside the folder, null to skip the entry, or undefined to refuse
 // the whole archive
 export type ZipEntryTarget = (name: string) => string[] | null | undefined
@@ -26,13 +24,13 @@ export const extractZip = async (
     if (failure) return
     if (file.name.endsWith('/')) return
     if (names.has(file.name)) {
-      failure = new InvalidZipError()
+      failure = new Error('Invalid ZIP archive')
       return
     }
     names.add(file.name)
     const segments = getTarget(file.name)
     if (segments === undefined) {
-      failure = new InvalidZipError()
+      failure = new Error('Invalid ZIP archive')
       return
     }
     if (segments === null) {
@@ -75,7 +73,7 @@ export const extractZip = async (
 
   const results = await Promise.allSettled(writes)
   if (failure || results.some(({ status }) => status === 'rejected')) {
-    throw new InvalidZipError()
+    throw new Error('Invalid ZIP archive')
   }
   return names
 }

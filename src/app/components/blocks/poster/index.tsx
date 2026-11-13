@@ -1,22 +1,20 @@
 import { cn } from 'cn'
 
-import {
-  posterBodyFont,
-  posterHeadingFont
-} from '@/app/components/blocks/poster/_components/fonts'
-import { InstagramMark } from '@/app/components/blocks/poster/_components/instagram-mark'
-import { getPosterPalette } from '@/app/components/blocks/poster/_components/palette'
-import { ProductCard } from '@/app/components/blocks/poster/_components/product-card'
+import { POSTER_SIZE } from '@/constants/poster'
 import {
   type Brand,
   getPosterLayout,
   getVisibleProducts,
   type Offer,
   type OfferProduct,
-  POSTER_SIZE,
   type PosterLayout,
   type PosterTemplate
-} from '@/domain/poster'
+} from '@/models/poster/poster'
+
+import { posterBodyFont, posterHeadingFont } from './_components/fonts'
+import { InstagramMark } from './_components/instagram-mark'
+import { getPosterPalette } from './_components/palette'
+import { ProductCard } from './_components/product-card'
 
 type PosterProps = {
   brand: Brand

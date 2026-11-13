@@ -1,17 +1,20 @@
 import { Readable } from 'node:stream'
 
-import { getBackupDownloadName, isBackupDateParameter } from '@/domain/backup'
-import { createBackupArchive } from '@/infra/backup'
 import { database } from '@/infra/database/client'
+import { getBackupDownloadName } from '@/models/backup/backup'
+import { backupModel } from '@/models/backup/model'
+import { backupDateSchema } from '@/models/backup/schema'
 
 export const GET = (request: Request) => {
   // The date comes from the browser, since the container's clock usually runs in UTC
-  const date = new URL(request.url).searchParams.get('data')
+  const date = backupDateSchema.safeParse(
+    new URL(request.url).searchParams.get('data')
+  )
   const name = getBackupDownloadName(
-    isBackupDateParameter(date) ? date : new Date().toISOString().slice(0, 10)
+    date.success ? date.data : new Date().toISOString().slice(0, 10)
   )
   const body = Readable.toWeb(
-    Readable.from(createBackupArchive(database))
+    Readable.from(backupModel.createArchive(database))
   ) as ReadableStream<Uint8Array>
 
   return new Response(body, {

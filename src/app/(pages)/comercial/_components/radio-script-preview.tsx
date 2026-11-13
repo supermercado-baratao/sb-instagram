@@ -10,13 +10,13 @@ import {
   TabsList,
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
-import type { Product } from '@/domain/product'
-import type { Pronunciation } from '@/domain/pronunciation'
+import type { Product } from '@/models/product/product'
+import type { Pronunciation } from '@/models/radio-ad/pronunciation'
 import {
   getRadioListMarkdown,
   type RadioScript,
   type RadioScriptPart
-} from '@/domain/radio-script'
+} from '@/models/radio-ad/radio-script'
 
 import { VoiceTextDialog } from './voice-text-dialog'
 

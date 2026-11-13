@@ -1,7 +1,8 @@
 import { type ReactNode, useState } from 'react'
 
 import { LeaveWithoutSavingDialog } from '@/app/components/blocks/leave-without-saving-dialog'
-import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
+
+import { useUnsavedChangesWarning } from './use-unsaved-changes-warning'
 
 type GuardedDialogOptions = {
   open: boolean

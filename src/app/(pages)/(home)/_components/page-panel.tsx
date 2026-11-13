@@ -24,14 +24,14 @@ import {
   type OfferPage,
   type OfferSlot,
   setSlot
-} from '@/domain/offer'
+} from '@/models/offer/offer'
 import {
   getPageTemplate,
   isPosterLayout,
   posterLayouts,
   type PosterTemplate
-} from '@/domain/poster'
-import type { Product } from '@/domain/product'
+} from '@/models/poster/poster'
+import type { Product } from '@/models/product/product'
 
 import { CLEAR_NOTE, ClearOfferButton } from './clear-offer-button'
 import type { MoveTarget } from './move-product-button'

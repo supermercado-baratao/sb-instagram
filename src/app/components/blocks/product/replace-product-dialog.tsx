@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/app/components/ui/shadcn/alert-dialog'
-import type { Product, ProductChange } from '@/domain/product'
+import type { Product, ProductChange } from '@/models/product/product'
 
 import type { PhotoChange } from './actions'
 

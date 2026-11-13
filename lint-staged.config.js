@@ -13,7 +13,7 @@ const test = (filenames) =>
   `pnpm exec vitest related --passWithNoTests ${relativeFiles(filenames)}`
 
 const optimizeCatalogImages = (filenames) =>
-  `pnpm exec tsx src/infra/catalog/optimize-cli.ts ${relativeFiles(filenames)}`
+  `pnpm exec tsx src/entry/cli/catalog-optimize.ts ${relativeFiles(filenames)}`
 
 export default {
   'catalog/**/*.png': [optimizeCatalogImages],

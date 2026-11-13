@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { unzipSync } from 'fflate'
 
-import { POSTER_SIZE } from '@/domain/poster'
+import { POSTER_SIZE } from '@/constants/poster'
 
 import { openEmptyOffer } from './offer-helpers'
 

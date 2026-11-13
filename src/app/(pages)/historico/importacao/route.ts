@@ -1,9 +1,7 @@
-import type { PrepareGenerationImportResponse } from '@/domain/generation-archive'
+import { toActionError } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import {
-  GenerationArchiveError,
-  prepareGenerationImport
-} from '@/infra/generation-archive'
+import type { PrepareGenerationImportResponse } from '@/models/generation-archive/archive'
+import { generationArchiveModel } from '@/models/generation-archive/model'
 
 const respond = (body: PrepareGenerationImportResponse, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -16,21 +14,15 @@ export const POST = async (request: Request) => {
     return respond({ status: 'error', message: 'Escolha um arquivo.' }, 400)
   }
   try {
-    const preview = await prepareGenerationImport(
+    const preview = await generationArchiveModel.prepareImport(
       database,
       request.body as unknown as AsyncIterable<Uint8Array>
     )
     return respond({ status: 'ready', ...preview })
   } catch (error) {
-    if (error instanceof GenerationArchiveError) {
-      return respond({ status: 'error', message: error.message }, 400)
-    }
-    return respond(
-      {
-        status: 'error',
-        message: 'Não foi possível ler o arquivo da oferta. Tente de novo.'
-      },
-      500
-    )
+    const { error: result, expected } = toActionError(error, {
+      fallback: 'Não foi possível ler o arquivo da oferta. Tente de novo.'
+    })
+    return respond(result, expected ? 400 : 500)
   }
 }

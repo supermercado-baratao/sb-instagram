@@ -5,10 +5,10 @@ import { connection } from 'next/server'
 import { Poster } from '@/app/components/blocks/poster'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
-import { getPageTemplate } from '@/domain/poster'
-import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { findOffer } from '@/infra/offer'
+import { brandModel } from '@/models/brand/model'
+import { offerModel } from '@/models/offer/model'
+import { getPageTemplate } from '@/models/poster/poster'
 
 export const metadata: Metadata = {
   title: 'Pôster',
@@ -21,8 +21,8 @@ const OfferPageRender = async ({
 }: PageProps<'/ofertas/render/[page]'>) => {
   await connection()
   const { page: pageNumber } = await params
-  const settings = findBrandSettings(database)
-  const offer = findOffer(database)
+  const settings = brandModel.findSettings(database)
+  const offer = offerModel.findCurrent(database)
   const page = offer?.pages[Number(pageNumber) - 1]
   const template =
     settings && page && getPageTemplate(settings.templates, page.templateId)

@@ -1,0 +1,107 @@
+import { CATALOG_IMAGE_EXTENSION } from '@/constants/catalog'
+
+import { isValidEan } from './ean'
+
+export type CodeType = 'ean' | 'internal'
+
+// A product has no main code: a single photo may group variations sold under different codes
+// (#49), and one code may be in several products, e.g. a single fragrance and the group (#55)
+export type Product = {
+  id: string
+  codes: string[]
+  // Name and brand as one text, since the poster shows them together (#99)
+  description: string
+  unit: string | null
+  // How the radio ad speaks it; null falls back to suggestVoiceText (#72)
+  voiceText: string | null
+  photo: string | null
+}
+
+export type ProductDetails = Pick<Product, 'description' | 'unit'>
+
+export type ProductFields = ProductDetails & Pick<Product, 'voiceText'>
+
+export type ProductChange = {
+  field: keyof ProductFields
+  from: string | null
+  to: string | null
+}
+
+const DETAIL_FIELDS = ['description', 'unit', 'voiceText'] as const
+
+export const getProductChanges = (
+  current: ProductFields,
+  next: ProductFields
+): ProductChange[] =>
+  DETAIL_FIELDS.filter((field) => current[field] !== next[field]).map(
+    (field) => ({ field, from: current[field], to: next[field] })
+  )
+
+// A community catalog product the store hasn't saved yet, found by any of its EANs
+export type CatalogMatch = ProductDetails & {
+  // Names the catalog files, so it locates the image
+  ean: string
+  codes: string[]
+}
+
+// USB scanners and copy-paste may bring surrounding or inner spaces, which a code never has
+export const normalizeCode = (code: string) => code.replaceAll(/\s/g, '')
+
+export const getCodeType = (code: string): CodeType =>
+  isValidEan(code) ? 'ean' : 'internal'
+
+// The code names the product photo file, so a separator or any other character outside this set
+// could write or serve a file outside the photos folder
+const CODE_PATTERN = /^[\w.-]+$/
+
+export const isValidCode = (code: string) => CODE_PATTERN.test(code)
+
+export const INVALID_CODE_MESSAGE =
+  'O código só pode ter letras sem acento, números, ponto, hífen e sublinhado.'
+
+// Sorted, so two products with the same codes in any order compare equal
+export const normalizeCodes = (codes: string[]) =>
+  [
+    ...new Set(codes.map((code) => normalizeCode(code)).filter(Boolean))
+  ].toSorted((a, b) => a.localeCompare(b))
+
+export const isSameCodeSet = (a: string[], b: string[]) => {
+  const left = normalizeCodes(a)
+  const right = normalizeCodes(b)
+  return (
+    left.length === right.length &&
+    left.every((code, index) => code === right[index])
+  )
+}
+
+// A product with one code keeps its photo under that code, so the photos folder stays readable.
+// A group has no code of its own and uses its id, which never matches a code a store uses
+export const getPhotoFileName = ({
+  id,
+  codes
+}: Pick<Product, 'id' | 'codes'>) =>
+  `${codes.length === 1 ? codes[0] : id}${CATALOG_IMAGE_EXTENSION}`
+
+// Keep below serverActions.bodySizeLimit in next.config.ts, which also counts the form fields
+export const PHOTO_MAX_MEGABYTES = 10
+
+export const PRODUCTS_PAGE_SIZE = 50
+
+export const PRODUCT_SUGGESTION_LIMIT = 8
+
+export type ProductOrigin = 'store' | 'catalog'
+
+// The catalog only lists the products the store hasn't saved, so the two never repeat
+export type ProductListItem =
+  | { origin: 'store'; product: Product }
+  | { origin: 'catalog'; product: CatalogMatch }
+
+// Outside the catalog is a subset of the store's products, which the catalog doesn't hold yet (#66)
+export type ProductListFilter = ProductOrigin | 'all' | 'outside-catalog'
+
+export type ProductPage = {
+  items: ProductListItem[]
+  total: number
+  page: number
+  pageCount: number
+}

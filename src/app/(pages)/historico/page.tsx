@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
-import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { GENERATIONS_HEADING_ID } from '@/app/helpers/generation'
+import { requireBrandSettings } from '@/entry/brand'
 import { database } from '@/infra/database/client'
-import { listGenerations } from '@/infra/generation'
+import { generationModel } from '@/models/generation/model'
 
 import { GenerationList } from './_components/generation-list'
 import { ImportGenerationButton } from './_components/import-generation-button'
@@ -36,7 +36,7 @@ const GenerationsPage = async () => {
           </div>
           <ImportGenerationButton />
         </header>
-        <GenerationList generations={listGenerations(database)} />
+        <GenerationList generations={generationModel.list(database)} />
       </main>
     </AppLayout>
   )

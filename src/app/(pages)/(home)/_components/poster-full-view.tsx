@@ -13,8 +13,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/app/components/ui/shadcn/dialog'
-import type { OfferContent } from '@/domain/offer'
-import type { Brand, PosterTemplate } from '@/domain/poster'
+import type { OfferContent } from '@/models/offer/offer'
+import type { Brand, PosterTemplate } from '@/models/poster/poster'
 
 import { PosterStage } from './poster-stage'
 

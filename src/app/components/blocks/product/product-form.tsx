@@ -30,7 +30,7 @@ import {
   PHOTO_MAX_MEGABYTES,
   type Product,
   type ProductDetails
-} from '@/domain/product'
+} from '@/models/product/product'
 
 import { saveProductForm, suggestProductVoiceText } from './actions'
 import { CatalogImagePicker } from './catalog-image-picker'

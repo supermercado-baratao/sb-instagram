@@ -3,6 +3,7 @@
 import { Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, useTransition } from 'react'
 
+import { deleteProductAction } from '@/app/(pages)/produtos/actions'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,9 +16,7 @@ import {
   AlertDialogTrigger
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
-import type { Product } from '@/domain/product'
-
-import { deleteProductAction } from '../actions'
+import type { Product } from '@/models/product/product'
 
 export const PRODUCTS_HEADING_ID = 'products-title'
 

@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import { formatPrice, parsePrice } from '@/domain/offer'
+import { formatPrice, parsePrice } from '@/models/offer/offer'
 
 type PriceFieldProps = {
   id: string

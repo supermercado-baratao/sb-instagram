@@ -4,8 +4,8 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from 'cn'
 import { useMemo } from 'react'
 
-import { Label } from '@/app/components/ui/shadcn/label'
-import { Separator } from '@/app/components/ui/shadcn/separator'
+import { Label } from './label'
+import { Separator } from './separator'
 
 const FieldSet = ({
   className,

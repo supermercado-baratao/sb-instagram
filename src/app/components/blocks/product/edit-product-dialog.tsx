@@ -14,7 +14,7 @@ import {
 } from '@/app/components/ui/shadcn/dialog'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
 import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import { ProductForm } from './product-form'
 

@@ -2,7 +2,9 @@ import type BetterSqlite3 from 'better-sqlite3'
 import { type SQL, sql } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
-import { normalizeSearchText } from '@/domain/product'
+// Shared by the SQLite function and the searches done in memory (the catalog), so both match alike
+export const normalizeSearchText = (text: string) =>
+  text.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase()
 
 // SQLite folds case only for ASCII and has no built-in way to drop accents (https://sqlite.org/lang_corefunc.html#lower)
 export const registerSearchText = (sqlite: BetterSqlite3.Database) =>

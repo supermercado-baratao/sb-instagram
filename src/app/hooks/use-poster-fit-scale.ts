@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useState } from 'react'
 
-import { getPosterFitScale } from '@/domain/poster'
+import { getPosterFitScale } from '@/models/poster/poster'
 
 export const usePosterFitScale = (stage: RefObject<HTMLElement | null>) => {
   const [scale, setScale] = useState(0)

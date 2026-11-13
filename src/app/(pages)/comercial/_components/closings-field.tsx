@@ -20,7 +20,7 @@ import {
   type RadioScriptClosing,
   type RadioScriptClosingField,
   type RadioScriptClosingSequence
-} from '@/domain/radio-script'
+} from '@/models/radio-ad/radio-script'
 
 type ClosingsFieldProps = {
   closings: RadioScriptClosing[]

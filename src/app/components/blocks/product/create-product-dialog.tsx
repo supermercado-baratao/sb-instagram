@@ -23,7 +23,7 @@ import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { getCatalogPhotoUrl } from '@/app/helpers/product-photo'
 import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
-import { normalizeCode, type Product } from '@/domain/product'
+import { normalizeCode, type Product } from '@/models/product/product'
 
 import { lookupProduct, type LookupResult } from './actions'
 import { AddCodeToProduct } from './add-code-to-product'

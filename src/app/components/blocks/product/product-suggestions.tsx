@@ -1,4 +1,3 @@
-import { ProductThumbnail } from '@/app/components/blocks/product/product-thumbnail'
 import {
   AutocompleteContent,
   AutocompleteItem,
@@ -6,7 +5,9 @@ import {
   AutocompleteStatus
 } from '@/app/components/ui/custom/autocomplete'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
+
+import { ProductThumbnail } from './product-thumbnail'
 
 type ProductSuggestionsProps = {
   suggestions: Product[]

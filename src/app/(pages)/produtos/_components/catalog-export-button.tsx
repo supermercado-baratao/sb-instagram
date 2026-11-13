@@ -13,7 +13,7 @@ import { useState, useTransition } from 'react'
 
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
-import { CATALOG_EXPORT_REPORT_FILE } from '@/domain/catalog-export'
+import { CATALOG_EXPORT_REPORT_FILE } from '@/models/catalog-export/catalog-export'
 
 const FILE_NAME = 'catalogo.zip'
 

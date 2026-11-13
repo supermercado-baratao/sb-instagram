@@ -134,10 +134,16 @@ Abaixo estão os destaques das convenções.
 
 ### Estrutura do projeto
 
-- `src/app` guarda apenas código exclusivo do frontend. As rotas ficam no route group `src/app/(pages)` (que não altera a URL), os componentes compartilhados em `src/app/components`, os hooks do React em `src/app/hooks` e os demais helpers em `src/app/helpers`. Não há barrels `index.ts`: cada módulo é importado direto do seu arquivo pelo alias `@/`.
+- `src/app` guarda apenas código exclusivo do frontend. As rotas ficam no route group `src/app/(pages)` (que não altera a URL), os componentes compartilhados em `src/app/components`, os hooks do React em `src/app/hooks` e os demais helpers em `src/app/helpers`. Não há barrels `index.ts`: cada módulo é importado direto do seu arquivo.
 - Os componentes são agrupados por papel: `ui/` para blocos visuais (os do shadcn em `ui/shadcn/`), `blocks/` para peças compostas reutilizadas entre páginas (agrupadas por domínio, ex.: `blocks/post/`), `providers/` para providers de contexto e `layouts/` para as estruturas de página, cujas partes privadas ficam numa pasta `_components/` ao lado.
 - Os estilos globais ficam em `src/app/styles/globals.css`.
-- O que não é exclusivo do frontend, como `src/tests`, fica direto em `src`, ao lado de `app`. Os tipos e as regras do domínio (pôster, layouts, modelos, catálogo), usados pela interface e pelo servidor, ficam em `src/domain`.
+- O que não é exclusivo do frontend, como `src/tests`, fica direto em `src`, ao lado de `app`.
+- O servidor é dividido em camadas, e os imports só descem: `app` → `entry` → `models` → `repositories` → `infra`, com `constants` como folha que todas podem importar. O ESLint cobra essa direção.
+  - `src/entry/` adapta o Next.js aos models: o wrapper das Server Actions (`runAction`, que transforma um erro em resultado com a mensagem para a loja), a exigência da marca, as tarefas de inicialização e os scripts do catálogo.
+  - `src/models/<domínio>/` guarda as regras de negócio de cada domínio (`model.ts`, que exporta `<domínio>Model`), os schemas Zod que validam a entrada das Server Actions e todo JSON lido (`schema.ts`) e as regras puras, sem IO, que o cliente também importa.
+  - `src/repositories/<domínio>-repo.ts` guarda as consultas Drizzle de cada domínio, sem regra de negócio.
+  - `src/infra/` guarda só as peças técnicas: banco, diretório de dados, fotos, logo, arquivos do histórico e do backup, ZIP, renderizador do pôster, leitura do `catalog/` e o `AppError`, o erro cuja mensagem a loja vê.
+- Imports da mesma pasta ou de uma subpasta direta são relativos (`./arquivo`); os demais usam o alias `@/`, nunca `../`.
 - O catálogo comunitário fica em `catalog/`, na raiz: `catalog/ean/` com `<ean>.png` e `<ean>.json` e `catalog/no-ean/` com as imagens nomeadas pela descrição. As regras de nome, de JSON e de imagem estão no [`CONTRIBUTING.md`](./CONTRIBUTING.md) e são conferidas por `pnpm catalog:check`.
 
 ### Pôster em PNG

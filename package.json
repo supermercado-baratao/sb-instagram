@@ -19,8 +19,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "catalog:check": "tsx src/infra/catalog/check-cli.ts",
-    "catalog:optimize": "tsx src/infra/catalog/optimize-cli.ts",
+    "catalog:check": "tsx src/entry/cli/catalog-check.ts",
+    "catalog:optimize": "tsx src/entry/cli/catalog-optimize.ts",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "shadcn:add": "pnpm dlx shadcn@latest add",
@@ -38,10 +38,12 @@
     "playwright-core": "1.63.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "server-only": "0.0.1",
     "shadcn": "4.21.0",
     "sharp": "0.35.5",
     "sonner": "2.0.8",
-    "tw-animate-css": "1.4.0"
+    "tw-animate-css": "1.4.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.2",

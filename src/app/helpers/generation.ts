@@ -1,4 +1,4 @@
-import type { Generation } from '@/domain/generation'
+import type { Generation } from '@/models/generation/generation'
 
 export const GENERATIONS_PATH = '/historico'
 

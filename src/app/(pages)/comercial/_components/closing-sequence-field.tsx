@@ -23,7 +23,7 @@ import {
   type RadioScriptClosingSequence,
   type RadioScriptSequencePart,
   SEQUENCE_PARTS
-} from '@/domain/radio-script'
+} from '@/models/radio-ad/radio-script'
 
 import { getClosingLabel } from './closings-field'
 

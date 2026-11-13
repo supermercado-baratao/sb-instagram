@@ -1,7 +1,7 @@
 import { useRef, useState, useTransition } from 'react'
 
 import { searchInstanceProducts } from '@/app/components/blocks/product/actions'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 // Long enough for a scanner to finish the code and press Enter before any suggestion is fetched
 const SUGGESTION_DELAY_MS = 250

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-import type { PosterTemplate } from '@/domain/poster'
+import type { PosterTemplate } from '@/models/poster/poster'
 
 // A template stores only two colors, so the shades the art needs are derived from them
 // with relative colors, which keeps the hue and chroma the store picked

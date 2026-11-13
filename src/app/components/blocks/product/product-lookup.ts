@@ -1,4 +1,4 @@
-import type { CatalogMatch, CodeType, Product } from '@/domain/product'
+import type { CatalogMatch, CodeType, Product } from '@/models/product/product'
 
 export type ProductTarget =
   | { status: 'instance'; product: Product }

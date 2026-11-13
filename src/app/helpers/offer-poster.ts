@@ -1,11 +1,12 @@
-import { getPhotoUrl } from '@/app/helpers/product-photo'
 import {
   formatValidUntil,
   type OfferContent,
   type OfferSlot
-} from '@/domain/offer'
-import { type Offer, type OfferProduct } from '@/domain/poster'
-import { getCodeType } from '@/domain/product'
+} from '@/models/offer/offer'
+import { type Offer, type OfferProduct } from '@/models/poster/poster'
+import { getCodeType } from '@/models/product/product'
+
+import { getPhotoUrl } from './product-photo'
 
 // Keeps the date line readable on the poster while the offer has no validity yet
 export const VALIDITY_PLACEHOLDER = '__/__/____'

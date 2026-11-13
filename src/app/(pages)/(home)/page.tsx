@@ -7,11 +7,11 @@ import { BrandSettingsForm } from '@/app/components/blocks/brand/brand-settings-
 import { AppLayout } from '@/app/components/layouts/app'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { getLegacyTabPath } from '@/app/helpers/navigation'
-import { createBrandContent } from '@/domain/brand'
-import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
-import { listNoEanImages } from '@/infra/photo'
+import { createBrandContent } from '@/models/brand/brand'
+import { brandModel } from '@/models/brand/model'
+import { catalogModel } from '@/models/catalog/model'
+import { offerModel } from '@/models/offer/model'
 
 import { OfferEditor } from './_components/offer-editor'
 
@@ -20,7 +20,9 @@ const MAIN_CLASS_NAME = 'flex w-full flex-1 flex-col px-4 py-10 sm:px-6'
 export const generateMetadata = async (): Promise<Metadata> => {
   await connection()
   return {
-    title: findBrandSettings(database) ? 'Oferta' : 'Configure a sua marca'
+    title: brandModel.findSettings(database)
+      ? 'Oferta'
+      : 'Configure a sua marca'
   }
 }
 
@@ -31,7 +33,7 @@ const HomePage = async ({ searchParams }: PageProps<'/'>) => {
   const legacyPath = getLegacyTabPath(aba)
   if (legacyPath) redirect(legacyPath)
 
-  const settings = findBrandSettings(database)
+  const settings = brandModel.findSettings(database)
 
   // The first setup has no brand to show yet and nowhere else to go until it is saved
   if (!settings) {
@@ -52,11 +54,11 @@ const HomePage = async ({ searchParams }: PageProps<'/'>) => {
     <AppLayout brand={brand}>
       <main className={MAIN_CLASS_NAME}>
         <OfferEditor
-          offer={findOrCreateOffer(database, templates[0].id)}
-          backup={findOfferBackup(database)}
+          offer={offerModel.findOrCreate(database, templates[0].id)}
+          backup={offerModel.findBackup(database)}
           brand={getPosterBrand(brand)}
           templates={templates}
-          noEanImages={await listNoEanImages()}
+          noEanImages={await catalogModel.listNoEanImages()}
         />
       </main>
     </AppLayout>

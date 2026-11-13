@@ -27,8 +27,8 @@ import {
   getPageConflict,
   type OfferPage,
   type SlotLocation
-} from '@/domain/offer'
-import type { Product } from '@/domain/product'
+} from '@/models/offer/offer'
+import type { Product } from '@/models/product/product'
 
 export type MoveTarget =
   { kind: 'new-page' } | { kind: 'slot'; to: SlotLocation }

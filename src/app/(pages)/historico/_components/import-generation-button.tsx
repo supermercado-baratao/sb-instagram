@@ -5,6 +5,10 @@ import { type ChangeEvent, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
+  discardGenerationImportAction,
+  importGenerationAction
+} from '@/app/(pages)/historico/actions'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -17,13 +21,8 @@ import {
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
-import type { PrepareGenerationImportResponse } from '@/domain/generation-archive'
-import { formatValidUntil } from '@/domain/offer'
-
-import {
-  discardGenerationImportAction,
-  importGenerationAction
-} from '../actions'
+import type { PrepareGenerationImportResponse } from '@/models/generation-archive/archive'
+import { formatValidUntil } from '@/models/offer/offer'
 
 const DESCRIPTION_ID = 'import-generation-description'
 

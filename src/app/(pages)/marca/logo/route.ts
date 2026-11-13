@@ -1,15 +1,10 @@
-import { readFile } from 'node:fs/promises'
-
-import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
-import { getLogoFile } from '@/infra/logo'
+import { brandModel } from '@/models/brand/model'
 
 export const GET = async () => {
-  if (!findBrandSettings(database)?.brand.logo) {
-    return new Response(null, { status: 404 })
-  }
+  const logo = await brandModel.readLogo(database)
+  if (!logo) return new Response(null, { status: 404 })
 
-  const logo = await readFile(getLogoFile())
   return new Response(new Uint8Array(logo), {
     headers: {
       'Content-Type': 'image/png',

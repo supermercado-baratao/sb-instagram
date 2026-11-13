@@ -1,7 +1,7 @@
 import { defineRelations } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
-import * as schema from '@/infra/database/schema'
+import * as schema from './schema'
 
 export const relations = defineRelations(schema, (r) => ({
   offerPages: {

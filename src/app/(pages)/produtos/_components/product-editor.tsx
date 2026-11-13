@@ -23,7 +23,7 @@ import {
   ToggleGroup,
   ToggleGroupItem
 } from '@/app/components/ui/shadcn/toggle-group'
-import type { CatalogStatus } from '@/domain/catalog-export'
+import type { CatalogStatus } from '@/models/catalog-export/catalog-export'
 import {
   getCodeType,
   isValidCode,
@@ -31,7 +31,7 @@ import {
   type Product,
   type ProductListFilter,
   type ProductPage
-} from '@/domain/product'
+} from '@/models/product/product'
 
 import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'

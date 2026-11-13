@@ -1,12 +1,15 @@
+import 'server-only'
+
 import { mkdirSync } from 'node:fs'
 
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 
 import { dataDirectory } from '@/infra/data-directory'
-import { databaseFile } from '@/infra/database/file'
-import { relations } from '@/infra/database/relations'
-import { registerSearchText } from '@/infra/database/search-text'
+
+import { databaseFile } from './file'
+import { relations } from './relations'
+import { registerSearchText } from './search-text'
 
 const openDatabase = () => {
   mkdirSync(dataDirectory, { recursive: true })

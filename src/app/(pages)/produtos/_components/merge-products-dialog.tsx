@@ -4,6 +4,11 @@ import { CircleAlert } from 'lucide-react'
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 
 import {
+  type MergePreviewResult,
+  mergeProductsAction,
+  previewMergeAction
+} from '@/app/(pages)/produtos/actions'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -17,13 +22,7 @@ import {
   RadioGroup,
   RadioGroupItem
 } from '@/app/components/ui/shadcn/radio-group'
-import type { Product } from '@/domain/product'
-
-import {
-  type MergePreviewResult,
-  mergeProductsAction,
-  previewMergeAction
-} from '../actions'
+import type { Product } from '@/models/product/product'
 
 type MergeProductsDialogProps = {
   open: boolean

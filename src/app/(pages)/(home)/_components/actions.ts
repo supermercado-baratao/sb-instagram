@@ -3,30 +3,17 @@
 import { revalidatePath } from 'next/cache'
 
 import { OFFER_PATH, RADIO_AD_PATH } from '@/app/helpers/navigation'
-import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
-import {
-  isOfferContent,
-  type OfferBackupSummary,
-  type OfferContent
-} from '@/domain/offer'
-import { isValidCode, normalizeCode, type Product } from '@/domain/product'
+import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { createGeneration } from '@/infra/generation'
+import { generationModel } from '@/models/generation/model'
+import { offerModel } from '@/models/offer/model'
+import type { OfferBackupSummary, OfferContent } from '@/models/offer/offer'
 import {
-  findOffer,
-  findOfferBackup,
-  restoreOfferBackup,
-  saveOffer
-} from '@/infra/offer'
-import { offerRenderer } from '@/infra/poster-renderer'
-import { findProductsByCode, saveProduct } from '@/infra/product'
+  productModel,
+  type SlotLookupResult as ProductSlotLookup
+} from '@/models/product/model'
 
-export type SlotLookupResult =
-  | { status: 'found'; product: Product }
-  // The code is in a single product and in groups that also have it (#55)
-  | { status: 'choose'; code: string; products: Product[] }
-  | { status: 'missing'; code: string }
-  | { status: 'error'; message: string }
+export type SlotLookupResult = ProductSlotLookup | ActionError
 
 export type SaveOfferResult =
   | { status: 'saved'; backup: OfferBackupSummary | undefined }
@@ -46,94 +33,56 @@ export type GenerateOfferResult =
 
 export const lookupSlotProduct = async (
   rawCode: string
-): Promise<SlotLookupResult> => {
-  const code = normalizeCode(rawCode)
-  if (code === '') return { status: 'error', message: 'Informe o código.' }
-  if (!isValidCode(code)) {
-    return { status: 'error', message: INVALID_CODE_MESSAGE }
-  }
-
-  const found = await findProductsByCode(database, code)
-  if (!found) return { status: 'missing', code }
-
-  if (found.source === 'instance') {
-    return found.products.length === 1
-      ? { status: 'found', product: found.products[0] }
-      : { status: 'choose', code, products: found.products }
-  }
-
-  // An offer item points to a row of products, so a catalog product joins the store's products
-  const { ean, ...details } = found.product
-  const product = await saveProduct(database, {
-    ...details,
-    photo: { kind: 'ean', ean }
-  })
-  return { status: 'found', product }
-}
+): Promise<SlotLookupResult> =>
+  runAction(
+    { fallback: 'Não foi possível buscar o produto. Tente de novo.' },
+    () => productModel.lookupForSlot(database, rawCode)
+  )
 
 export const saveOfferAction = async (
   content: unknown
-): Promise<SaveOfferResult> => {
-  if (!isOfferContent(content)) {
-    return {
-      status: 'error',
-      message: 'Confira os dados da oferta e tente de novo.'
-    }
-  }
-
-  try {
-    saveOffer(database, content)
-    // A page keeps its old content for the browser's Back button, and saving that again would undo
-    // this. The radio ad previews the saved offer, so it changes too
-    revalidatePath(OFFER_PATH)
-    revalidatePath(RADIO_AD_PATH)
-    return { status: 'saved', backup: findOfferBackup(database) }
-  } catch {
-    // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
-    return {
-      status: 'error',
-      message: 'Não foi possível salvar. Algum produto não está cadastrado.'
-    }
-  }
-}
-
-export const restoreOfferAction = async (): Promise<RestoreOfferResult> => {
-  try {
-    const restored = restoreOfferBackup(database)
-    const content = restored && findOffer(database)
-    if (!content) {
+): Promise<SaveOfferResult> =>
+  runAction(
+    {
+      // The editor only places saved products, so this is one deleted meanwhile (items' foreign key)
+      fallback: 'Não foi possível salvar. Algum produto não está cadastrado.',
+      invalid: 'Confira os dados da oferta e tente de novo.'
+    },
+    () => {
+      offerModel.save(database, content)
+      // A page keeps its old content for the browser's Back button, and saving that again would
+      // undo this. The radio ad previews the saved offer, so it changes too
+      revalidatePath(OFFER_PATH)
+      revalidatePath(RADIO_AD_PATH)
       return {
-        status: 'error',
-        message: 'Não há uma versão anterior da oferta para voltar.'
+        status: 'saved' as const,
+        backup: offerModel.findBackup(database)
       }
     }
-    revalidatePath(OFFER_PATH)
-    revalidatePath(RADIO_AD_PATH)
-    return {
-      status: 'restored',
-      content,
-      backup: findOfferBackup(database),
-      missingProductCount: restored.missingProductCount
-    }
-  } catch {
-    return {
-      status: 'error',
-      message: 'Não foi possível voltar à versão anterior. Tente de novo.'
-    }
-  }
-}
+  )
 
-export const generateOfferAction = async (): Promise<GenerateOfferResult> => {
-  try {
-    const generation = await createGeneration(database, offerRenderer)
-    if (!generation) {
-      return { status: 'error', message: 'Salve a oferta antes de gerar.' }
+export const restoreOfferAction = async (): Promise<RestoreOfferResult> =>
+  runAction(
+    { fallback: 'Não foi possível voltar à versão anterior. Tente de novo.' },
+    () => {
+      const { content, missingProductCount } =
+        offerModel.restoreBackup(database)
+      revalidatePath(OFFER_PATH)
+      revalidatePath(RADIO_AD_PATH)
+      return {
+        status: 'restored' as const,
+        content,
+        backup: offerModel.findBackup(database),
+        missingProductCount
+      }
     }
-    return { status: 'generated', number: generation.number }
-  } catch {
-    return {
-      status: 'error',
-      message: 'Não foi possível gerar a oferta. Tente de novo.'
+  )
+
+export const generateOfferAction = async (): Promise<GenerateOfferResult> =>
+  runAction(
+    { fallback: 'Não foi possível gerar a oferta. Tente de novo.' },
+    async () => {
+      const generation = await generationModel.create(database)
+      return { status: 'generated' as const, number: generation.number }
     }
-  }
-}
+  )

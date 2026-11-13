@@ -39,10 +39,10 @@ import {
   getBrandContentError,
   INITIAL_TEMPLATE,
   normalizeInstagram
-} from '@/domain/brand'
-import { createOfferContent, createOfferPage } from '@/domain/offer'
-import { DEFAULT_POSTER_LAYOUT } from '@/domain/poster'
-import { PHOTO_MAX_MEGABYTES } from '@/domain/product'
+} from '@/models/brand/brand'
+import { createOfferContent, createOfferPage } from '@/models/offer/offer'
+import { DEFAULT_POSTER_LAYOUT } from '@/models/poster/poster'
+import { PHOTO_MAX_MEGABYTES } from '@/models/product/product'
 
 import { saveBrandSettingsAction } from './actions'
 import { getTemplateLabel, TemplateFields } from './template-fields'

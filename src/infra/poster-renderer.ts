@@ -1,6 +1,6 @@
 import { type Browser, chromium } from 'playwright-core'
 
-import { POSTER_SIZE } from '@/domain/poster'
+import { POSTER_SIZE } from '@/constants/poster'
 
 // The browser renders a page of this same server, which listens on PORT inside the container.
 // The request's own host may be a reverse proxy the container can't reach

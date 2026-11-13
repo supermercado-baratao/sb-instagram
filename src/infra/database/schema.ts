@@ -10,15 +10,6 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
-import type { GenerationPage } from '@/domain/generation-pages'
-import type { OfferSnapshot } from '@/domain/offer'
-import type {
-  LegacyRadioScriptBlock,
-  RadioScript,
-  RadioScriptClosing,
-  RadioScriptClosingSequence
-} from '@/domain/radio-script'
-
 export const products = sqliteTable(
   'products',
   {
@@ -127,7 +118,7 @@ export const offerBackup = sqliteTable(
   'offer_backup',
   {
     id: integer().primaryKey(),
-    content: text({ mode: 'json' }).$type<OfferSnapshot>().notNull(),
+    content: text({ mode: 'json' }).$type<unknown>().notNull(),
     replacedAt: integer({ mode: 'timestamp_ms' }).notNull()
   },
   (table) => [check('offer_backup_single_row', sql`${table.id} = 1`)]
@@ -144,9 +135,9 @@ export const generations = sqliteTable(
     offerExport: text().notNull(),
     pageCount: integer().notNull(),
     // Null for generations recorded before the radio ad script existed (#76)
-    radioScript: text({ mode: 'json' }).$type<RadioScript>(),
+    radioScript: text({ mode: 'json' }).$type<unknown>(),
     // Null for generations recorded before pages could be copied back to the offer (#119)
-    pages: text({ mode: 'json' }).$type<GenerationPage[]>(),
+    pages: text({ mode: 'json' }).$type<unknown>(),
     createdAt: integer({ mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date())
@@ -205,11 +196,11 @@ export const radioScriptTemplate = sqliteTable(
   'radio_script_template',
   {
     id: integer().primaryKey(),
-    blocks: text({ mode: 'json' }).$type<LegacyRadioScriptBlock[]>(),
+    blocks: text({ mode: 'json' }).$type<unknown>(),
     opening: text(),
-    closings: text({ mode: 'json' }).$type<RadioScriptClosing[]>(),
-    sequence: text({ mode: 'json' }).$type<RadioScriptClosingSequence>(),
-    priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull(),
+    closings: text({ mode: 'json' }).$type<unknown>(),
+    sequence: text({ mode: 'json' }).$type<unknown>(),
+    priceMarkers: text({ mode: 'json' }).$type<unknown>().notNull(),
     speakRepeatedOnce: integer({ mode: 'boolean' }).notNull().default(true)
   },
   (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]

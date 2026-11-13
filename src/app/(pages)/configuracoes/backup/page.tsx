@@ -1,12 +1,11 @@
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
+import { BackupPanel } from '@/app/(pages)/configuracoes/_components/backup/backup-panel'
+import { SettingsTabs } from '@/app/(pages)/configuracoes/_components/settings-tabs'
 import { AppLayout } from '@/app/components/layouts/app'
-import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { BACKUP_PATH } from '@/app/helpers/navigation'
-
-import { BackupPanel } from '../_components/backup/backup-panel'
-import { SettingsTabs } from '../_components/settings-tabs'
+import { requireBrandSettings } from '@/entry/brand'
 
 export const metadata: Metadata = { title: 'Backup' }
 
