@@ -21,6 +21,7 @@ import {
   getBackupFilePath,
   isBackupManifest
 } from '@/domain/backup'
+import { isUuid } from '@/domain/uuid'
 import { dataDirectory as defaultDataDirectory } from '@/infra/data-directory'
 import { migrationsFolder as defaultMigrationsFolder } from '@/infra/database/file'
 import { type Database, relations } from '@/infra/database/relations'
@@ -49,11 +50,8 @@ const MIGRATIONS_TABLE = '__drizzle_migrations'
 const INVALID_BACKUP_MESSAGE =
   'O arquivo não é um backup do app. Escolha o arquivo .zip baixado em "Baixar backup".'
 
-const isRestoreToken = (token: string) =>
-  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/.test(token)
-
 const getRestoreFolder = (dataDirectory: string, token: string) => {
-  if (!isRestoreToken(token)) throw new BackupError('Backup não encontrado.')
+  if (!isUuid(token)) throw new BackupError('Backup não encontrado.')
   return path.join(dataDirectory, `${RESTORE_PREFIX}${token}`)
 }
 

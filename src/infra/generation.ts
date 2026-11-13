@@ -87,7 +87,7 @@ export const findGenerationTexts = (database: Database, id: number) =>
     .get()
 
 // A generation recorded before #119 has no pages of its own, so they are rebuilt from its export
-export const findGenerationPages = (
+const findGenerationPages = (
   database: Database,
   id: number
 ): GenerationPage[] | undefined => {

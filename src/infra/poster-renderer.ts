@@ -62,7 +62,7 @@ export const renderPosterPng = async (path: string) => {
 }
 
 // The sheet size and margins come from the page's `@page` rule, so they live next to its layout
-export const renderPosterPdf = async (path: string) => {
+const renderPosterPdf = async (path: string) => {
   const page = await openPosterPage(await getBrowser(), path)
   try {
     return await page.pdf({

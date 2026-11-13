@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ArrowRight,
   CircleAlert,
-  ImageOff,
   Plus,
   Search,
   X
@@ -24,6 +23,7 @@ import {
   ProductChoiceDialog
 } from '@/app/components/blocks/product/product-choice-dialog'
 import { ProductSuggestions } from '@/app/components/blocks/product/product-suggestions'
+import { ProductThumbnail } from '@/app/components/blocks/product/product-thumbnail'
 import {
   Autocomplete,
   AutocompleteInput
@@ -361,21 +361,13 @@ export const SlotField = ({
         )}
       >
         <div className="flex items-start gap-3">
-          <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-            {product.photo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- the photo changes on every upload and is served by our own route, so next/image's optimizer would only cache a stale copy
-              <img
-                src={getPhotoUrl(product.id, photoVersion)}
-                alt=""
-                className={cn(
-                  'size-full object-contain',
-                  outside && 'opacity-50 grayscale'
-                )}
-              />
-            ) : (
-              <ImageOff className="size-5 text-muted-foreground" aria-hidden />
-            )}
-          </div>
+          <ProductThumbnail
+            size="lg"
+            src={
+              product.photo ? getPhotoUrl(product.id, photoVersion) : undefined
+            }
+            imageClassName={outside ? 'opacity-50 grayscale' : undefined}
+          />
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex flex-wrap items-center gap-2">
               <p id={labelId} className="text-xs text-muted-foreground">

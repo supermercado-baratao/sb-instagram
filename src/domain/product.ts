@@ -1,9 +1,7 @@
 import { CATALOG_IMAGE_EXTENSION, CATALOG_IMAGE_RULES } from '@/domain/catalog'
 import { isValidEan } from '@/domain/ean'
 
-export const CODE_TYPES = ['ean', 'internal'] as const
-
-export type CodeType = (typeof CODE_TYPES)[number]
+export type CodeType = 'ean' | 'internal'
 
 // A product has no main code: a single photo may group variations sold under different codes
 // (#49), and one code may be in several products, e.g. a single fragrance and the group (#55)
@@ -71,11 +69,6 @@ export const isSameCodeSet = (a: string[], b: string[]) => {
     left.every((code, index) => code === right[index])
   )
 }
-
-const PRODUCT_ID_PATTERN =
-  /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/
-
-export const isValidProductId = (id: string) => PRODUCT_ID_PATTERN.test(id)
 
 // A product with one code keeps its photo under that code, so the photos folder stays readable.
 // A group has no code of its own and uses its id, which never matches a code a store uses
@@ -162,3 +155,5 @@ export const getProductPage = (
     pageCount
   }
 }
+
+export { isUuid as isValidProductId } from '@/domain/uuid'
