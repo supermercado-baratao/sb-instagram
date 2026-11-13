@@ -136,14 +136,11 @@ describe('createGeneration', () => {
   test('records the radio ad script with the saved template and dictionary', async () => {
     const { database, directory } = await setup()
     saveRadioScriptTemplate(database, {
-      blocks: [
-        { type: 'text', text: 'Atenção!' },
-        { type: 'products', pageCount: 1 }
-      ],
+      opening: 'Atenção!',
+      closings: [],
+      sequence: { start: [], middle: [], end: [] },
       priceMarkers: ['somente'],
-      speakRepeatedOnce: true,
-      splitEvenly: false,
-      productBlocks: []
+      speakRepeatedOnce: true
     })
     savePronunciations(database, [{ term: 'Moça', spoken: 'Mossa' }])
     saveOffer(database, twoPages())
@@ -153,7 +150,7 @@ describe('createGeneration', () => {
     })
 
     expect(findGeneration(database, generation?.id ?? 0)?.radioScript).toEqual({
-      version: 2,
+      version: 3,
       script:
         'Atenção!\n\n- leite condensado Mossa, trezentos e noventa e cinco gramas, somente: sete e noventa e nove',
       list: [
@@ -162,9 +159,7 @@ describe('createGeneration', () => {
           text: 'leite condensado Mossa, trezentos e noventa e cinco gramas',
           price: '7,99'
         }
-      ],
-      unusedPages: [],
-      missingPageCount: 0
+      ]
     })
   })
 

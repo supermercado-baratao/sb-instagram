@@ -18,7 +18,6 @@ import {
   TabsTrigger
 } from '@/app/components/ui/shadcn/tabs'
 import { GENERATIONS_PATH } from '@/app/helpers/generation'
-import { RADIO_AD_PATH } from '@/app/helpers/navigation'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import {
   addPage,
@@ -83,19 +82,6 @@ const viewGenerations = (
 
 const generationActions = (
   <div className="ml-auto shrink-0">{viewGenerations}</div>
-)
-
-const generationWarningActions = (
-  <div className="flex w-full flex-wrap justify-end gap-2">
-    <GuardedLink
-      href={RADIO_AD_PATH}
-      className={buttonVariants({ variant: 'outline', size: 'sm' })}
-      onLeave={() => toast.dismiss()}
-    >
-      Ajustar comercial
-    </GuardedLink>
-    {viewGenerations}
-  </div>
 )
 
 const getTabId = (key: number) => `page-tab-${key}`
@@ -370,16 +356,6 @@ export const OfferEditor = ({
       toast.dismiss()
       if (result.status === 'error') {
         toast.error(result.message, { duration: Infinity })
-        return
-      }
-      if (result.warning) {
-        // Stays until closed, like an error, since the radio ad needs fixing (WCAG 2.2.1)
-        toast.warning(`Oferta ${result.number} gerada. ${result.warning}`, {
-          duration: Infinity,
-          // On a line of their own, or the long message is squeezed beside two links
-          classNames: { toast: 'flex-wrap' },
-          action: generationWarningActions
-        })
         return
       }
       // Longer than the default, so there is time to reach its action

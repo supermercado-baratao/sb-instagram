@@ -142,6 +142,40 @@ test('radio-script-blocks resets the saved template and drops the first script f
   ).toEqual([{ radioScript: null }, { radioScript: null }])
 })
 
+test('radio-script-rounds keeps the saved blocks to convert and drops the moves', async () => {
+  const sqlite = new Database(':memory:')
+  sqlite.pragma('foreign_keys = ON')
+  const database = drizzle({ client: sqlite })
+  migrate(database, {
+    migrationsFolder: await copyMigrationsBefore('_radio-script-rounds')
+  })
+
+  sqlite.exec(`
+    INSERT INTO radio_script_template (id, blocks, priceMarkers, speakRepeatedOnce, splitEvenly)
+      VALUES (1, '[{"type":"text","text":"Oi"},{"type":"products","pageCount":1,"id":1}]', '["somente"]', 0, 1);
+  `)
+
+  migrate(database, { migrationsFolder })
+
+  expect(sqlite.prepare('SELECT * FROM radio_script_template').get()).toEqual({
+    id: 1,
+    blocks:
+      '[{"type":"text","text":"Oi"},{"type":"products","pageCount":1,"id":1}]',
+    opening: null,
+    closings: null,
+    sequence: null,
+    priceMarkers: '["somente"]',
+    speakRepeatedOnce: 0
+  })
+  expect(
+    sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE name = 'radio_script_product_blocks'"
+      )
+      .get()
+  ).toBeUndefined()
+})
+
 test('single-offer keeps the latest offer and every generation of the others', async () => {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
