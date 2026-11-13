@@ -20,6 +20,23 @@ export const actionError = (message: string): ActionError => ({
   message
 })
 
+// An AppError or a schema error is the store's to fix, any other is the server's and is logged
+export const toActionError = (
+  error: unknown,
+  options: ActionOptions
+): { error: ActionError; expected: boolean } => {
+  if (error instanceof AppError) {
+    return { error: actionError(error.message), expected: true }
+  }
+  if (error instanceof z.ZodError) {
+    const message =
+      options.invalid ?? error.issues[0]?.message ?? options.fallback
+    return { error: actionError(message), expected: true }
+  }
+  console.error(error)
+  return { error: actionError(options.fallback), expected: false }
+}
+
 // A Server Action is a public endpoint, so the models validate its input again and their errors
 // become a result the client shows, instead of an exception
 export const runAction = async <TResult>(
@@ -31,13 +48,6 @@ export const runAction = async <TResult>(
   } catch (error) {
     // redirect() and notFound() work by throwing
     unstable_rethrow(error)
-    if (error instanceof AppError) return actionError(error.message)
-    if (error instanceof z.ZodError) {
-      return actionError(
-        options.invalid ?? error.issues[0]?.message ?? options.fallback
-      )
-    }
-    console.error(error)
-    return actionError(options.fallback)
+    return toActionError(error, options).error
   }
 }

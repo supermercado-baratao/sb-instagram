@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react'
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { deleteGenerationAction } from '@/app/(pages)/historico/actions'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,8 +19,6 @@ import {
 import { Button } from '@/app/components/ui/shadcn/button'
 import { GENERATIONS_HEADING_ID } from '@/app/helpers/generation'
 import type { Generation } from '@/models/generation/generation'
-
-import { deleteGenerationAction } from '../actions'
 
 // The deleted card takes the trigger with it, so focus would fall back to <body>
 const getFinalFocus = () =>

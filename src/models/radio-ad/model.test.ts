@@ -7,13 +7,13 @@ import { expect, test } from 'vitest'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import { radioScriptTemplate } from '@/infra/database/schema'
-import { INITIAL_PRONUNCIATIONS } from '@/models/radio-ad/pronunciation'
+
+import { radioAdModel } from './model'
+import { INITIAL_PRONUNCIATIONS } from './pronunciation'
 import {
   INITIAL_RADIO_SCRIPT_TEMPLATE,
   type RadioScriptTemplate
-} from '@/models/radio-ad/radio-script'
-
-import { radioAdModel } from './model'
+} from './radio-script'
 
 const setup = () => {
   const database = drizzle({ client: new Database(':memory:'), relations })

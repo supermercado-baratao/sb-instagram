@@ -5,7 +5,7 @@ import {
   spellNumbers,
   spellPrice,
   suggestVoiceText
-} from '@/models/radio-ad/spoken-text'
+} from './spoken-text'
 
 describe('spellNumber', () => {
   test.each([

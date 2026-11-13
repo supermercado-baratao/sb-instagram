@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { randomUUID } from 'node:crypto'
 
 import { type Zippable, zipSync } from 'fflate'

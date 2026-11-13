@@ -8,7 +8,7 @@ import {
 import Link from 'next/link'
 import * as React from 'react'
 
-import { buttonVariants } from '@/app/components/ui/shadcn/button'
+import { buttonVariants } from './button'
 
 const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
   <nav

@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { and, eq, exists, inArray, type SQL, sql } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'

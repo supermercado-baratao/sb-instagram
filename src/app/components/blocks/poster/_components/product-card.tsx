@@ -1,14 +1,15 @@
 import { ImageOff } from 'lucide-react'
 
-import { posterCharWidth } from '@/app/components/blocks/poster/_components/fonts'
-import { posterPlaceholders } from '@/app/components/blocks/poster/_components/placeholders'
-import { PriceTag } from '@/app/components/blocks/poster/_components/price-tag'
 import { fitFontSize } from '@/models/poster/fit-font-size'
 import {
   type OfferProduct,
   type PosterLayoutConfig,
   resolvePosterField
 } from '@/models/poster/poster'
+
+import { posterCharWidth } from './fonts'
+import { posterPlaceholders } from './placeholders'
+import { PriceTag } from './price-tag'
 
 type ProductCardProps = {
   product: OfferProduct

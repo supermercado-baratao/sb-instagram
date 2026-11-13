@@ -1,9 +1,8 @@
-import { generationModel } from '@/models/generation/model'
-
 import {
   findGenerationByParams,
   IMMUTABLE_CACHE_CONTROL
-} from '../generation-route'
+} from '@/app/(pages)/historico/[id]/generation-route'
+import { generationModel } from '@/models/generation/model'
 
 export const GET = async (
   _request: Request,

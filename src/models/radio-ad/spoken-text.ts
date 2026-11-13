@@ -1,8 +1,6 @@
 import { type ProductDetails } from '@/models/product/product'
-import {
-  applyPronunciations,
-  type Pronunciation
-} from '@/models/radio-ad/pronunciation'
+
+import { applyPronunciations, type Pronunciation } from './pronunciation'
 
 const ONES = [
   'zero',

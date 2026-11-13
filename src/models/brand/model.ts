@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { Database } from '@/infra/database/relations'
 import { deleteLogo, readLogo as readLogoFile, saveLogo } from '@/infra/logo'
 import { PHOTO_MAX_MEGABYTES } from '@/models/product/product'

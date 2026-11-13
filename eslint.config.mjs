@@ -10,6 +10,29 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import eslintPluginTailwindcss from 'eslint-plugin-tailwindcss'
 import unicorn from 'eslint-plugin-unicorn'
 
+const NO_PARENT_IMPORTS = {
+  group: ['../*'],
+  message:
+    'Use `./` for the same folder or a direct subfolder and the `@/` alias otherwise.'
+}
+
+const layerRule = (patterns) => ({
+  'no-restricted-imports': [
+    'error',
+    {
+      patterns: [
+        ...patterns.map((regex) => ({
+          regex,
+          message: 'Imports only flow down the layers (see AGENTS.md).'
+        })),
+        NO_PARENT_IMPORTS
+      ]
+    }
+  ]
+})
+
+const layersBelow = (layers) => `^@/(${layers.join('|')})(/|$)`
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -48,6 +71,28 @@ const eslintConfig = defineConfig([
       ]
     }
   },
+  {
+    files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    rules: layerRule([])
+  },
+  // Pages reach the database only through the models, which take the client as an argument
+  {
+    files: ['src/app/**'],
+    rules: layerRule([
+      layersBelow(['repositories']),
+      '^@/infra/(?!database/client$)'
+    ])
+  },
+  ...Object.entries({
+    'src/entry/**': ['app'],
+    'src/models/**': ['app', 'entry'],
+    'src/repositories/**': ['app', 'entry', 'models'],
+    'src/infra/**': ['app', 'entry', 'models', 'repositories'],
+    'src/constants/**': ['app', 'entry', 'models', 'repositories', 'infra']
+  }).map(([files, layers]) => ({
+    files: [files],
+    rules: layerRule([layersBelow(layers)])
+  })),
   {
     plugins: { 'simple-import-sort': simpleImportSort },
     rules: {

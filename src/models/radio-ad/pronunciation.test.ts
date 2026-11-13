@@ -4,8 +4,7 @@ import {
   applyPronunciations,
   getPronunciationsError,
   normalizePronunciations
-} from '@/models/radio-ad/pronunciation'
-
+} from './pronunciation'
 import { pronunciationListSchema } from './schema'
 
 describe('applyPronunciations', () => {

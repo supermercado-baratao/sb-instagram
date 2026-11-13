@@ -5,7 +5,7 @@ import { cn } from 'cn'
 import { XIcon } from 'lucide-react'
 import * as React from 'react'
 
-import { Button } from '@/app/components/ui/shadcn/button'
+import { Button } from './button'
 
 const Dialog = ({ ...props }: DialogPrimitive.Root.Props) => (
   <DialogPrimitive.Root data-slot="dialog" {...props} />

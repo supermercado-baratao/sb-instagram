@@ -1,9 +1,10 @@
-import { templates } from '@/app/(pages)/preview/_components/fixtures'
 import {
   DEFAULT_POSTER_LAYOUT,
   getPageTemplate,
   isPosterLayout
 } from '@/models/poster/poster'
+
+import { templates } from './fixtures'
 
 type SearchParameters = Record<string, string | string[] | undefined>
 

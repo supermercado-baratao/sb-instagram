@@ -3,16 +3,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import {
-  brand,
-  offer,
-  products,
-  templates
-} from '@/app/(pages)/preview/_components/fixtures'
-import { getPreviewOptions } from '@/app/(pages)/preview/_components/preview-options'
 import { Poster } from '@/app/components/blocks/poster'
 import { buttonVariants } from '@/app/components/ui/shadcn/button'
 import { posterLayouts } from '@/models/poster/poster'
+
+import { brand, offer, products, templates } from './_components/fixtures'
+import { getPreviewOptions } from './_components/preview-options'
 
 export const metadata: Metadata = {
   title: 'Pré-visualização do pôster'

@@ -14,10 +14,11 @@ import {
   products
 } from '@/infra/database/schema'
 import { AppError } from '@/infra/errors'
-import { offerModel } from '@/models/offer/model'
-import { createOfferContent, type OfferContent } from '@/models/offer/offer'
 import { PAGE_PRODUCT_COUNT } from '@/models/poster/poster'
 import type { Product } from '@/models/product/product'
+
+import { offerModel } from './model'
+import { createOfferContent, type OfferContent } from './offer'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',

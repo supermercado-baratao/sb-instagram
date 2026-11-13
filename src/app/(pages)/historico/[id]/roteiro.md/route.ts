@@ -1,9 +1,8 @@
-import { getRadioScriptMarkdown } from '@/models/radio-ad/radio-script'
-
 import {
   findGenerationByParams,
   IMMUTABLE_CACHE_CONTROL
-} from '../generation-route'
+} from '@/app/(pages)/historico/[id]/generation-route'
+import { getRadioScriptMarkdown } from '@/models/radio-ad/radio-script'
 
 export const GET = async (
   _request: Request,

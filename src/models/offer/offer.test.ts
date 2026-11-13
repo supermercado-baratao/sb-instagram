@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
+import { PAGE_PRODUCT_COUNT } from '@/models/poster/poster'
+
 import {
   addPage,
   canSwapSlots,
@@ -35,9 +37,7 @@ import {
   setProductPrice,
   setSlot,
   toOfferSnapshot
-} from '@/models/offer/offer'
-import { PAGE_PRODUCT_COUNT } from '@/models/poster/poster'
-
+} from './offer'
 import { offerContentSchema, offerSnapshotSchema } from './schema'
 
 const emptySlots = Array.from({ length: PAGE_PRODUCT_COUNT }, () => null)

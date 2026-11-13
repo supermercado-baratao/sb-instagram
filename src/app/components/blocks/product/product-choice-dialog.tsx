@@ -1,6 +1,5 @@
 'use client'
 
-import { ProductThumbnail } from '@/app/components/blocks/product/product-thumbnail'
 import {
   Dialog,
   DialogContent,
@@ -10,6 +9,8 @@ import {
 } from '@/app/components/ui/shadcn/dialog'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
 import type { Product } from '@/models/product/product'
+
+import { ProductThumbnail } from './product-thumbnail'
 
 export type ProductChoice = {
   code: string

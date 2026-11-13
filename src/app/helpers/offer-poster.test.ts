@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest'
 
+import { createOfferContent } from '@/models/offer/offer'
+import type { Product } from '@/models/product/product'
+
 import {
   getPosterOffer,
   getPosterProducts,
   VALIDITY_PLACEHOLDER
-} from '@/app/helpers/offer-poster'
-import { createOfferContent } from '@/models/offer/offer'
-import type { Product } from '@/models/product/product'
+} from './offer-poster'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',

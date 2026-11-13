@@ -10,7 +10,7 @@ import {
 } from 'node:fs/promises'
 import path from 'node:path'
 
-import { dataDirectory } from '@/infra/data-directory'
+import { dataDirectory } from './data-directory'
 
 export const generationsDirectory = path.join(dataDirectory, 'generations')
 

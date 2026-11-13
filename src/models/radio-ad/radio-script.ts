@@ -3,8 +3,9 @@ import {
   type OfferContent,
   type OfferItem
 } from '@/models/offer/offer'
-import type { Pronunciation } from '@/models/radio-ad/pronunciation'
-import { spellPrice, suggestVoiceText } from '@/models/radio-ad/spoken-text'
+
+import type { Pronunciation } from './pronunciation'
+import { spellPrice, suggestVoiceText } from './spoken-text'
 
 // Each offer page with products is a round of the ad: the opening, the page's products and a
 // closing chosen by the round's position (#123). Tone marks ("[animado]") are written into the

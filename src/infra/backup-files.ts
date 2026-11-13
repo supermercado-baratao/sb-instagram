@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { Zip, ZipDeflate } from 'fflate'
 
-import { dataDirectory as defaultDataDirectory } from '@/infra/data-directory'
+import { dataDirectory as defaultDataDirectory } from './data-directory'
 
 const EXPORT_PREFIX = '.backup-'
 const RESTORE_PREFIX = '.restore-'

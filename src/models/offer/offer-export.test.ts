@@ -6,8 +6,8 @@ import {
   type OfferItem,
   type OfferPage,
   setSlot
-} from '@/models/offer/offer'
-import { getOfferExport } from '@/models/offer/offer-export'
+} from './offer'
+import { getOfferExport } from './offer-export'
 
 const item = (description: string, priceInCents: number): OfferItem => ({
   product: {

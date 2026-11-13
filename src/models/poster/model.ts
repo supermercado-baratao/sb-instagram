@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { renderPosterPng } from '@/infra/poster-renderer'
 
 // Only the template and layout reach the preview page, which needs nothing else

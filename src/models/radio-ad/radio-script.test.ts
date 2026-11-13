@@ -6,6 +6,7 @@ import {
   type OfferItem,
   setSlot
 } from '@/models/offer/offer'
+
 import {
   convertLegacyBlocks,
   getClosingSequence,
@@ -21,8 +22,7 @@ import {
   normalizeRadioScriptTemplate,
   type RadioScriptClosingSequence,
   type RadioScriptTemplate
-} from '@/models/radio-ad/radio-script'
-
+} from './radio-script'
 import { radioScriptSchema, radioScriptTemplateSchema } from './schema'
 
 const item = (

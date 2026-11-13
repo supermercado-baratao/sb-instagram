@@ -1,5 +1,5 @@
+import { toActionError } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { AppError } from '@/infra/errors'
 import type { PrepareBackupResponse } from '@/models/backup/backup'
 import { backupModel } from '@/models/backup/model'
 
@@ -20,15 +20,9 @@ export const POST = async (request: Request) => {
     )
     return respond({ status: 'ready', ...preview })
   } catch (error) {
-    if (error instanceof AppError) {
-      return respond({ status: 'error', message: error.message }, 400)
-    }
-    return respond(
-      {
-        status: 'error',
-        message: 'Não foi possível ler o backup. Tente de novo.'
-      },
-      500
-    )
+    const { error: result, expected } = toActionError(error, {
+      fallback: 'Não foi possível ler o backup. Tente de novo.'
+    })
+    return respond(result, expected ? 400 : 500)
   }
 }

@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { createHash } from 'node:crypto'
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'

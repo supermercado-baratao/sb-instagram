@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { desc, eq, max, sql } from 'drizzle-orm'
 
 import type { Database } from '@/infra/database/relations'

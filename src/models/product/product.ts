@@ -1,5 +1,6 @@
 import { CATALOG_IMAGE_EXTENSION } from '@/constants/catalog'
-import { isValidEan } from '@/models/product/ean'
+
+import { isValidEan } from './ean'
 
 export type CodeType = 'ean' | 'internal'
 

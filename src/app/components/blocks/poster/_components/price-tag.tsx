@@ -1,6 +1,7 @@
-import { FitText } from '@/app/components/blocks/poster/_components/fit-text'
-import { posterPlaceholders } from '@/app/components/blocks/poster/_components/placeholders'
 import { splitPrice } from '@/models/poster/poster'
+
+import { FitText } from './fit-text'
+import { posterPlaceholders } from './placeholders'
 
 type PriceTagProps = {
   priceInCents: number

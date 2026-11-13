@@ -1,4 +1,4 @@
-import { formatPrice, type OfferContent } from '@/models/offer/offer'
+import { formatPrice, type OfferContent } from './offer'
 
 export type OfferExportProduct = {
   description: string

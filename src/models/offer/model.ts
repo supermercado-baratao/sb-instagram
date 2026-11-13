@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { Database } from '@/infra/database/relations'
 import { AppError } from '@/infra/errors'
 import { DEFAULT_POSTER_LAYOUT, isPosterLayout } from '@/models/poster/poster'

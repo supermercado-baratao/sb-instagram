@@ -5,7 +5,8 @@ import sharp from 'sharp'
 
 import { CATALOG_IMAGE_EXTENSION } from '@/constants/catalog'
 import { PHOTO_MAX_SIDE } from '@/constants/photo'
-import { photosDirectory } from '@/infra/photos-directory'
+
+import { photosDirectory } from './photos-directory'
 
 type PhotoDirectories = {
   photos?: string

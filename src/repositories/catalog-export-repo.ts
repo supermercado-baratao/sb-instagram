@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
 import { catalogExports } from '@/infra/database/schema'

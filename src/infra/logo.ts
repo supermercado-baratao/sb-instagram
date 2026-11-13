@@ -4,7 +4,8 @@ import path from 'node:path'
 import sharp from 'sharp'
 
 import { LOGO_FILE_NAME, LOGO_MAX_SIDE } from '@/constants/brand'
-import { dataDirectory } from '@/infra/data-directory'
+
+import { dataDirectory } from './data-directory'
 
 type LogoOptions = { directory?: string }
 

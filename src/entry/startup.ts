@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { database } from '@/infra/database/client'
 import { migrateDatabase } from '@/infra/database/migrate'
 import { backupModel } from '@/models/backup/model'

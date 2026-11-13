@@ -1,3 +1,5 @@
+import 'server-only'
+
 import type { Database } from '@/infra/database/relations'
 import type { ProductDetails } from '@/models/product/product'
 import { radioAdRepo } from '@/repositories/radio-ad-repo'

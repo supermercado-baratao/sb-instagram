@@ -6,7 +6,8 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 
 import { fileExists } from '@/infra/backup-files'
-import { type Database, relations } from '@/infra/database/relations'
+
+import { type Database, relations } from './relations'
 
 // The instance's own connection, since a backup reads and replaces the whole file
 export type ClientDatabase = Database & { $client: BetterSqlite3.Database }

@@ -4,6 +4,7 @@ import { CopyPlus } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
+import { copyGenerationPagesAction } from '@/app/(pages)/historico/actions'
 import { GuardedLink } from '@/app/components/ui/custom/guarded-link'
 import { Button, buttonVariants } from '@/app/components/ui/shadcn/button'
 import { Checkbox } from '@/app/components/ui/shadcn/checkbox'
@@ -22,8 +23,6 @@ import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { getGenerationPageHref } from '@/app/helpers/generation'
 import { OFFER_PATH } from '@/app/helpers/navigation'
 import type { Generation } from '@/models/generation/generation'
-
-import { copyGenerationPagesAction } from '../actions'
 
 const describeCopied = (count: number) =>
   count === 1

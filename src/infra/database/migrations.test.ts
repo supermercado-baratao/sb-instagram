@@ -7,9 +7,9 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { expect, onTestFinished, test } from 'vitest'
+import { z } from 'zod'
 
-import { migrationsFolder } from '@/infra/database/file'
-import { isProductId } from '@/models/product/schema'
+import { migrationsFolder } from './file'
 
 // Copies the migrations up to, but not including, the given one, to fill a database as it was
 const copyMigrationsBefore = async (name: string) => {
@@ -85,8 +85,8 @@ test('products-by-id keeps each product, its codes and the offer items', async (
     }
   ])
   const [picanha, sabonete] = rows
-  expect(isProductId(picanha.id)).toBe(true)
-  expect(isProductId(sabonete.id)).toBe(true)
+  expect(z.uuid().safeParse(picanha.id).success).toBe(true)
+  expect(z.uuid().safeParse(sabonete.id).success).toBe(true)
   expect(picanha.id).not.toBe(sabonete.id)
 
   expect(
