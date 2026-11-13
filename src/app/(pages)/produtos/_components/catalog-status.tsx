@@ -3,7 +3,7 @@
 import { CircleAlert, CircleCheck, CircleDashed, Send } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 
-import type { CatalogStatus as Status } from '@/domain/catalog-export'
+import type { CatalogStatus as Status } from '@/models/catalog-export/catalog-export'
 
 const formatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
 

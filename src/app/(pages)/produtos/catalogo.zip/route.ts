@@ -1,8 +1,8 @@
 import { zipSync } from 'fflate'
 import type { NextRequest } from 'next/server'
 
-import { buildCatalogExport } from '@/infra/catalog/export'
 import { database } from '@/infra/database/client'
+import { catalogExportModel } from '@/models/catalog-export/model'
 
 // POST, since each export records what it took, so the next one takes only what changed (#66)
 export const POST = async (request: NextRequest) => {
@@ -14,7 +14,9 @@ export const POST = async (request: NextRequest) => {
   }
 
   const all = request.nextUrl.searchParams.get('todos') === '1'
-  const { files, exportedCount } = await buildCatalogExport(database, { all })
+  const { files, exportedCount } = await catalogExportModel.build(database, {
+    all
+  })
   if (exportedCount === 0) return new Response(null, { status: 204 })
 
   // PNG is already compressed, so the files are only stored

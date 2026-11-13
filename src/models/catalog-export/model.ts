@@ -1,13 +1,20 @@
 import { createHash } from 'node:crypto'
-import { readdir, readFile, stat } from 'node:fs/promises'
-import path from 'node:path'
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
 import {
   CATALOG_DATA_EXTENSION,
   CATALOG_IMAGE_EXTENSION
-} from '@/domain/catalog'
+} from '@/constants/catalog'
+import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
+import { listCatalogBaseNames, readCatalogFile } from '@/infra/catalog/files'
+import { getPhotoVersion, readPhoto } from '@/infra/photo'
+import { photosDirectory } from '@/infra/photos-directory'
+import { catalogModel } from '@/models/catalog/model'
+import { getCodeType, type Product } from '@/models/product/product'
+import { catalogExportRepo } from '@/repositories/catalog-export-repo'
+import { productRepo } from '@/repositories/product-repo'
+
 import {
   CATALOG_EXPORT_REPORT_FILE,
   type CatalogExportContext,
@@ -20,14 +27,7 @@ import {
   getCatalogExportDataPath,
   getCatalogExportImagePath,
   type SkippedProduct
-} from '@/domain/catalog-export'
-import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import { prepareCatalogImage } from '@/infra/catalog/optimize'
-import { readCatalogCodes } from '@/infra/catalog/product'
-import { catalogExports } from '@/infra/database/schema'
-import { photosDirectory } from '@/infra/photos-directory'
-import { getCodeType, type Product } from '@/models/product/product'
-import { productRepo } from '@/repositories/product-repo'
+} from './catalog-export'
 
 type Database = BetterSQLite3Database
 
@@ -55,13 +55,6 @@ type PhotoOutcome = { image?: Buffer } | { reason: string }
 
 const PHOTO_NOT_FOUND = 'A foto não foi encontrada'
 
-const listBaseNames = async (directory: string, extension: string) => {
-  const fileNames = await readdir(directory)
-  return fileNames
-    .filter((fileName) => fileName.endsWith(extension))
-    .map((fileName) => fileName.slice(0, -extension.length))
-}
-
 const hash = (data: Buffer | string) =>
   createHash('sha256').update(data).digest('hex')
 
@@ -70,9 +63,7 @@ const hashNoEanImages = async (directory: string, names: string[]) => {
   const hashes = await Promise.all(
     names.map(async (name) =>
       hash(
-        await readFile(
-          path.join(directory, `${name}${CATALOG_IMAGE_EXTENSION}`)
-        )
+        await readCatalogFile(directory, `${name}${CATALOG_IMAGE_EXTENSION}`)
       )
     )
   )
@@ -83,12 +74,12 @@ const readCatalogIndex = async (
   ean: string,
   noEan: string
 ): Promise<CatalogIndex> => {
-  const names = await listBaseNames(noEan, CATALOG_IMAGE_EXTENSION)
-  const codes = await readCatalogCodes(ean)
+  const names = await listCatalogBaseNames(noEan, CATALOG_IMAGE_EXTENSION)
+  const codes = await catalogModel.readCodes(ean)
   return {
     // File names and codes lists alike, since an EAN may be in only one catalog product
     eans: new Set([
-      ...(await listBaseNames(ean, CATALOG_DATA_EXTENSION)),
+      ...(await listCatalogBaseNames(ean, CATALOG_DATA_EXTENSION)),
       ...codes.keys()
     ]),
     names: new Set(names),
@@ -109,16 +100,8 @@ const getCatalogIndex = (ean: string, noEan: string) => {
   return index
 }
 
-const readPhoto = async (photos: string, photo: string) => {
-  try {
-    return await readFile(path.join(photos, photo))
-  } catch {
-    return
-  }
-}
-
 // Every field the catalog files take, so editing any of them makes the product new to the catalog
-export const getCatalogFingerprint = (
+const getFingerprint = (
   { description, unit, codes }: Pick<Product, 'description' | 'unit' | 'codes'>,
   photoHash: string
 ) =>
@@ -131,7 +114,7 @@ const isInternalOnly = (product: Product) =>
 
 const prepareImage = async (original: Buffer): Promise<PhotoOutcome> => {
   try {
-    const { image, errors } = await prepareCatalogImage(original)
+    const { image, errors } = await catalogModel.prepareImage(original)
     return image && errors.length === 0
       ? { image }
       : { reason: errors.join('; ') }
@@ -168,11 +151,7 @@ const evaluateProducts = async (
 ) => {
   const index = await getCatalogIndex(ean, noEan)
   const exports = new Map(
-    database
-      .select()
-      .from(catalogExports)
-      .all()
-      .map((row) => [row.productId, row])
+    catalogExportRepo.listAll(database).map((row) => [row.productId, row])
   )
   const exportedEans = new Set<string>()
   const exportedNames = new Set<string>()
@@ -222,7 +201,7 @@ const evaluateProducts = async (
       continue
     }
 
-    const fingerprint = getCatalogFingerprint(product, photo.hash)
+    const fingerprint = getFingerprint(product, photo.hash)
     const exported = exports.get(product.id)
     const unchanged = exported?.fingerprint === fingerprint
     const outcome = checkImage
@@ -260,31 +239,25 @@ type CachedPhoto = {
 // Keyed by the file's size and change time, so a new upload under the same name is read again
 const photoCache = new Map<string, CachedPhoto>()
 
-const getCachedPhoto = async (file: string) => {
-  let version: string
-  try {
-    const { size, mtimeMs } = await stat(file)
-    version = `${size}:${mtimeMs}`
-  } catch {
-    photoCache.delete(file)
+const getCachedPhoto = async (photos: string, photo: string) => {
+  const key = `${photos}\0${photo}`
+  const version = await getPhotoVersion(photo, { photos })
+  if (version === undefined) {
+    photoCache.delete(key)
     return
   }
-  const cached = photoCache.get(file)
+  const cached = photoCache.get(key)
   if (cached?.version === version) return cached
 
-  let buffer: Buffer
-  try {
-    buffer = await readFile(file)
-  } catch {
-    return
-  }
+  const buffer = await readPhoto(photo, { photos })
+  if (!buffer) return
   const entry: CachedPhoto = { version, hash: hash(buffer) }
-  photoCache.set(file, entry)
+  photoCache.set(key, entry)
   return entry
 }
 
 // Statuses without checking the images, which listing every store product can't afford
-export const listCatalogStatuses = async (
+const listStatuses = async (
   database: Database,
   {
     photos = photosDirectory,
@@ -295,25 +268,24 @@ export const listCatalogStatuses = async (
   const evaluations = await evaluateProducts(database, {
     ean,
     noEan,
-    readPhotoHash: (photo) => getCachedPhoto(path.join(photos, photo))
+    readPhotoHash: (photo) => getCachedPhoto(photos, photo)
   })
   return new Map(evaluations.map(({ product, status }) => [product.id, status]))
 }
 
-const checkPhotoFile = async (file: string): Promise<PhotoOutcome> => {
-  let buffer: Buffer
-  try {
-    buffer = await readFile(file)
-  } catch {
-    return { reason: PHOTO_NOT_FOUND }
-  }
+const checkPhotoFile = async (
+  photos: string,
+  photo: string
+): Promise<PhotoOutcome> => {
+  const buffer = await readPhoto(photo, { photos })
+  if (!buffer) return { reason: PHOTO_NOT_FOUND }
   const outcome = await prepareImage(buffer)
   // Only the outcome is kept, never the image
   return 'reason' in outcome ? outcome : {}
 }
 
 // Checks the images of the products a page shows, which a ready status doesn't cover yet
-export const checkCatalogPhotos = async (
+const checkPhotos = async (
   items: Product[],
   statuses: ReadonlyMap<string, CatalogStatus>,
   { photos = photosDirectory }: Pick<CatalogExportDirectories, 'photos'> = {}
@@ -325,13 +297,12 @@ export const checkCatalogPhotos = async (
     checked.set(product.id, status)
     if (status.kind !== 'ready' || !product.photo) continue
 
-    const file = path.join(photos, product.photo)
-    const cached = await getCachedPhoto(file)
+    const cached = await getCachedPhoto(photos, product.photo)
     if (!cached) {
       checked.set(product.id, { kind: 'pending', reason: PHOTO_NOT_FOUND })
       continue
     }
-    cached.image ??= checkPhotoFile(file)
+    cached.image ??= checkPhotoFile(photos, product.photo)
     const outcome = await cached.image
     if ('reason' in outcome) {
       checked.set(product.id, { kind: 'pending', reason: outcome.reason })
@@ -345,7 +316,7 @@ export type CatalogExport = {
   exportedCount: number
 }
 
-export const buildCatalogExport = async (
+const build = async (
   database: Database,
   {
     all = false,
@@ -359,7 +330,7 @@ export const buildCatalogExport = async (
     ean,
     noEan,
     readPhotoHash: async (photo) => {
-      const buffer = await readPhoto(photos, photo)
+      const buffer = await readPhoto(photo, { photos })
       return buffer && { hash: hash(buffer), buffer }
     },
     checkImage: async (_product, { buffer }, unchanged) => {
@@ -404,16 +375,19 @@ export const buildCatalogExport = async (
 
   database.transaction((transaction) => {
     for (const { productId, fingerprint } of exported) {
-      transaction
-        .insert(catalogExports)
-        .values({ productId, fingerprint, exportedAt: now })
-        .onConflictDoUpdate({
-          target: catalogExports.productId,
-          set: { fingerprint, exportedAt: now }
-        })
-        .run()
+      catalogExportRepo.upsert(transaction, {
+        productId,
+        fingerprint,
+        exportedAt: now
+      })
     }
   })
 
   return { files, exportedCount: exported.length }
+}
+
+export const catalogExportModel = {
+  listStatuses,
+  checkPhotos,
+  build
 }

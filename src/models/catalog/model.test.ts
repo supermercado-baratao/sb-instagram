@@ -1,10 +1,14 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
 import sharp from 'sharp'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, onTestFinished, test } from 'vitest'
 
-import { checkCatalogImage, CUT_OUT_ERROR } from '@/domain/catalog'
+import { readCatalogImage } from '@/infra/catalog/image'
 
-import { readCatalogImage } from './image'
-import { optimizeCatalogImage, prepareCatalogImage } from './optimize'
+import { checkCatalogImage, CUT_OUT_ERROR } from './catalog'
+import { catalogModel } from './model'
 
 const transparent = { r: 0, g: 0, b: 0, alpha: 0 }
 
@@ -33,7 +37,7 @@ const createImage = async (product: {
     .toBuffer()
 }
 
-describe('optimizeCatalogImage', () => {
+describe('optimizeImage', () => {
   test('frames a large product that fills its corners into a valid catalog image', async () => {
     const buffer = await createImage({
       width: 2000,
@@ -42,7 +46,9 @@ describe('optimizeCatalogImage', () => {
       top: 300
     })
 
-    const image = await readCatalogImage(await optimizeCatalogImage(buffer))
+    const image = await readCatalogImage(
+      await catalogModel.optimizeImage(buffer)
+    )
 
     expect(image).toMatchObject({ format: 'png', width: 800, height: 800 })
     expect(checkCatalogImage(image)).toEqual([])
@@ -56,7 +62,7 @@ describe('optimizeCatalogImage', () => {
       top: 100
     })
 
-    const { data, info } = await sharp(await optimizeCatalogImage(buffer))
+    const { data, info } = await sharp(await catalogModel.optimizeImage(buffer))
       .extractChannel('alpha')
       .raw()
       .toBuffer({ resolveWithObject: true })
@@ -67,7 +73,7 @@ describe('optimizeCatalogImage', () => {
   })
 })
 
-describe('prepareCatalogImage', () => {
+describe('prepareImage', () => {
   test('frames a product trimmed so close that it covers the corners', async () => {
     const buffer = await createImage({
       width: 3000,
@@ -76,7 +82,7 @@ describe('prepareCatalogImage', () => {
       top: 0
     })
 
-    const { image, errors } = await prepareCatalogImage(buffer)
+    const { image, errors } = await catalogModel.prepareImage(buffer)
 
     expect(errors).toEqual([])
     expect(checkCatalogImage(await readCatalogImage(image!))).toEqual([])
@@ -100,7 +106,7 @@ describe('prepareCatalogImage', () => {
       .png()
       .toBuffer()
 
-    const { image, errors } = await prepareCatalogImage(buffer)
+    const { image, errors } = await catalogModel.prepareImage(buffer)
 
     expect(errors).toEqual([])
     expect(checkCatalogImage(await readCatalogImage(image!))).toEqual([])
@@ -113,9 +119,64 @@ describe('prepareCatalogImage', () => {
       .png()
       .toBuffer()
 
-    expect(await prepareCatalogImage(buffer)).toEqual({
+    expect(await catalogModel.prepareImage(buffer)).toEqual({
       image: undefined,
       errors: [CUT_OUT_ERROR]
     })
+  })
+})
+
+const createFolder = async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'catalog-'))
+  onTestFinished(() => rm(directory, { recursive: true, force: true }))
+  return directory
+}
+
+describe('listNoEanImages', () => {
+  test('lists the valid image names in alphabetical order', async () => {
+    const noEan = await createFolder()
+    for (const fileName of [
+      'picanha-bovina.png',
+      'alcatra.png',
+      '.gitkeep',
+      'Banana.png',
+      'notes.txt'
+    ]) {
+      await writeFile(path.join(noEan, fileName), '')
+    }
+
+    expect(await catalogModel.listNoEanImages(noEan)).toEqual([
+      'alcatra',
+      'picanha-bovina'
+    ])
+  })
+})
+
+describe('readNoEanImage', () => {
+  test('reads an image and refuses a name that could leave the folder', async () => {
+    const noEan = await createFolder()
+    await writeFile(path.join(noEan, 'alcatra.png'), 'image')
+
+    expect(await catalogModel.readNoEanImage('alcatra', noEan)).toEqual(
+      Buffer.from('image')
+    )
+    expect(await catalogModel.readNoEanImage('../ean/alcatra', noEan)).toBe(
+      undefined
+    )
+  })
+})
+
+describe('readEanImage', () => {
+  test('reads the image of an EAN and nothing else', async () => {
+    const ean = await createFolder()
+    await writeFile(path.join(ean, '7891000100103.png'), 'image')
+
+    expect(await catalogModel.readEanImage('7891000100103', ean)).toEqual(
+      Buffer.from('image')
+    )
+    expect(await catalogModel.readEanImage('7891000053508', ean)).toBe(
+      undefined
+    )
+    expect(await catalogModel.readEanImage('../ean', ean)).toBe(undefined)
   })
 })

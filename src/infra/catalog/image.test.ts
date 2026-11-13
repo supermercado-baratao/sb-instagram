@@ -1,7 +1,7 @@
 import sharp from 'sharp'
 import { describe, expect, test } from 'vitest'
 
-import { readCatalogImage } from './image'
+import { getTransparentShare, readCatalogImage } from './image'
 
 const transparent = { r: 0, g: 0, b: 0, alpha: 0 }
 
@@ -42,5 +42,15 @@ describe('readCatalogImage', () => {
 
     expect(cornerAlphas).toEqual([255, 255, 255, 255])
     expect(transparentBorderShare).toBe(0)
+  })
+})
+
+describe('getTransparentShare', () => {
+  test('counts the faint residue a background removal leaves as transparent', () => {
+    expect(getTransparentShare([0, 8, 9, 255])).toBe(0.5)
+  })
+
+  test('returns zero for no pixels', () => {
+    expect(getTransparentShare([])).toBe(0)
   })
 })

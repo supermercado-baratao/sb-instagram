@@ -1,42 +1,21 @@
+import {
+  CATALOG_DATA_EXTENSION,
+  CATALOG_IMAGE_EXTENSION,
+  CATALOG_IMAGE_RULES
+} from '@/constants/catalog'
+import type { CatalogImage } from '@/infra/catalog/image'
 import { isValidEan } from '@/models/product/ean'
 
-export type CatalogProduct = {
-  // Name and brand as one text, like the store's products (#99)
-  description: string
-  unit: string
-  // The product's other EANs, for a photo that groups variations sold under different codes (#51)
-  codes?: string[]
-}
+import type { CatalogProduct } from './schema'
 
 export type CatalogCodes = {
   ean: string
   codes: string[]
 }
 
-export type CatalogImage = {
-  format: string | undefined
-  width: number
-  height: number
-  bytes: number
-  cornerAlphas: number[]
-  transparentBorderShare: number
-}
-
 export type CatalogError = {
   file: string
   message: string
-}
-
-export const CATALOG_IMAGE_EXTENSION = '.png'
-export const CATALOG_DATA_EXTENSION = '.json'
-
-// The poster shows a photo at about 340 px at most (the 4-product layout), so 800 px keeps a 2x
-// margin while every pixel still reaches the poster; files are lossless to keep labels legible
-export const CATALOG_IMAGE_RULES = {
-  format: 'png',
-  minSide: 600,
-  maxSide: 800,
-  maxMegabytes: 1
 }
 
 // A box-shaped product that touched the edges would make the corners opaque, failing the
@@ -75,13 +54,6 @@ export const getCatalogImageLayout = (content: {
     top: Math.floor((side - height) / 2)
   }
 }
-
-const CATALOG_PRODUCT_FIELDS = ['description', 'unit'] as const
-
-const CATALOG_PRODUCT_KEYS: ReadonlySet<string> = new Set([
-  ...CATALOG_PRODUCT_FIELDS,
-  'codes'
-])
 
 // Lets git keep the folders while the catalog has no product in them
 const PLACEHOLDER_FILE = '.gitkeep'
@@ -181,48 +153,6 @@ export const checkNoEanFileNames = (fileNames: string[]): CatalogError[] =>
     return []
   })
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const checkCodesField = (codes: unknown, ean: string): string[] => {
-  if (!Array.isArray(codes) || codes.length === 0) {
-    return ['O campo codes precisa ser uma lista não vazia de EANs']
-  }
-
-  const seen = new Set<string>()
-  return codes.flatMap((code: unknown) => {
-    if (typeof code !== 'string' || !isValidEan(code)) {
-      return [`O código ${JSON.stringify(code)} em codes não é um EAN válido`]
-    }
-    if (code === ean) return [`O EAN ${code} em codes já é o nome do arquivo`]
-    if (seen.has(code)) return [`O EAN ${code} se repete em codes`]
-    seen.add(code)
-    return []
-  })
-}
-
-export const checkCatalogProduct = (data: unknown, ean: string): string[] => {
-  if (!isPlainObject(data)) {
-    return ['O JSON precisa ser um objeto com description e unit']
-  }
-
-  const fieldErrors = CATALOG_PRODUCT_FIELDS.flatMap((field) => {
-    const value = data[field]
-    return typeof value === 'string' && value.trim() !== ''
-      ? []
-      : [`O campo ${field} precisa ser um texto não vazio`]
-  })
-
-  const codesErrors =
-    data.codes === undefined ? [] : checkCodesField(data.codes, ean)
-
-  const extraKeyErrors = Object.keys(data)
-    .filter((key) => !CATALOG_PRODUCT_KEYS.has(key))
-    .map((key) => `O campo ${key} não faz parte do esquema`)
-
-  return [...fieldErrors, ...codesErrors, ...extraKeyErrors]
-}
-
 // A scan must find a single catalog product, so an EAN names one file or sits in one codes list
 export const checkCatalogCodes = (
   fileEans: ReadonlySet<string>,
@@ -272,21 +202,12 @@ const TRANSPARENT_BACKGROUND_ERROR =
 const hasTransparentBackground = (image: Pick<CatalogImage, 'cornerAlphas'>) =>
   image.cornerAlphas.every((alpha) => alpha === 0)
 
-// An editor or background removal tool often leaves a faint, invisible residue of the background
-const NEARLY_TRANSPARENT_ALPHA = 8
-
 // A product trimmed close to the edges covers part of the border, even touching the corners, so a
 // cut-out photo only needs part of its border transparent; a photo with a background has none (#109)
 const CUT_OUT_MIN_BORDER_SHARE = 0.25
 
 export const CUT_OUT_ERROR =
   'A foto não tem fundo transparente: o fundo é branco ou colorido, ou o xadrez cinza e branco faz parte da imagem. Recorte o produto num editor de imagem ou numa ferramenta de remoção de fundo'
-
-export const getTransparentShare = (alphas: readonly number[]) =>
-  alphas.length === 0
-    ? 0
-    : alphas.filter((alpha) => alpha <= NEARLY_TRANSPARENT_ALPHA).length /
-      alphas.length
 
 // Checked on the original photo, before framing adds a transparent margin to every side
 export const isCutOut = (image: Pick<CatalogImage, 'transparentBorderShare'>) =>

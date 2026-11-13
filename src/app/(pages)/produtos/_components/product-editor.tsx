@@ -23,7 +23,7 @@ import {
   ToggleGroup,
   ToggleGroupItem
 } from '@/app/components/ui/shadcn/toggle-group'
-import type { CatalogStatus } from '@/domain/catalog-export'
+import type { CatalogStatus } from '@/models/catalog-export/catalog-export'
 import {
   getCodeType,
   isValidCode,

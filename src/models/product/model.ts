@@ -2,22 +2,18 @@ import { randomUUID } from 'node:crypto'
 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 
-import { getCatalogProductCodes } from '@/domain/catalog'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import {
-  type CatalogEntry,
-  findCatalogProduct,
-  listCatalogEntries
-} from '@/infra/catalog/product'
 import { AppError } from '@/infra/errors'
 import {
-  copyEanImage,
-  copyNoEanImage,
+  copyIntoPhotos,
+  readPhoto as readPhotoFile,
   removePhoto,
   renamePhoto,
   savePhoto
 } from '@/infra/photo'
 import { photosDirectory } from '@/infra/photos-directory'
+import { getCatalogProductCodes } from '@/models/catalog/catalog'
+import { type CatalogEntry, catalogModel } from '@/models/catalog/model'
 import { productRepo } from '@/repositories/product-repo'
 
 import { isValidEan } from './ean'
@@ -77,6 +73,15 @@ const findById = (
 ): Product | undefined =>
   isProductId(id) ? productRepo.findById(database, id) : undefined
 
+const readPhoto = async (
+  database: Database,
+  id: string,
+  { photos = photosDirectory }: ProductDirectories = {}
+) => {
+  const photo = findById(database, id)?.photo
+  return photo ? readPhotoFile(photo, { photos }) : undefined
+}
+
 // A single product comes before the groups that also have its code, smaller groups first
 const listInstanceProducts = (database: Database | Transaction, code: string) =>
   productRepo
@@ -116,7 +121,7 @@ const findByCode = async (
   // Internal codes differ from store to store, so the catalog only knows products by EAN
   if (getCodeType(code) !== 'ean') return undefined
 
-  const found = await findCatalogProduct(code, catalog)
+  const found = await catalogModel.findProduct(code, catalog)
   if (!found) return undefined
 
   return { source: 'catalog', product: toCatalogMatch(found) }
@@ -178,15 +183,16 @@ const writePhotoSource = async (
         return fileName
       }
       case 'no-ean': {
-        await copyNoEanImage(source.name, fileName, { photos, noEan })
+        const file = catalogModel.getNoEanImage(source.name, noEan)
+        if (!file) throw new Error(`Invalid catalog image name: ${source.name}`)
+        await copyIntoPhotos(file, fileName, { photos })
         return fileName
       }
       case 'ean': {
-        const copied = await copyEanImage(source.ean, fileName, {
-          photos,
-          ean: catalog
-        })
-        return copied ? fileName : null
+        const file = await catalogModel.findEanImage(source.ean, catalog)
+        if (!file) return null
+        await copyIntoPhotos(file, fileName, { photos })
+        return fileName
       }
     }
   } catch (error) {
@@ -427,7 +433,7 @@ const listCatalogItems = async (
   catalog: string
 ) => {
   const storeCodes = productRepo.listCodes(database)
-  const entries = await listCatalogEntries(catalog)
+  const entries = await catalogModel.listEntries(catalog)
   return entries
     .map((entry) => toCatalogMatch(entry))
     .filter(
@@ -617,6 +623,7 @@ const renameOutdatedPhotos = async (
 
 export const productModel = {
   findById,
+  readPhoto,
   findWithCodes,
   findByCode,
   lookup,

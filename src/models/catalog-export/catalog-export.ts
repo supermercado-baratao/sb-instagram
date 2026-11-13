@@ -1,10 +1,10 @@
 import {
   CATALOG_DATA_EXTENSION,
-  CATALOG_IMAGE_EXTENSION,
-  type CatalogProduct,
-  isCatalogDescriptionName
-} from '@/domain/catalog'
+  CATALOG_IMAGE_EXTENSION
+} from '@/constants/catalog'
 import { normalizeSearchText } from '@/infra/database/search-text'
+import { isCatalogDescriptionName } from '@/models/catalog/catalog'
+import type { CatalogProduct } from '@/models/catalog/schema'
 import { getCodeType, type Product } from '@/models/product/product'
 
 export type CatalogExportFolder = 'ean' | 'no-ean'

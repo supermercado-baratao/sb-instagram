@@ -1,4 +1,4 @@
-import { CATALOG_IMAGE_EXTENSION, CATALOG_IMAGE_RULES } from '@/domain/catalog'
+import { CATALOG_IMAGE_EXTENSION } from '@/constants/catalog'
 import { isValidEan } from '@/models/product/ean'
 
 export type CodeType = 'ean' | 'internal'
@@ -80,8 +80,6 @@ export const getPhotoFileName = ({
   codes
 }: Pick<Product, 'id' | 'codes'>) =>
   `${codes.length === 1 ? codes[0] : id}${CATALOG_IMAGE_EXTENSION}`
-
-export const PHOTO_MAX_SIDE = CATALOG_IMAGE_RULES.maxSide
 
 // Keep below serverActions.bodySizeLimit in next.config.ts, which also counts the form fields
 export const PHOTO_MAX_MEGABYTES = 10

@@ -1,15 +1,16 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { CATALOG_IMAGE_EXTENSION } from '@/domain/catalog'
+import { CATALOG_IMAGE_EXTENSION } from '@/constants/catalog'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
-import { prepareCatalogImage } from '@/infra/catalog/optimize'
+import { listCatalogBaseNames } from '@/infra/catalog/files'
+import { catalogModel } from '@/models/catalog/model'
 
 const listImages = async (directory: string) => {
-  const fileNames = await readdir(directory)
-  return fileNames
-    .filter((fileName) => fileName.endsWith(CATALOG_IMAGE_EXTENSION))
-    .map((fileName) => path.join(directory, fileName))
+  const names = await listCatalogBaseNames(directory, CATALOG_IMAGE_EXTENSION)
+  return names.map((name) =>
+    path.join(directory, `${name}${CATALOG_IMAGE_EXTENSION}`)
+  )
 }
 
 const formatBytes = (bytes: number) =>
@@ -33,7 +34,7 @@ for (const file of files) {
   const original = await readFile(file)
 
   try {
-    const { image, errors } = await prepareCatalogImage(original)
+    const { image, errors } = await catalogModel.prepareImage(original)
 
     if (image && image !== original) {
       await writeFile(file, image)

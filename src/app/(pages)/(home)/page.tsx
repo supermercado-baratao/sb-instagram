@@ -11,7 +11,7 @@ import { createBrandContent } from '@/domain/brand'
 import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
 import { findOfferBackup, findOrCreateOffer } from '@/infra/offer'
-import { listNoEanImages } from '@/infra/photo'
+import { catalogModel } from '@/models/catalog/model'
 
 import { OfferEditor } from './_components/offer-editor'
 
@@ -56,7 +56,7 @@ const HomePage = async ({ searchParams }: PageProps<'/'>) => {
           backup={findOfferBackup(database)}
           brand={getPosterBrand(brand)}
           templates={templates}
-          noEanImages={await listNoEanImages()}
+          noEanImages={await catalogModel.listNoEanImages()}
         />
       </main>
     </AppLayout>

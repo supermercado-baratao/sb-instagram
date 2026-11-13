@@ -2,7 +2,7 @@ import { ProductThumbnail } from '@/app/components/blocks/product/product-thumbn
 import { Badge } from '@/app/components/ui/shadcn/badge'
 import { Checkbox } from '@/app/components/ui/shadcn/checkbox'
 import { getCatalogPhotoUrl, getPhotoUrl } from '@/app/helpers/product-photo'
-import type { CatalogStatus as Status } from '@/domain/catalog-export'
+import type { CatalogStatus as Status } from '@/models/catalog-export/catalog-export'
 import type {
   CatalogMatch,
   Product,

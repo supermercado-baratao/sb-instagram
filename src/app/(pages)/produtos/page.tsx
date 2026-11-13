@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
-import { needsCatalogExport } from '@/domain/catalog-export'
 import { requireBrandSettings } from '@/entry/brand'
-import { checkCatalogPhotos, listCatalogStatuses } from '@/infra/catalog/export'
 import { database } from '@/infra/database/client'
-import { listNoEanImages } from '@/infra/photo'
+import { catalogModel } from '@/models/catalog/model'
+import { needsCatalogExport } from '@/models/catalog-export/catalog-export'
+import { catalogExportModel } from '@/models/catalog-export/model'
 import { productModel } from '@/models/product/model'
 
 import { ProductEditor } from './_components/product-editor'
@@ -23,11 +23,11 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
   // Renders per request, so `next build` never reads the catalog or opens the database
   await connection()
   const { brand } = requireBrandSettings()
-  const noEanImages = await listNoEanImages()
+  const noEanImages = await catalogModel.listNoEanImages()
   const params = await searchParams
   const query = readParameter(params.q).trim()
   const filter = parseProductListFilter(readParameter(params.origem))
-  const statuses = await listCatalogStatuses(database)
+  const statuses = await catalogExportModel.listStatuses(database)
   const productPage = await productModel.list(database, {
     query,
     filter,
@@ -38,7 +38,7 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
         .map(([id]) => id)
     )
   })
-  const catalogStatuses = await checkCatalogPhotos(
+  const catalogStatuses = await catalogExportModel.checkPhotos(
     productPage.items.flatMap((item) =>
       item.origin === 'store' ? [item.product] : []
     ),

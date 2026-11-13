@@ -1,6 +1,6 @@
-import { checkCatalog } from '@/infra/catalog/check'
+import { catalogModel } from '@/models/catalog/model'
 
-const errors = await checkCatalog()
+const errors = await catalogModel.check()
 
 if (errors.length === 0) {
   console.log('Catálogo válido')
