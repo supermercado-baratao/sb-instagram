@@ -2,16 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { suggestVoiceText } from '@/domain/spoken-text'
 import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { listPronunciations } from '@/infra/pronunciation'
 import {
   type LookupResult as ProductLookup,
   productModel,
   type SaveFormResult
 } from '@/models/product/model'
 import type { Product, ProductDetails } from '@/models/product/product'
+import { radioAdModel } from '@/models/radio-ad/model'
 
 export type LookupResult = ProductLookup | ActionError
 
@@ -28,21 +27,10 @@ export const searchInstanceProducts = async (
   query: string
 ): Promise<Product[]> => productModel.search(database, query)
 
-const readUnknownText = (value: unknown) =>
-  typeof value === 'string' ? value.trim() : ''
-
 // Takes what the form holds, saved or not, since the store suggests while it types
 export const suggestProductVoiceText = async (
   details: Record<keyof ProductDetails, unknown>
-): Promise<string> => {
-  return suggestVoiceText(
-    {
-      description: readUnknownText(details.description),
-      unit: readUnknownText(details.unit) || null
-    },
-    listPronunciations(database)
-  )
-}
+): Promise<string> => radioAdModel.suggestVoiceText(database, details)
 
 export const saveProductForm = async (
   formData: FormData

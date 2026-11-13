@@ -1,10 +1,10 @@
-import type { Pronunciation } from '@/domain/pronunciation'
-import { spellPrice, suggestVoiceText } from '@/domain/spoken-text'
 import {
   formatPrice,
   type OfferContent,
   type OfferItem
 } from '@/models/offer/offer'
+import type { Pronunciation } from '@/models/radio-ad/pronunciation'
+import { spellPrice, suggestVoiceText } from '@/models/radio-ad/spoken-text'
 
 // Each offer page with products is a round of the ad: the opening, the page's products and a
 // closing chosen by the round's position (#123). Tone marks ("[animado]") are written into the
@@ -67,72 +67,6 @@ export const INITIAL_RADIO_SCRIPT_TEMPLATE: RadioScriptTemplate = {
 export const SEQUENCE_PARTS = ['start', 'middle', 'end'] as const
 
 export type RadioScriptSequencePart = (typeof SEQUENCE_PARTS)[number]
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isClosingId = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
-
-const isRadioScriptClosing = (value: unknown): value is RadioScriptClosing =>
-  isRecord(value) &&
-  isClosingId(value.id) &&
-  typeof value.name === 'string' &&
-  typeof value.text === 'string'
-
-const isClosingSequence = (
-  value: unknown
-): value is RadioScriptClosingSequence =>
-  isRecord(value) &&
-  SEQUENCE_PARTS.every(
-    (part) => Array.isArray(value[part]) && value[part].every(isClosingId)
-  )
-
-export const isRadioScriptTemplate = (
-  value: unknown
-): value is RadioScriptTemplate =>
-  isRecord(value) &&
-  typeof value.opening === 'string' &&
-  Array.isArray(value.closings) &&
-  value.closings.every(isRadioScriptClosing) &&
-  isClosingSequence(value.sequence) &&
-  Array.isArray(value.priceMarkers) &&
-  value.priceMarkers.every((marker: unknown) => typeof marker === 'string') &&
-  typeof value.speakRepeatedOnce === 'boolean'
-
-export const isLegacyRadioScriptBlocks = (
-  value: unknown
-): value is LegacyRadioScriptBlock[] =>
-  Array.isArray(value) &&
-  value.every(
-    (block) =>
-      isRecord(block) &&
-      ((block.type === 'text' && typeof block.text === 'string') ||
-        (block.type === 'products' && typeof block.pageCount === 'number'))
-  )
-
-const isRadioListItem = (value: unknown): value is RadioListItem =>
-  isRecord(value) &&
-  typeof value.number === 'number' &&
-  typeof value.text === 'string' &&
-  typeof value.price === 'string'
-
-const isPageNumber = (value: unknown) =>
-  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
-
-// Generations keep the version they were generated with, so both are read
-export const isRadioScript = (value: unknown): value is RadioScript =>
-  isRecord(value) &&
-  typeof value.script === 'string' &&
-  Array.isArray(value.list) &&
-  value.list.every(isRadioListItem) &&
-  (value.version === 3 ||
-    (value.version === 2 &&
-      Array.isArray(value.unusedPages) &&
-      value.unusedPages.every((page) => isPageNumber(page)) &&
-      typeof value.missingPageCount === 'number' &&
-      Number.isSafeInteger(value.missingPageCount) &&
-      value.missingPageCount >= 0))
 
 const foldName = (name: string) => name.trim().toLocaleLowerCase('pt-BR')
 

@@ -3,9 +3,10 @@ import { describe, expect, test } from 'vitest'
 import {
   applyPronunciations,
   getPronunciationsError,
-  isPronunciationList,
   normalizePronunciations
-} from '@/domain/pronunciation'
+} from '@/models/radio-ad/pronunciation'
+
+import { pronunciationListSchema } from './schema'
 
 describe('applyPronunciations', () => {
   const dictionary = [
@@ -79,7 +80,10 @@ test('normalizePronunciations trims and collapses the spaces of a term', () => {
   ).toEqual([{ term: 'cream cracker', spoken: 'crim' }])
 })
 
-test('isPronunciationList checks the shape a Server Action receives', () => {
+const isPronunciationList = (value: unknown) =>
+  pronunciationListSchema.safeParse(value).success
+
+test('pronunciationListSchema checks the shape a Server Action receives', () => {
   expect(isPronunciationList([{ term: 'a', spoken: 'b' }])).toBe(true)
   expect(isPronunciationList([{ term: 'a' }])).toBe(false)
   expect(isPronunciationList('a')).toBe(false)

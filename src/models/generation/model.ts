@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto'
 
 import { zipSync } from 'fflate'
 
-import { getRadioScript } from '@/domain/radio-script'
 import type { Database } from '@/infra/database/relations'
 import { AppError } from '@/infra/errors'
 import {
@@ -17,12 +16,13 @@ import {
   writeFolderFile
 } from '@/infra/generation-files'
 import { offerRenderer } from '@/infra/poster-renderer'
-import { listPronunciations } from '@/infra/pronunciation'
-import { findRadioScriptTemplate } from '@/infra/radio-script'
 import { brandModel } from '@/models/brand/model'
 import { offerModel } from '@/models/offer/model'
 import { getOfferExport } from '@/models/offer/offer-export'
 import { productModel } from '@/models/product/model'
+import { radioAdModel } from '@/models/radio-ad/model'
+import { getRadioScript } from '@/models/radio-ad/radio-script'
+import { radioScriptSchema } from '@/models/radio-ad/schema'
 import { generationRepo } from '@/repositories/generation-repo'
 
 import {
@@ -54,14 +54,24 @@ type GenerationOptions = { directory?: string }
 
 const MISSING_GENERATION_MESSAGE = 'Esta oferta não está mais no histórico.'
 
-const list = (database: Database): Generation[] => generationRepo.list(database)
+type GenerationRow = Omit<Generation, 'radioScript'> & { radioScript: unknown }
+
+// The script is stored JSON, so one that isn't a script is shown as none
+const toGeneration = ({ radioScript, ...row }: GenerationRow): Generation => ({
+  ...row,
+  radioScript: radioScriptSchema.safeParse(radioScript).data ?? null
+})
+
+const list = (database: Database): Generation[] =>
+  generationRepo.list(database).map((row) => toGeneration(row))
 
 // The id comes from the URL, so anything but a generation's id finds nothing
 const findById = (database: Database, id: unknown): Generation | undefined => {
   const parsed = generationIdSchema.safeParse(id)
-  return parsed.success
+  const row = parsed.success
     ? generationRepo.findById(database, parsed.data)
     : undefined
+  return row && toGeneration(row)
 }
 
 const findExport = (database: Database, id: number) =>
@@ -175,11 +185,13 @@ const record = async (
   getValues: (transaction: Database) => GenerationValues,
   directory = generationsDirectory
 ): Promise<Generation> => {
-  const generation = database.transaction((transaction) =>
-    generationRepo.insert(transaction, {
-      ...getValues(transaction),
-      number: generationRepo.findLastNumber(transaction) + 1
-    })
+  const generation = toGeneration(
+    database.transaction((transaction) =>
+      generationRepo.insert(transaction, {
+        ...getValues(transaction),
+        number: generationRepo.findLastNumber(transaction) + 1
+      })
+    )
   )
 
   try {
@@ -227,8 +239,8 @@ const create = async (
         pages: getGenerationPages(offer),
         radioScript: getRadioScript(
           offer,
-          findRadioScriptTemplate(transaction),
-          listPronunciations(transaction)
+          radioAdModel.findTemplate(transaction),
+          radioAdModel.listPronunciations(transaction)
         )
       }),
       directory

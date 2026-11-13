@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-import { isRadioScript, type RadioScript } from '@/domain/radio-script'
 import { generationPagesSchema } from '@/models/generation/schema'
+import { radioScriptSchema } from '@/models/radio-ad/schema'
 
 import { GENERATION_ARCHIVE_FORMAT, MAX_GENERATION_PAGE_COUNT } from './archive'
 
@@ -14,9 +14,7 @@ export const generationManifestSchema = z.object({
   number: positiveInteger,
   pageCount: positiveInteger.max(MAX_GENERATION_PAGE_COUNT),
   createdAt: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
-  radioScript: z
-    .custom<RadioScript>((value) => isRadioScript(value))
-    .nullable(),
+  radioScript: radioScriptSchema.nullable(),
   // Optional within version 1: generations recorded before #119 have none
   pages: generationPagesSchema.optional()
 })

@@ -2,10 +2,6 @@ import { randomUUID } from 'node:crypto'
 
 import { type Zippable, zipSync } from 'fflate'
 
-import {
-  getRadioListMarkdown,
-  getRadioScriptMarkdown
-} from '@/domain/radio-script'
 import type { Database } from '@/infra/database/relations'
 import { AppError } from '@/infra/errors'
 import {
@@ -25,6 +21,10 @@ import {
 import { generationModel } from '@/models/generation/model'
 import { generationPagesSchema } from '@/models/generation/schema'
 import { storedOfferExportSchema } from '@/models/offer/schema'
+import {
+  getRadioListMarkdown,
+  getRadioScriptMarkdown
+} from '@/models/radio-ad/radio-script'
 import { generationRepo } from '@/repositories/generation-repo'
 
 import {

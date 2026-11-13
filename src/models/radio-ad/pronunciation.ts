@@ -54,18 +54,6 @@ export const normalizePronunciations = (pronunciations: Pronunciation[]) =>
     spoken: spoken.trim()
   }))
 
-export const isPronunciationList = (value: unknown): value is Pronunciation[] =>
-  Array.isArray(value) &&
-  value.every(
-    (item: unknown) =>
-      typeof item === 'object' &&
-      item !== null &&
-      'term' in item &&
-      'spoken' in item &&
-      typeof item.term === 'string' &&
-      typeof item.spoken === 'string'
-  )
-
 const escapeRegExp = (text: string) =>
   text.replaceAll(/[$()*+.?[\\\]^{|}]/g, String.raw`\$&`)
 

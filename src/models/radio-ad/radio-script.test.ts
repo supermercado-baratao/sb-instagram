@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 
 import {
+  createOfferContent,
+  createOfferPage,
+  type OfferItem,
+  setSlot
+} from '@/models/offer/offer'
+import {
   convertLegacyBlocks,
   getClosingSequence,
   getEditedVoiceText,
@@ -11,19 +17,13 @@ import {
   getRadioScriptRounds,
   getRadioScriptTemplateError,
   getRadioScriptWarning,
-  isRadioScript,
-  isRadioScriptTemplate,
   type LegacyRadioScriptBlock,
   normalizeRadioScriptTemplate,
   type RadioScriptClosingSequence,
   type RadioScriptTemplate
-} from '@/domain/radio-script'
-import {
-  createOfferContent,
-  createOfferPage,
-  type OfferItem,
-  setSlot
-} from '@/models/offer/offer'
+} from '@/models/radio-ad/radio-script'
+
+import { radioScriptSchema, radioScriptTemplateSchema } from './schema'
 
 const item = (
   description: string,
@@ -348,7 +348,13 @@ describe('getRadioScriptWarning', () => {
   })
 })
 
-describe('isRadioScript', () => {
+const isRadioScript = (value: unknown) =>
+  radioScriptSchema.safeParse(value).success
+
+const isRadioScriptTemplate = (value: unknown) =>
+  radioScriptTemplateSchema.safeParse(value).success
+
+describe('radioScriptSchema', () => {
   test('reads the scripts of both versions', () => {
     const list = [{ number: 1, text: 'Arroz', price: '1,00' }]
     expect(isRadioScript({ version: 3, script: 'x', list })).toBe(true)
@@ -422,7 +428,7 @@ describe('normalizeRadioScriptTemplate', () => {
     })
   })
 
-  test('is checked by isRadioScriptTemplate', () => {
+  test('is checked by radioScriptTemplateSchema', () => {
     expect(isRadioScriptTemplate(template())).toBe(true)
     expect(
       isRadioScriptTemplate({

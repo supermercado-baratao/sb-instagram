@@ -1,6 +1,6 @@
-import type { RadioScript } from '@/domain/radio-script'
 import { GENERATION_PDF_FILE_NAME } from '@/models/generation/generation'
 import type { GenerationPage } from '@/models/generation/schema'
+import type { RadioScript } from '@/models/radio-ad/radio-script'
 
 export const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
 

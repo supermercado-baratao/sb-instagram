@@ -18,11 +18,10 @@ import {
 } from '@/infra/database/schema'
 import { registerSearchText } from '@/infra/database/search-text'
 import { AppError } from '@/infra/errors'
-import { savePronunciations } from '@/infra/pronunciation'
-import { saveRadioScriptTemplate } from '@/infra/radio-script'
 import { offerModel } from '@/models/offer/model'
 import { createOfferContent, type OfferContent } from '@/models/offer/offer'
 import type { Product } from '@/models/product/product'
+import { radioAdModel } from '@/models/radio-ad/model'
 
 import { generationModel, type OfferRenderer } from './model'
 
@@ -127,14 +126,16 @@ describe('create', () => {
 
   test('records the radio ad script with the saved template and dictionary', async () => {
     const { database, directory } = await setup()
-    saveRadioScriptTemplate(database, {
-      opening: 'Atenção!',
-      closings: [],
-      sequence: { start: [], middle: [], end: [] },
-      priceMarkers: ['somente'],
-      speakRepeatedOnce: true
+    radioAdModel.save(database, {
+      pronunciations: [{ term: 'Moça', spoken: 'Mossa' }],
+      radioScript: {
+        opening: 'Atenção!',
+        closings: [],
+        sequence: { start: [], middle: [], end: [] },
+        priceMarkers: ['somente'],
+        speakRepeatedOnce: true
+      }
     })
-    savePronunciations(database, [{ term: 'Moça', spoken: 'Mossa' }])
     offerModel.save(database, twoPages())
 
     const generation = await generationModel.create(database, renderer, {

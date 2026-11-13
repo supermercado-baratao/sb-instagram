@@ -23,10 +23,10 @@ import {
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
-import type { Pronunciation } from '@/domain/pronunciation'
-import { getEditedVoiceText } from '@/domain/radio-script'
-import { suggestVoiceText } from '@/domain/spoken-text'
 import type { Product } from '@/models/product/product'
+import type { Pronunciation } from '@/models/radio-ad/pronunciation'
+import { getEditedVoiceText } from '@/models/radio-ad/radio-script'
+import { suggestVoiceText } from '@/models/radio-ad/spoken-text'
 
 import { saveProductVoiceTextAction } from './actions'
 

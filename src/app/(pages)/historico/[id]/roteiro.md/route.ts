@@ -1,4 +1,4 @@
-import { getRadioScriptMarkdown } from '@/domain/radio-script'
+import { getRadioScriptMarkdown } from '@/models/radio-ad/radio-script'
 
 import {
   findGenerationByParams,

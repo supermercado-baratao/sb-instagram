@@ -10,13 +10,6 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
-import type {
-  LegacyRadioScriptBlock,
-  RadioScript,
-  RadioScriptClosing,
-  RadioScriptClosingSequence
-} from '@/domain/radio-script'
-
 export const products = sqliteTable(
   'products',
   {
@@ -142,7 +135,7 @@ export const generations = sqliteTable(
     offerExport: text().notNull(),
     pageCount: integer().notNull(),
     // Null for generations recorded before the radio ad script existed (#76)
-    radioScript: text({ mode: 'json' }).$type<RadioScript>(),
+    radioScript: text({ mode: 'json' }).$type<unknown>(),
     // Null for generations recorded before pages could be copied back to the offer (#119)
     pages: text({ mode: 'json' }).$type<unknown>(),
     createdAt: integer({ mode: 'timestamp_ms' })
@@ -203,11 +196,11 @@ export const radioScriptTemplate = sqliteTable(
   'radio_script_template',
   {
     id: integer().primaryKey(),
-    blocks: text({ mode: 'json' }).$type<LegacyRadioScriptBlock[]>(),
+    blocks: text({ mode: 'json' }).$type<unknown>(),
     opening: text(),
-    closings: text({ mode: 'json' }).$type<RadioScriptClosing[]>(),
-    sequence: text({ mode: 'json' }).$type<RadioScriptClosingSequence>(),
-    priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull(),
+    closings: text({ mode: 'json' }).$type<unknown>(),
+    sequence: text({ mode: 'json' }).$type<unknown>(),
+    priceMarkers: text({ mode: 'json' }).$type<unknown>().notNull(),
     speakRepeatedOnce: integer({ mode: 'boolean' }).notNull().default(true)
   },
   (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]

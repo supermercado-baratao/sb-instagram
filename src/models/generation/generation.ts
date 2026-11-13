@@ -1,4 +1,4 @@
-import type { RadioScript } from '@/domain/radio-script'
+import type { RadioScript } from '@/models/radio-ad/radio-script'
 
 export type Generation = {
   id: number

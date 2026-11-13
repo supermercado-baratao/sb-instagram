@@ -19,13 +19,14 @@ import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
+import { type OfferContent, replaceProduct } from '@/models/offer/offer'
 import {
   getPronunciationsError,
   INITIAL_PRONUNCIATIONS,
   normalizePronunciations,
   type Pronunciation,
   type PronunciationError
-} from '@/domain/pronunciation'
+} from '@/models/radio-ad/pronunciation'
 import {
   getRadioScript,
   getRadioScriptParts,
@@ -33,8 +34,7 @@ import {
   getRadioScriptTemplateError,
   type RadioScriptClosingField,
   type RadioScriptTemplate
-} from '@/domain/radio-script'
-import { type OfferContent, replaceProduct } from '@/models/offer/offer'
+} from '@/models/radio-ad/radio-script'
 
 import { saveRadioAdAction } from './actions'
 import { ClosingSequenceField } from './closing-sequence-field'
