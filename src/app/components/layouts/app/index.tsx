@@ -11,7 +11,7 @@ import {
   PRODUCTS_PATH,
   RADIO_AD_PATH
 } from '@/app/helpers/navigation'
-import type { StoreBrand } from '@/domain/brand'
+import type { StoreBrand } from '@/models/brand/brand'
 
 import { NavLink } from './_components/nav-link'
 

@@ -4,7 +4,6 @@ import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 import { offerPageItems, productCodes, products } from '@/infra/database/schema'
 import { searchText } from '@/infra/database/search-text'
-import type { Product } from '@/models/product/product'
 
 type Database = BetterSQLite3Database
 
@@ -13,6 +12,8 @@ type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0]
 type Connection = Database | Transaction
 
 type ProductRow = typeof products.$inferSelect
+
+type Product = ProductRow & { codes: string[] }
 
 // Breaks ties between products with the same description the same way on every query
 const firstProductCode = sql`(SELECT min(${productCodes.code}) FROM ${productCodes} WHERE ${productCodes.productId} = ${products.id})`

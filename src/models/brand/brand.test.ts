@@ -5,11 +5,11 @@ import {
   type BrandContent,
   getBrandContentError,
   INITIAL_TEMPLATE,
-  isBrandContent,
   normalizeHexColor,
   normalizeInstagram,
   type TemplateDraft
 } from './brand'
+import { brandContentSchema } from './schema'
 
 const colors = { primary: '#1a1d6b', accent: '#e01b22' }
 
@@ -94,9 +94,9 @@ describe('assignTemplateIds', () => {
   })
 })
 
-describe('isBrandContent', () => {
+describe('brandContentSchema', () => {
   test('accepts the form content', () => {
-    expect(isBrandContent(content())).toBe(true)
+    expect(brandContentSchema.safeParse(content()).success).toBe(true)
   })
 
   test.each([
@@ -107,7 +107,7 @@ describe('isBrandContent', () => {
     ],
     ['a missing name', { ...content(), name: undefined }]
   ])('rejects %s', (_, value) => {
-    expect(isBrandContent(value)).toBe(false)
+    expect(brandContentSchema.safeParse(value).success).toBe(false)
   })
 })
 

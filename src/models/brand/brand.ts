@@ -40,11 +40,6 @@ export const createBrandContent = (settings?: BrandSettings): BrandContent => ({
   templates: settings?.templates ?? [INITIAL_TEMPLATE]
 })
 
-export const LOGO_FILE_NAME = 'logo.png'
-
-// The poster shows the logo at most 230 px wide, so 600 px keeps a 2x margin
-export const LOGO_MAX_SIDE = 600
-
 const HEX_COLOR_PATTERN = /^#[\da-f]{6}$/i
 
 const isHexColor = (value: string) => HEX_COLOR_PATTERN.test(value)
@@ -98,26 +93,6 @@ export const assignTemplateIds = (
     return { ...template, id }
   })
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isTemplateDraft = (value: unknown): value is TemplateDraft =>
-  isRecord(value) &&
-  (value.id === null || typeof value.id === 'string') &&
-  typeof value.name === 'string' &&
-  isRecord(value.colors) &&
-  typeof value.colors.primary === 'string' &&
-  typeof value.colors.accent === 'string'
-
-// A Server Action is a public endpoint, so the form's content is checked again on the server
-export const isBrandContent = (value: unknown): value is BrandContent =>
-  isRecord(value) &&
-  typeof value.name === 'string' &&
-  typeof value.slogan === 'string' &&
-  typeof value.instagram === 'string' &&
-  Array.isArray(value.templates) &&
-  value.templates.every(isTemplateDraft)
 
 export type BrandContentError = {
   field: 'name' | 'instagram' | 'templates'

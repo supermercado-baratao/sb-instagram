@@ -1,9 +1,9 @@
-import { mkdir, rm } from 'node:fs/promises'
+import { mkdir, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 
 import sharp from 'sharp'
 
-import { LOGO_FILE_NAME, LOGO_MAX_SIDE } from '@/domain/brand'
+import { LOGO_FILE_NAME, LOGO_MAX_SIDE } from '@/constants/brand'
 import { dataDirectory } from '@/infra/data-directory'
 
 type LogoOptions = { directory?: string }
@@ -27,6 +27,9 @@ export const saveLogo = async (image: Buffer, options: LogoOptions = {}) => {
     .toFile(file)
   return LOGO_FILE_NAME
 }
+
+export const readLogo = (options: LogoOptions = {}) =>
+  readFile(getLogoFile(options))
 
 export const deleteLogo = (options: LogoOptions = {}) =>
   rm(getLogoFile(options), { force: true })

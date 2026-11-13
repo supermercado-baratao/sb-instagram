@@ -33,15 +33,15 @@ import {
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
+import { createOfferContent, createOfferPage } from '@/domain/offer'
+import { DEFAULT_POSTER_LAYOUT } from '@/domain/poster'
 import {
   type BrandContent,
   type BrandContentError,
   getBrandContentError,
   INITIAL_TEMPLATE,
   normalizeInstagram
-} from '@/domain/brand'
-import { createOfferContent, createOfferPage } from '@/domain/offer'
-import { DEFAULT_POSTER_LAYOUT } from '@/domain/poster'
+} from '@/models/brand/brand'
 import { PHOTO_MAX_MEGABYTES } from '@/models/product/product'
 
 import { saveBrandSettingsAction } from './actions'

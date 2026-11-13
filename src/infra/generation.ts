@@ -27,7 +27,6 @@ import {
 } from '@/domain/generation-pages'
 import { getOfferExport } from '@/domain/offer-export'
 import { getRadioScript } from '@/domain/radio-script'
-import { listTemplates } from '@/infra/brand'
 import type { Database } from '@/infra/database/relations'
 import { generations } from '@/infra/database/schema'
 import {
@@ -37,6 +36,7 @@ import {
 import { findOffer, saveOffer } from '@/infra/offer'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
+import { brandModel } from '@/models/brand/model'
 import { productModel } from '@/models/product/model'
 
 export type OfferRenderer = {
@@ -117,7 +117,9 @@ export const copyGenerationPages = (
   const pages = findGenerationPages(database, id)
   const selected = pages && selectGenerationPages(pages, pageNumbers)
   const offer = findOffer(database)
-  const templateIds = listTemplates(database).map((template) => template.id)
+  const templateIds = brandModel
+    .listTemplates(database)
+    .map((template) => template.id)
   if (!selected || !offer || templateIds.length === 0) {
     return { status: 'missing' }
   }

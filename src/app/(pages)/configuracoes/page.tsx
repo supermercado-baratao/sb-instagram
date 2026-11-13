@@ -5,8 +5,8 @@ import { BrandSettingsForm } from '@/app/components/blocks/brand/brand-settings-
 import { AppLayout } from '@/app/components/layouts/app'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
 import { BRAND_SETTINGS_PATH } from '@/app/helpers/navigation'
-import { createBrandContent } from '@/domain/brand'
 import { requireBrandSettings } from '@/entry/brand'
+import { createBrandContent } from '@/models/brand/brand'
 
 import { SettingsTabs } from './_components/settings-tabs'
 

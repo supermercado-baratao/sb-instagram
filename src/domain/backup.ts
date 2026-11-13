@@ -1,4 +1,4 @@
-import { LOGO_FILE_NAME } from '@/domain/brand'
+import { LOGO_FILE_NAME } from '@/constants/brand'
 
 const BACKUP_FORMAT = 'sb-instagram-backup'
 

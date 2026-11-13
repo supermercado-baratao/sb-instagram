@@ -11,7 +11,7 @@ import {
   FieldSet
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import { normalizeHexColor, type TemplateDraft } from '@/domain/brand'
+import { normalizeHexColor, type TemplateDraft } from '@/models/brand/brand'
 
 type TemplateFieldsProps = {
   id: string

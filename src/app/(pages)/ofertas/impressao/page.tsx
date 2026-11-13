@@ -6,9 +6,9 @@ import { Poster } from '@/app/components/blocks/poster'
 import { getPosterBrand } from '@/app/helpers/brand-poster'
 import { getPosterOffer, getPosterProducts } from '@/app/helpers/offer-poster'
 import { getPageTemplate, getPosterFitScale } from '@/domain/poster'
-import { findBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
 import { findOffer } from '@/infra/offer'
+import { brandModel } from '@/models/brand/model'
 
 export const metadata: Metadata = {
   title: 'Impressão',
@@ -30,7 +30,7 @@ const printScale = getPosterFitScale({
 // Printed to PDF by the renderer, one saved page per A4 sheet, so it has no header or controls
 const OfferPrint = async () => {
   await connection()
-  const settings = findBrandSettings(database)
+  const settings = brandModel.findSettings(database)
   const offer = findOffer(database)
   if (!settings || !offer) notFound()
 

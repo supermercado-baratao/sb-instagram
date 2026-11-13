@@ -1,13 +1,19 @@
 import { asc } from 'drizzle-orm'
 
-import type { BrandSettings, StoreBrand } from '@/domain/brand'
-import type { PosterTemplate } from '@/domain/poster'
 import type { Database } from '@/infra/database/relations'
 import { brand, templates } from '@/infra/database/schema'
 
 const BRAND_ID = 1
 
-export const listTemplates = (database: Database): PosterTemplate[] =>
+type Template = {
+  id: string
+  name: string
+  colors: { primary: string; accent: string }
+}
+
+type StoreBrand = Omit<typeof brand.$inferSelect, 'id'>
+
+const listTemplates = (database: Database): Template[] =>
   database
     .select()
     .from(templates)
@@ -19,10 +25,10 @@ export const listTemplates = (database: Database): PosterTemplate[] =>
       colors: { primary: primaryColor, accent: accentColor }
     }))
 
-// Undefined until the first setup, which is what sends a new instance to the settings page
-export const findBrandSettings = (
+// Undefined until the first setup
+const findSettings = (
   database: Database
-): BrandSettings | undefined => {
+): { brand: StoreBrand; templates: Template[] } | undefined => {
   const storeBrand = database
     .select({
       name: brand.name,
@@ -39,14 +45,14 @@ export const findBrandSettings = (
 }
 
 // Templates are rewritten as a whole, like offer pages, so removing and reordering need no diff
-export const saveBrandSettings = (
+const saveSettings = (
   database: Database,
   {
     brand: storeBrand,
     templates: newTemplates
   }: {
     brand: Omit<StoreBrand, 'updatedAt'>
-    templates: PosterTemplate[]
+    templates: Template[]
   }
 ) =>
   database.transaction((transaction) => {
@@ -71,3 +77,9 @@ export const saveBrandSettings = (
       )
       .run()
   })
+
+export const brandRepo = {
+  findSettings,
+  listTemplates,
+  saveSettings
+}
