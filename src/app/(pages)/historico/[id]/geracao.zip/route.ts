@@ -1,6 +1,6 @@
-import { getGenerationArchiveName } from '@/domain/generation-archive'
 import { database } from '@/infra/database/client'
-import { createGenerationArchive } from '@/infra/generation-archive'
+import { getGenerationArchiveName } from '@/models/generation-archive/archive'
+import { generationArchiveModel } from '@/models/generation-archive/model'
 
 import {
   findGenerationByParams,
@@ -13,7 +13,7 @@ export const GET = async (
 ) => {
   const generation = await findGenerationByParams(params)
   const result =
-    generation && (await createGenerationArchive(database, generation.id))
+    generation && (await generationArchiveModel.create(database, generation.id))
   if (!result) return new Response(null, { status: 404 })
 
   return new Response(new Uint8Array(result.archive), {

@@ -5,8 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { OFFER_PATH, RADIO_AD_PATH } from '@/app/helpers/navigation'
 import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { createGeneration } from '@/infra/generation'
-import { offerRenderer } from '@/infra/poster-renderer'
+import { generationModel } from '@/models/generation/model'
 import { offerModel } from '@/models/offer/model'
 import type { OfferBackupSummary, OfferContent } from '@/models/offer/offer'
 import {
@@ -79,17 +78,11 @@ export const restoreOfferAction = async (): Promise<RestoreOfferResult> =>
     }
   )
 
-export const generateOfferAction = async (): Promise<GenerateOfferResult> => {
-  try {
-    const generation = await createGeneration(database, offerRenderer)
-    if (!generation) {
-      return { status: 'error', message: 'Salve a oferta antes de gerar.' }
+export const generateOfferAction = async (): Promise<GenerateOfferResult> =>
+  runAction(
+    { fallback: 'Não foi possível gerar a oferta. Tente de novo.' },
+    async () => {
+      const generation = await generationModel.create(database)
+      return { status: 'generated' as const, number: generation.number }
     }
-    return { status: 'generated', number: generation.number }
-  } catch {
-    return {
-      status: 'error',
-      message: 'Não foi possível gerar a oferta. Tente de novo.'
-    }
-  }
-}
+  )

@@ -17,7 +17,7 @@ import {
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
 import { GENERATIONS_HEADING_ID } from '@/app/helpers/generation'
-import type { Generation } from '@/domain/generation'
+import type { Generation } from '@/models/generation/generation'
 
 import { deleteGenerationAction } from '../actions'
 

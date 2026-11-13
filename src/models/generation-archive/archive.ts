@@ -1,11 +1,8 @@
-import { GENERATION_PDF_FILE_NAME } from '@/domain/generation'
-import {
-  type GenerationPage,
-  isGenerationPages
-} from '@/domain/generation-pages'
-import { isRadioScript, type RadioScript } from '@/domain/radio-script'
+import type { RadioScript } from '@/domain/radio-script'
+import { GENERATION_PDF_FILE_NAME } from '@/models/generation/generation'
+import type { GenerationPage } from '@/models/generation/schema'
 
-const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
+export const GENERATION_ARCHIVE_FORMAT = 'sb-instagram-generation'
 
 export const GENERATION_ARCHIVE_VERSION = 1
 
@@ -18,7 +15,7 @@ export const RADIO_SCRIPT_FILE_NAME = 'roteiro.md'
 export const RADIO_LIST_FILE_NAME = 'lista.md'
 
 // Far above any real offer, only so a crafted file can't ask for an endless list of pages
-const MAX_GENERATION_PAGE_COUNT = 500
+export const MAX_GENERATION_PAGE_COUNT = 500
 
 export type GenerationManifest = {
   format: typeof GENERATION_ARCHIVE_FORMAT
@@ -47,27 +44,6 @@ export type PrepareGenerationImportResponse =
 export type GenerationArchiveEntry =
   | { type: 'manifest' | 'offer-export' | 'pdf' | 'radio-text' }
   | { type: 'page'; pageNumber: number }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isPositiveInteger = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isSafeInteger(value) && value >= 1
-
-// Checks the shape only, so a newer version is told apart from a file that isn't a generation
-export const isGenerationManifest = (
-  value: unknown
-): value is GenerationManifest =>
-  isRecord(value) &&
-  value.format === GENERATION_ARCHIVE_FORMAT &&
-  isPositiveInteger(value.version) &&
-  isPositiveInteger(value.number) &&
-  isPositiveInteger(value.pageCount) &&
-  value.pageCount <= MAX_GENERATION_PAGE_COUNT &&
-  typeof value.createdAt === 'string' &&
-  !Number.isNaN(Date.parse(value.createdAt)) &&
-  (value.radioScript === null || isRadioScript(value.radioScript)) &&
-  (value.pages === undefined || isGenerationPages(value.pages))
 
 export const createGenerationManifest = ({
   number,

@@ -5,12 +5,12 @@ import type { Product } from '@/models/product/product'
 
 import {
   appendGenerationPages,
-  type GenerationPage,
   getGenerationPages,
   getGenerationPagesFromExport,
   resolveGenerationProduct,
   selectGenerationPages
-} from './generation-pages'
+} from './pages'
+import type { GenerationPage } from './schema'
 
 const createProduct = (id: string, code: string): Product => ({
   id,

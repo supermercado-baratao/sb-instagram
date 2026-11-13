@@ -11,23 +11,12 @@ import { describe, expect, onTestFinished, test } from 'vitest'
 
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
+import { AppError } from '@/infra/errors'
+import { generationModel, type OfferRenderer } from '@/models/generation/model'
 import { offerModel } from '@/models/offer/model'
 import { createOfferContent } from '@/models/offer/offer'
 
-import {
-  createGeneration,
-  findGenerationExport,
-  findGenerationTexts,
-  listGenerations,
-  type OfferRenderer
-} from './generation'
-import {
-  createGenerationArchive,
-  discardGenerationImport,
-  GenerationArchiveError,
-  importGeneration,
-  prepareGenerationImport
-} from './generation-archive'
+import { generationArchiveModel } from './model'
 
 const PNG = [137, 80, 78, 71, 13, 10, 26, 10]
 
@@ -55,7 +44,9 @@ const generate = async ({
   content.validUntil = '2026-11-12'
   content.pages.push(createOfferContent('mercado').pages[0])
   offerModel.save(database, content)
-  const generation = await createGeneration(database, renderer, { directory })
+  const generation = await generationModel.create(database, renderer, {
+    directory
+  })
   if (!generation) throw new Error('No generation')
   return generation
 }
@@ -71,7 +62,7 @@ const stream = async function* (data: Uint8Array) {
 
 const exportArchive = async (instance: Awaited<ReturnType<typeof setup>>) => {
   const generation = await generate(instance)
-  const result = await createGenerationArchive(
+  const result = await generationArchiveModel.create(
     instance.database,
     generation.id,
     { directory: instance.directory }
@@ -80,7 +71,7 @@ const exportArchive = async (instance: Awaited<ReturnType<typeof setup>>) => {
   return { generation, archive: result.archive }
 }
 
-describe('createGenerationArchive', () => {
+describe('create', () => {
   test('holds the pages, the PDF, the texts and the manifest', async () => {
     const instance = await setup()
     const { generation, archive } = await exportArchive(instance)
@@ -103,11 +94,12 @@ describe('createGenerationArchive', () => {
         pageCount: 2,
         createdAt: generation.createdAt.toISOString(),
         radioScript: generation.radioScript,
-        pages: findGenerationTexts(instance.database, generation.id)?.pages
+        pages: generationModel.findTexts(instance.database, generation.id)
+          ?.pages
       }
     )
     expect(new TextDecoder().decode(files['ofertas.json'])).toBe(
-      findGenerationExport(instance.database, generation.id)
+      generationModel.findExport(instance.database, generation.id)
     )
   })
 
@@ -119,19 +111,19 @@ describe('createGenerationArchive', () => {
     )
 
     expect(
-      await createGenerationArchive(instance.database, generation.id, {
+      await generationArchiveModel.create(instance.database, generation.id, {
         directory: instance.directory
       })
     ).toBeUndefined()
     expect(
-      await createGenerationArchive(instance.database, 99, {
+      await generationArchiveModel.create(instance.database, 99, {
         directory: instance.directory
       })
     ).toBeUndefined()
   })
 })
 
-describe('prepareGenerationImport and importGeneration', () => {
+describe('prepareImport and importPrepared', () => {
   test('add the generation with the next number and its original date', async () => {
     const source = await setup()
     const { generation, archive } = await exportArchive(source)
@@ -139,7 +131,7 @@ describe('prepareGenerationImport and importGeneration', () => {
     await generate(target)
     await generate(target)
 
-    const preview = await prepareGenerationImport(
+    const preview = await generationArchiveModel.prepareImport(
       target.database,
       stream(archive),
       { directory: target.directory }
@@ -151,11 +143,15 @@ describe('prepareGenerationImport and importGeneration', () => {
       validUntil: '2026-11-12',
       nextNumber: 3
     })
-    expect(listGenerations(target.database)).toHaveLength(2)
+    expect(generationModel.list(target.database)).toHaveLength(2)
 
-    const imported = await importGeneration(target.database, preview.token, {
-      directory: target.directory
-    })
+    const imported = await generationArchiveModel.importPrepared(
+      target.database,
+      preview.token,
+      {
+        directory: target.directory
+      }
+    )
 
     expect(imported).toMatchObject({
       number: 3,
@@ -164,8 +160,8 @@ describe('prepareGenerationImport and importGeneration', () => {
       radioScript: generation.radioScript,
       createdAt: generation.createdAt
     })
-    expect(findGenerationTexts(target.database, imported.id)).toEqual(
-      findGenerationTexts(source.database, generation.id)
+    expect(generationModel.findTexts(target.database, imported.id)).toEqual(
+      generationModel.findTexts(source.database, generation.id)
     )
     const folder = path.join(target.directory, String(imported.id))
     expect(await listSorted(folder)).toEqual([
@@ -187,16 +183,20 @@ describe('prepareGenerationImport and importGeneration', () => {
     const options = { directory: target.directory }
 
     for (let time = 0; time < 2; time++) {
-      const { token } = await prepareGenerationImport(
+      const { token } = await generationArchiveModel.prepareImport(
         target.database,
         stream(archive),
         options
       )
-      await importGeneration(target.database, token, options)
+      await generationArchiveModel.importPrepared(
+        target.database,
+        token,
+        options
+      )
     }
 
     expect(
-      listGenerations(target.database).map(({ number }) => number)
+      generationModel.list(target.database).map(({ number }) => number)
     ).toEqual([2, 1])
   })
 
@@ -206,18 +206,18 @@ describe('prepareGenerationImport and importGeneration', () => {
     const target = await setup()
     const options = { directory: target.directory }
 
-    const { token } = await prepareGenerationImport(
+    const { token } = await generationArchiveModel.prepareImport(
       target.database,
       stream(archive),
       options
     )
-    await discardGenerationImport(token, options)
+    await generationArchiveModel.discardImport(token, options)
 
     expect(await readdir(target.directory)).toEqual([])
     await expect(
-      importGeneration(target.database, token, options)
+      generationArchiveModel.importPrepared(target.database, token, options)
     ).rejects.toThrow('Envie o arquivo de novo')
-    expect(listGenerations(target.database)).toEqual([])
+    expect(generationModel.list(target.database)).toEqual([])
   })
 
   test('removes the row when the folder cannot take the generation id', async () => {
@@ -225,7 +225,7 @@ describe('prepareGenerationImport and importGeneration', () => {
     const { archive } = await exportArchive(source)
     const target = await setup()
     const options = { directory: target.directory }
-    const { token } = await prepareGenerationImport(
+    const { token } = await generationArchiveModel.prepareImport(
       target.database,
       stream(archive),
       options
@@ -234,9 +234,9 @@ describe('prepareGenerationImport and importGeneration', () => {
     await writeFile(path.join(target.directory, '1'), 'x')
 
     await expect(
-      importGeneration(target.database, token, options)
+      generationArchiveModel.importPrepared(target.database, token, options)
     ).rejects.toThrow()
-    expect(listGenerations(target.database)).toEqual([])
+    expect(generationModel.list(target.database)).toEqual([])
   })
 })
 
@@ -255,7 +255,7 @@ const manifestWith = (files: Zippable, fields: Record<string, unknown>) => {
   files['geracao.json'] = strToU8(JSON.stringify({ ...manifest, ...fields }))
 }
 
-describe('prepareGenerationImport refuses', () => {
+describe('prepareImport refuses', () => {
   test.each<[string, (files: Zippable) => void, RegExp]>([
     [
       'a missing page',
@@ -306,11 +306,15 @@ describe('prepareGenerationImport refuses', () => {
     const archive = await tamper(change)
     const target = await setup()
 
-    const result = prepareGenerationImport(target.database, stream(archive), {
-      directory: target.directory
-    })
+    const result = generationArchiveModel.prepareImport(
+      target.database,
+      stream(archive),
+      {
+        directory: target.directory
+      }
+    )
 
-    await expect(result).rejects.toThrow(GenerationArchiveError)
+    await expect(result).rejects.toThrow(AppError)
     await expect(result).rejects.toThrow(message)
     expect(await readdir(target.directory)).toEqual([])
   })
@@ -319,7 +323,7 @@ describe('prepareGenerationImport refuses', () => {
     const target = await setup()
     const archive = stream(strToU8('not a zip'))
     await expect(
-      prepareGenerationImport(target.database, archive, {
+      generationArchiveModel.prepareImport(target.database, archive, {
         directory: target.directory
       })
     ).rejects.toThrow(/não é uma oferta do histórico/)

@@ -10,7 +10,6 @@ import {
   uniqueIndex
 } from 'drizzle-orm/sqlite-core'
 
-import type { GenerationPage } from '@/domain/generation-pages'
 import type {
   LegacyRadioScriptBlock,
   RadioScript,
@@ -145,7 +144,7 @@ export const generations = sqliteTable(
     // Null for generations recorded before the radio ad script existed (#76)
     radioScript: text({ mode: 'json' }).$type<RadioScript>(),
     // Null for generations recorded before pages could be copied back to the offer (#119)
-    pages: text({ mode: 'json' }).$type<GenerationPage[]>(),
+    pages: text({ mode: 'json' }).$type<unknown>(),
     createdAt: integer({ mode: 'timestamp_ms' })
       .notNull()
       .$defaultFn(() => new Date())

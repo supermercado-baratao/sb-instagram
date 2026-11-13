@@ -1,14 +1,32 @@
 import { randomUUID } from 'node:crypto'
-import { open, readFile, rm, stat } from 'node:fs/promises'
-import path from 'node:path'
 
-import { max } from 'drizzle-orm'
 import { type Zippable, zipSync } from 'fflate'
 
 import {
+  getRadioListMarkdown,
+  getRadioScriptMarkdown
+} from '@/domain/radio-script'
+import type { Database } from '@/infra/database/relations'
+import { AppError } from '@/infra/errors'
+import {
+  generationsDirectory,
+  getTemporaryGenerationFolder,
+  hasFileSignature,
+  hasFolderFile,
+  readFolderText,
+  removeFolder,
+  removeFolderFile
+} from '@/infra/generation-files'
+import { extractZip } from '@/infra/zip'
+import {
   GENERATION_PDF_FILE_NAME,
   getGenerationPageFileName
-} from '@/domain/generation'
+} from '@/models/generation/generation'
+import { generationModel } from '@/models/generation/model'
+import { generationPagesSchema } from '@/models/generation/schema'
+import { storedOfferExportSchema } from '@/models/offer/schema'
+import { generationRepo } from '@/repositories/generation-repo'
+
 import {
   createGenerationManifest,
   GENERATION_ARCHIVE_VERSION,
@@ -17,32 +35,13 @@ import {
   type GenerationManifest,
   getGenerationArchiveEntry,
   hasEveryPage,
-  isGenerationManifest,
   OFFER_EXPORT_FILE_NAME,
   RADIO_LIST_FILE_NAME,
   RADIO_SCRIPT_FILE_NAME
-} from '@/domain/generation-archive'
-import {
-  getRadioListMarkdown,
-  getRadioScriptMarkdown
-} from '@/domain/radio-script'
-import { isUuid } from '@/domain/uuid'
-import type { Database } from '@/infra/database/relations'
-import { generations } from '@/infra/database/schema'
-import {
-  findGeneration,
-  findGenerationTexts,
-  getTemporaryGenerationFolder,
-  readGenerationFile,
-  recordGeneration
-} from '@/infra/generation'
-import { generationsDirectory } from '@/infra/generations-directory'
-import { extractZip } from '@/infra/zip'
-import { storedOfferExportSchema } from '@/models/offer/schema'
+} from './archive'
+import { generationManifestSchema, importTokenSchema } from './schema'
 
 type GenerationArchiveOptions = { directory?: string }
-
-export class GenerationArchiveError extends Error {}
 
 const INVALID_ARCHIVE_MESSAGE =
   'O arquivo não é uma oferta do histórico do app. Escolha o arquivo .zip baixado em "Baixar tudo (ZIP)".'
@@ -59,17 +58,20 @@ const PDF_SIGNATURE = Buffer.from('%PDF-')
 
 const encoder = new TextEncoder()
 
-export const createGenerationArchive = async (
+const create = async (
   database: Database,
   id: number,
   { directory = generationsDirectory }: GenerationArchiveOptions = {}
 ) => {
-  const generation = findGeneration(database, id)
-  const stored = findGenerationTexts(database, id)
+  const generation = generationModel.findById(database, id)
+  const stored = generationModel.findTexts(database, id)
   if (!generation || !stored) return
 
   const { offerExport, pages } = stored
-  const manifest = createGenerationManifest({ ...generation, pages })
+  const manifest = createGenerationManifest({
+    ...generation,
+    pages: generationPagesSchema.safeParse(pages).data ?? null
+  })
   // PNG and PDF are already compressed, so only the texts are deflated
   const files: Zippable = {
     [GENERATION_MANIFEST_NAME]: encoder.encode(
@@ -92,33 +94,21 @@ export const createGenerationArchive = async (
     GENERATION_PDF_FILE_NAME
   ]
   for (const fileName of binaries) {
-    const data = await readGenerationFile(id, fileName, { directory })
+    const data = await generationModel.readFile(id, fileName, { directory })
     if (!data) return
     files[fileName] = [data, { level: 0 }]
   }
   return { generation, archive: zipSync(files) }
 }
 
-const getImportFolder = (token: string, directory: string) => {
-  if (!isUuid(token)) {
-    throw new GenerationArchiveError(MISSING_IMPORT_MESSAGE)
-  }
-  return getTemporaryGenerationFolder(token, directory)
+const getImportFolder = (token: unknown, directory: string) => {
+  const parsed = importTokenSchema.safeParse(token)
+  if (!parsed.success) throw new AppError(MISSING_IMPORT_MESSAGE)
+  return getTemporaryGenerationFolder(parsed.data, directory)
 }
 
-const hasSignature = async (file: string, signature: Buffer) => {
-  const handle = await open(file)
-  try {
-    const head = Buffer.alloc(signature.length)
-    const { bytesRead } = await handle.read(head, 0, signature.length, 0)
-    return bytesRead === signature.length && head.equals(signature)
-  } finally {
-    await handle.close()
-  }
-}
-
-const readJson = async (file: string): Promise<unknown> =>
-  JSON.parse(await readFile(file, 'utf8'))
+const readJson = async (folder: string, fileName: string): Promise<unknown> =>
+  JSON.parse(await readFolderText(folder, fileName))
 
 type ImportedTexts = {
   manifest: GenerationManifest
@@ -127,23 +117,18 @@ type ImportedTexts = {
 }
 
 const readTexts = async (folder: string): Promise<ImportedTexts> => {
-  const manifest = await readJson(path.join(folder, GENERATION_MANIFEST_NAME))
-  if (!isGenerationManifest(manifest)) {
-    throw new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
-  }
-  if (manifest.version > GENERATION_ARCHIVE_VERSION) {
-    throw new GenerationArchiveError(NEWER_VERSION_MESSAGE)
-  }
-  const offerExport = await readFile(
-    path.join(folder, OFFER_EXPORT_FILE_NAME),
-    'utf8'
+  const manifest = generationManifestSchema.safeParse(
+    await readJson(folder, GENERATION_MANIFEST_NAME)
   )
-  const exported = storedOfferExportSchema.safeParse(JSON.parse(offerExport))
-  if (!exported.success) {
-    throw new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
+  if (!manifest.success) throw new AppError(INVALID_ARCHIVE_MESSAGE)
+  if (manifest.data.version > GENERATION_ARCHIVE_VERSION) {
+    throw new AppError(NEWER_VERSION_MESSAGE)
   }
+  const offerExport = await readFolderText(folder, OFFER_EXPORT_FILE_NAME)
+  const exported = storedOfferExportSchema.safeParse(JSON.parse(offerExport))
+  if (!exported.success) throw new AppError(INVALID_ARCHIVE_MESSAGE)
   return {
-    manifest,
+    manifest: manifest.data,
     offerExport,
     validUntil: exported.data.validUntil
   }
@@ -162,30 +147,19 @@ const checkFiles = async (
   }
   if (!hasEveryPage(pageNumbers, pageCount)) return false
   for (const pageNumber of pageNumbers) {
-    const page = path.join(folder, getGenerationPageFileName(pageNumber))
-    if (!(await hasSignature(page, PNG_SIGNATURE))) return false
+    const page = getGenerationPageFileName(pageNumber)
+    if (!(await hasFileSignature(folder, page, PNG_SIGNATURE))) return false
   }
-  return hasSignature(
-    path.join(folder, GENERATION_PDF_FILE_NAME),
-    PDF_SIGNATURE
-  )
+  return hasFileSignature(folder, GENERATION_PDF_FILE_NAME, PDF_SIGNATURE)
 }
 
 const asArchiveError = (error: unknown) =>
-  error instanceof GenerationArchiveError
-    ? error
-    : new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
-
-const getNextNumber = (database: Database) =>
-  (database
-    .select({ number: max(generations.number) })
-    .from(generations)
-    .get()?.number ?? 0) + 1
+  error instanceof AppError ? error : new AppError(INVALID_ARCHIVE_MESSAGE)
 
 // Nothing is added until importGeneration: the file is only extracted and checked, so the store
 // sees the generation first. The folder takes the generations' temporary prefix, so a restart
-// before the store confirms clears it (removeUnfinishedGenerations)
-export const prepareGenerationImport = async (
+// before the store confirms clears it (removeUnfinished)
+const prepareImport = async (
   database: Database,
   archive: AsyncIterable<Uint8Array>,
   { directory = generationsDirectory }: GenerationArchiveOptions = {}
@@ -202,11 +176,11 @@ export const prepareGenerationImport = async (
         return entry.type === 'radio-text' ? null : [name]
       })
     } catch {
-      throw new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
+      throw new AppError(INVALID_ARCHIVE_MESSAGE)
     }
     const { manifest, validUntil } = await readTexts(folder)
     if (!(await checkFiles(folder, names, manifest.pageCount))) {
-      throw new GenerationArchiveError(INVALID_ARCHIVE_MESSAGE)
+      throw new AppError(INVALID_ARCHIVE_MESSAGE)
     }
     return {
       token,
@@ -214,36 +188,26 @@ export const prepareGenerationImport = async (
       pageCount: manifest.pageCount,
       createdAt: manifest.createdAt,
       validUntil,
-      nextNumber: getNextNumber(database)
+      nextNumber: generationRepo.findLastNumber(database) + 1
     }
   } catch (error) {
-    await rm(folder, { recursive: true, force: true })
+    await removeFolder(folder)
     throw asArchiveError(error)
   }
 }
 
-const exists = async (file: string) => {
-  try {
-    await stat(file)
-    return true
-  } catch {
-    return false
-  }
-}
-
 // Always added, with the next number of this instance and the date it was first generated
-export const importGeneration = async (
+const importPrepared = async (
   database: Database,
-  token: string,
+  token: unknown,
   { directory = generationsDirectory }: GenerationArchiveOptions = {}
 ) => {
   const folder = getImportFolder(token, directory)
-  const manifestFile = path.join(folder, GENERATION_MANIFEST_NAME)
-  if (!(await exists(manifestFile))) {
-    throw new GenerationArchiveError(MISSING_IMPORT_MESSAGE)
+  if (!(await hasFolderFile(folder, GENERATION_MANIFEST_NAME))) {
+    throw new AppError(MISSING_IMPORT_MESSAGE)
   }
   try {
-    // The files were checked by prepareGenerationImport, so only the texts are read again
+    // The files were checked by prepareImport, so only the texts are read again
     let texts: ImportedTexts
     try {
       texts = await readTexts(folder)
@@ -251,9 +215,9 @@ export const importGeneration = async (
       throw asArchiveError(error)
     }
     const { manifest, offerExport } = texts
-    await rm(manifestFile)
-    await rm(path.join(folder, OFFER_EXPORT_FILE_NAME))
-    return await recordGeneration(
+    await removeFolderFile(folder, GENERATION_MANIFEST_NAME)
+    await removeFolderFile(folder, OFFER_EXPORT_FILE_NAME)
+    return await generationModel.record(
       database,
       folder,
       () => ({
@@ -266,12 +230,19 @@ export const importGeneration = async (
       directory
     )
   } catch (error) {
-    await rm(folder, { recursive: true, force: true })
+    await removeFolder(folder)
     throw error
   }
 }
 
-export const discardGenerationImport = async (
-  token: string,
+const discardImport = async (
+  token: unknown,
   { directory = generationsDirectory }: GenerationArchiveOptions = {}
-) => rm(getImportFolder(token, directory), { recursive: true, force: true })
+) => removeFolder(getImportFolder(token, directory))
+
+export const generationArchiveModel = {
+  create,
+  prepareImport,
+  importPrepared,
+  discardImport
+}

@@ -1,5 +1,5 @@
 import { database } from '@/infra/database/client'
-import { findGenerationExport } from '@/infra/generation'
+import { generationModel } from '@/models/generation/model'
 
 import {
   findGenerationByParams,
@@ -12,7 +12,7 @@ export const GET = async (
 ) => {
   const generation = await findGenerationByParams(params)
   const offerExport =
-    generation && findGenerationExport(database, generation.id)
+    generation && generationModel.findExport(database, generation.id)
   if (!generation || !offerExport) return new Response(null, { status: 404 })
 
   return new Response(offerExport, {

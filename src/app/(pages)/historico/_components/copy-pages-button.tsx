@@ -21,7 +21,7 @@ import { FieldLegend, FieldSet } from '@/app/components/ui/shadcn/field'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { getGenerationPageHref } from '@/app/helpers/generation'
 import { OFFER_PATH } from '@/app/helpers/navigation'
-import type { Generation } from '@/domain/generation'
+import type { Generation } from '@/models/generation/generation'
 
 import { copyGenerationPagesAction } from '../actions'
 

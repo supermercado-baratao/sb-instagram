@@ -1,5 +1,4 @@
-import { GENERATION_PDF_FILE_NAME } from '@/domain/generation'
-import { readGenerationFile } from '@/infra/generation'
+import { generationModel } from '@/models/generation/model'
 
 import {
   findGenerationByParams,
@@ -11,9 +10,7 @@ export const GET = async (
   { params }: RouteContext<'/historico/[id]/paginas.pdf'>
 ) => {
   const generation = await findGenerationByParams(params)
-  const pdf = generation
-    ? await readGenerationFile(generation.id, GENERATION_PDF_FILE_NAME)
-    : undefined
+  const pdf = generation && (await generationModel.readPdf(generation))
   if (!generation || !pdf) return new Response(null, { status: 404 })
 
   return new Response(new Uint8Array(pdf), {

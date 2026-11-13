@@ -1,8 +1,4 @@
-import {
-  getGenerationPageFileName,
-  isGenerationPageNumber
-} from '@/domain/generation'
-import { readGenerationFile } from '@/infra/generation'
+import { generationModel } from '@/models/generation/model'
 
 import {
   findGenerationByParams,
@@ -17,12 +13,7 @@ export const GET = async (
   const { page } = await params
   const pageNumber = Number(page)
   const png =
-    generation && isGenerationPageNumber(generation, pageNumber)
-      ? await readGenerationFile(
-          generation.id,
-          getGenerationPageFileName(pageNumber)
-        )
-      : undefined
+    generation && (await generationModel.readPage(generation, pageNumber))
   if (!png) return new Response(null, { status: 404 })
 
   return new Response(new Uint8Array(png), {

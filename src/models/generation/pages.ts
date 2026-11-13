@@ -7,33 +7,17 @@ import {
 } from '@/models/offer/offer'
 import {
   DEFAULT_POSTER_LAYOUT,
-  isPosterLayout,
   PAGE_PRODUCT_COUNT,
   type PosterLayout,
   posterLayouts
 } from '@/models/poster/poster'
+import { normalizeCodes, type Product } from '@/models/product/product'
+
 import {
-  isValidCode,
-  normalizeCodes,
-  type Product
-} from '@/models/product/product'
-import { isProductId } from '@/models/product/schema'
-
-export type GenerationPageItem = {
-  position: number
-  // Null for a page rebuilt from the export of a generation recorded before #119
-  productId: string | null
-  // Kept beside the id, so a generation imported from another instance still finds its products
-  codes: string[]
-  priceInCents: number
-}
-
-export type GenerationPage = {
-  // Null when rebuilt from an old export, which kept neither
-  templateId: string | null
-  layout: PosterLayout | null
-  items: GenerationPageItem[]
-}
+  exportPagesSchema,
+  type GenerationPage,
+  type GenerationPageItem
+} from './schema'
 
 // Only the slots the layout shows, like the PNG, so a copy brings back what was published
 export const getGenerationPages = (content: OfferContent): GenerationPage[] =>
@@ -54,36 +38,6 @@ export const getGenerationPages = (content: OfferContent): GenerationPage[] =>
     )
   }))
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const isCodeList = (value: unknown): value is string[] =>
-  Array.isArray(value) &&
-  value.every((code) => typeof code === 'string' && isValidCode(code))
-
-const isGenerationPageItem = (value: unknown): value is GenerationPageItem =>
-  isRecord(value) &&
-  Number.isSafeInteger(value.position) &&
-  (value.position as number) >= 0 &&
-  (value.position as number) < PAGE_PRODUCT_COUNT &&
-  (value.productId === null ||
-    (typeof value.productId === 'string' && isProductId(value.productId))) &&
-  isCodeList(value.codes) &&
-  Number.isSafeInteger(value.priceInCents) &&
-  (value.priceInCents as number) >= 0
-
-const isGenerationPage = (value: unknown): value is GenerationPage =>
-  isRecord(value) &&
-  (value.templateId === null || typeof value.templateId === 'string') &&
-  (value.layout === null || isPosterLayout(value.layout)) &&
-  Array.isArray(value.items) &&
-  value.items.every(isGenerationPageItem)
-
-// Read from the database or an imported archive, so a list written by a future version or edited
-// by hand is never copied
-export const isGenerationPages = (value: unknown): value is GenerationPage[] =>
-  Array.isArray(value) && value.every(isGenerationPage)
-
 const getSmallestLayout = (productCount: number): PosterLayout =>
   posterLayouts
     .map(({ id }) => id)
@@ -95,15 +49,13 @@ const getSmallestLayout = (productCount: number): PosterLayout =>
 export const getGenerationPagesFromExport = (
   exported: unknown
 ): GenerationPage[] | undefined => {
-  if (!isRecord(exported) || !Array.isArray(exported.pages)) return
+  const parsed = exportPagesSchema.safeParse(exported)
+  if (!parsed.success) return
   const pages: GenerationPage[] = []
-  for (const page of exported.pages) {
-    if (!isRecord(page) || !Array.isArray(page.products)) return
+  for (const page of parsed.data.pages) {
     const items: GenerationPageItem[] = []
     for (const product of page.products.slice(0, PAGE_PRODUCT_COUNT)) {
-      if (!isRecord(product) || !isCodeList(product.codes)) return
-      const priceInCents =
-        typeof product.price === 'string' ? parsePrice(product.price) : null
+      const priceInCents = parsePrice(product.price)
       if (priceInCents === null) return
       items.push({
         position: items.length,

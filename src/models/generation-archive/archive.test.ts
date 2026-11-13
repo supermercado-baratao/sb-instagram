@@ -3,9 +3,9 @@ import { describe, expect, test } from 'vitest'
 import {
   createGenerationManifest,
   getGenerationArchiveEntry,
-  hasEveryPage,
-  isGenerationManifest
-} from './generation-archive'
+  hasEveryPage
+} from './archive'
+import { generationManifestSchema } from './schema'
 
 const manifest = createGenerationManifest({
   number: 4,
@@ -15,7 +15,10 @@ const manifest = createGenerationManifest({
   pages: null
 })
 
-describe('isGenerationManifest', () => {
+const isGenerationManifest = (value: unknown) =>
+  generationManifestSchema.safeParse(value).success
+
+describe('generationManifestSchema', () => {
   test('accepts the manifest the app writes, with or without a radio script', () => {
     expect(isGenerationManifest(manifest)).toBe(true)
     expect(
