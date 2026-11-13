@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
-import { requireBrandSettings } from '@/app/helpers/brand-settings'
+import { requireBrandSettings } from '@/entry/brand'
 import { database } from '@/infra/database/client'
 import { findOffer } from '@/infra/offer'
 import { listPronunciations } from '@/infra/pronunciation'

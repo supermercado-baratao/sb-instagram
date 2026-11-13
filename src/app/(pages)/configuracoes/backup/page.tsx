@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { connection } from 'next/server'
 
 import { AppLayout } from '@/app/components/layouts/app'
-import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { BACKUP_PATH } from '@/app/helpers/navigation'
+import { requireBrandSettings } from '@/entry/brand'
 
 import { BackupPanel } from '../_components/backup/backup-panel'
 import { SettingsTabs } from '../_components/settings-tabs'

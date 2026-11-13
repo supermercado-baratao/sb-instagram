@@ -4,9 +4,9 @@ import { connection } from 'next/server'
 import { BrandSettingsForm } from '@/app/components/blocks/brand/brand-settings-form'
 import { AppLayout } from '@/app/components/layouts/app'
 import { getLogoUrl } from '@/app/helpers/brand-poster'
-import { requireBrandSettings } from '@/app/helpers/brand-settings'
 import { BRAND_SETTINGS_PATH } from '@/app/helpers/navigation'
 import { createBrandContent } from '@/domain/brand'
+import { requireBrandSettings } from '@/entry/brand'
 
 import { SettingsTabs } from './_components/settings-tabs'
 
