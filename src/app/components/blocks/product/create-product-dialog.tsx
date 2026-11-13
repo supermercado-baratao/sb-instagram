@@ -4,8 +4,8 @@ import { CircleAlert, Info } from 'lucide-react'
 import {
   type KeyboardEvent,
   type RefObject,
-  useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition
@@ -133,7 +133,8 @@ const CreateProductContent = ({
     })
   }
 
-  useEffect(() => {
+  // A layout effect, like `ProductForm`'s, so an Esc right after typing still asks
+  useLayoutEffect(() => {
     onDirtyChange(dirty)
   }, [dirty, onDirtyChange])
 
