@@ -31,6 +31,10 @@ Para levar o app para outro computador, ou reinstalá-lo depois de uma pane:
 2. Configure qualquer marca no primeiro acesso, só para liberar o app. Ela é substituída pela do backup.
 3. Restaure o backup em **Configurações** → **Backup**, como explicado acima.
 
+### Experimentando com o backup de exemplo
+
+Para conhecer o app com dados de verdade antes de cadastrar os seus, baixe o [`backup-exemplo.zip`](https://github.com/supermercado-baratao/sb-instagram/releases/download/v1.1.0/backup-exemplo.zip), com a marca, os produtos, a oferta e o histórico do Supermercado Baratão, e restaure-o como explicado acima. Ele precisa da versão `1.1.0` ou mais nova do app. Depois, para começar com os dados do seu mercado, restaure um backup seu ou reinstale o app com um volume de dados novo.
+
 ### Levando só uma oferta do histórico
 
 Para levar uma única oferta gerada para outra instalação, sem substituir os dados dela, use a página **Histórico**:
