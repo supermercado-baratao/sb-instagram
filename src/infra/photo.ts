@@ -7,11 +7,11 @@ import {
   CATALOG_IMAGE_EXTENSION,
   isCatalogDescriptionName
 } from '@/domain/catalog'
-import { isValidEan } from '@/domain/ean'
-import { PHOTO_MAX_SIDE } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
 import { getCatalogImageFile } from '@/infra/catalog/product'
 import { photosDirectory } from '@/infra/photos-directory'
+import { isValidEan } from '@/models/product/ean'
+import { PHOTO_MAX_SIDE } from '@/models/product/product'
 
 type PhotoDirectories = {
   photos?: string

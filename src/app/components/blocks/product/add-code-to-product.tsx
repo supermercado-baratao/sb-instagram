@@ -10,7 +10,7 @@ import {
 import { Button } from '@/app/components/ui/shadcn/button'
 import { Field, FieldLabel } from '@/app/components/ui/shadcn/field'
 import { useProductSuggestions } from '@/app/hooks/use-product-suggestions'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import { addCodeToProduct } from './actions'
 import { ProductSuggestions } from './product-suggestions'

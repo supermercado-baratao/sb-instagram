@@ -7,9 +7,9 @@ import {
 import {
   isSameCodeSet,
   isValidCode,
-  isValidProductId,
   type Product
-} from '@/domain/product'
+} from '@/models/product/product'
+import { isProductId } from '@/models/product/schema'
 
 export type OfferItem = {
   product: Product
@@ -293,7 +293,7 @@ const isOptionalText = (value: unknown) =>
 const isProduct = (value: unknown): value is Product =>
   isRecord(value) &&
   typeof value.id === 'string' &&
-  isValidProductId(value.id) &&
+  isProductId(value.id) &&
   Array.isArray(value.codes) &&
   value.codes.every((code) => typeof code === 'string' && isValidCode(code)) &&
   typeof value.description === 'string' &&
@@ -432,7 +432,7 @@ const isSnapshotItem = (value: unknown): value is OfferSnapshotItem =>
   (value.position as number) >= 0 &&
   (value.position as number) < PAGE_PRODUCT_COUNT &&
   typeof value.productId === 'string' &&
-  isValidProductId(value.productId) &&
+  isProductId(value.productId) &&
   Number.isSafeInteger(value.priceInCents) &&
   (value.priceInCents as number) >= 0
 

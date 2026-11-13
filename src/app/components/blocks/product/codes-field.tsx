@@ -12,8 +12,11 @@ import {
   FieldSet
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import { INVALID_CODE_MESSAGE } from '@/app/helpers/product-code'
-import { isValidCode, normalizeCode } from '@/domain/product'
+import {
+  INVALID_CODE_MESSAGE,
+  isValidCode,
+  normalizeCode
+} from '@/models/product/product'
 
 type CodesFieldProps = {
   codes: string[]

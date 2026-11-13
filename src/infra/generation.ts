@@ -35,9 +35,9 @@ import {
   getGenerationFolder
 } from '@/infra/generations-directory'
 import { findOffer, saveOffer } from '@/infra/offer'
-import { findProductById, findProductWithCodes } from '@/infra/product'
 import { listPronunciations } from '@/infra/pronunciation'
 import { findRadioScriptTemplate } from '@/infra/radio-script'
+import { productModel } from '@/models/product/model'
 
 export type OfferRenderer = {
   renderPage: (pageNumber: number) => Promise<Uint8Array>
@@ -130,8 +130,8 @@ export const copyGenerationPages = (
       findProduct: (item) =>
         resolveGenerationProduct(
           item,
-          (productId) => findProductById(database, productId),
-          (codes) => findProductWithCodes(database, codes)
+          (productId) => productModel.findById(database, productId),
+          (codes) => productModel.findWithCodes(database, codes)
         )
     }
   )

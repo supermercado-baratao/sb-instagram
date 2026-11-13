@@ -5,7 +5,7 @@ import {
   type OfferSlot
 } from '@/domain/offer'
 import { type Offer, type OfferProduct } from '@/domain/poster'
-import { getCodeType } from '@/domain/product'
+import { getCodeType } from '@/models/product/product'
 
 // Keeps the date line readable on the poster while the offer has no validity yet
 export const VALIDITY_PLACEHOLDER = '__/__/____'

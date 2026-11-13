@@ -1,16 +1,15 @@
 import { readFile } from 'node:fs/promises'
 
-import { isValidProductId } from '@/domain/product'
 import { database } from '@/infra/database/client'
 import { findPhotoFile } from '@/infra/photo'
-import { findProductById } from '@/infra/product'
+import { productModel } from '@/models/product/model'
 
 export const GET = async (
   _request: Request,
   { params }: RouteContext<'/fotos/[id]'>
 ) => {
   const { id } = await params
-  const photo = isValidProductId(id) && findProductById(database, id)?.photo
+  const photo = productModel.findById(database, id)?.photo
   const file = photo ? await findPhotoFile(photo) : undefined
   if (!file) return new Response(null, { status: 404 })
 

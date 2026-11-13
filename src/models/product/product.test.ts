@@ -5,9 +5,7 @@ import {
   getProductChanges,
   isSameCodeSet,
   isValidCode,
-  isValidProductId,
-  normalizeCodes,
-  normalizeSearchText
+  normalizeCodes
 } from './product'
 
 describe('isValidCode', () => {
@@ -24,17 +22,6 @@ describe('isValidCode', () => {
       expect(isValidCode(code)).toBe(false)
     }
   )
-})
-
-describe('normalizeSearchText', () => {
-  test.each([
-    ['Pão', 'pao'],
-    ['AÇÚCAR', 'acucar'],
-    ['Maçã Fuji', 'maca fuji'],
-    ['Feijão 1 kg', 'feijao 1 kg']
-  ])('turns %s into %s', (text, normalized) => {
-    expect(normalizeSearchText(text)).toBe(normalized)
-  })
 })
 
 describe('getProductChanges', () => {
@@ -83,16 +70,6 @@ describe('isSameCodeSet', () => {
   test('tells a product from a group that also has its code', () => {
     expect(isSameCodeSet(['2001'], ['2001', '2002'])).toBe(false)
     expect(isSameCodeSet(['2001', '2002'], ['2001', '2003'])).toBe(false)
-  })
-})
-
-describe('isValidProductId', () => {
-  test('accepts a UUID and nothing else', () => {
-    expect(isValidProductId('0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d')).toBe(true)
-    expect(isValidProductId('7891000100103')).toBe(false)
-    expect(isValidProductId('../0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d')).toBe(
-      false
-    )
   })
 })
 

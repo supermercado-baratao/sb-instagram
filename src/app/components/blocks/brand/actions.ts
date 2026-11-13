@@ -12,10 +12,10 @@ import {
   normalizeInstagram
 } from '@/domain/brand'
 import type { PosterTemplate } from '@/domain/poster'
-import { PHOTO_MAX_MEGABYTES } from '@/domain/product'
 import { findBrandSettings, saveBrandSettings } from '@/infra/brand'
 import { database } from '@/infra/database/client'
 import { deleteLogo, saveLogo } from '@/infra/logo'
+import { PHOTO_MAX_MEGABYTES } from '@/models/product/product'
 
 export type SaveBrandResult =
   | { status: 'saved'; logoUrl: string | null; templates: PosterTemplate[] }

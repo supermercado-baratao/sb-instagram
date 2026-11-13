@@ -5,19 +5,19 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import Database from 'better-sqlite3'
-import { eq, inArray } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import sharp from 'sharp'
 import { expect, onTestFinished, test } from 'vitest'
 
 import { checkCatalogImage } from '@/domain/catalog'
-import type { Product } from '@/domain/product'
 import { readCatalogImage } from '@/infra/catalog/image'
 import { migrationsFolder } from '@/infra/database/file'
 import { productCodes, products } from '@/infra/database/schema'
 import { registerSearchText } from '@/infra/database/search-text'
-import { attachCodes } from '@/infra/product'
+import type { Product } from '@/models/product/product'
+import { productRepo } from '@/repositories/product-repo'
 
 import {
   buildCatalogExport,
@@ -367,14 +367,7 @@ test('gives each store product its catalog status', async () => {
     reason: 'Sem foto'
   })
 
-  const page = attachCodes(
-    database,
-    database
-      .select()
-      .from(products)
-      .where(inArray(products.id, [ready, withBackground]))
-      .all()
-  )
+  const page = productRepo.listByIds(database, [ready, withBackground])
   const checked = await checkCatalogPhotos(page, statuses, directories)
 
   expect(checked.get(ready)).toEqual({ kind: 'ready' })

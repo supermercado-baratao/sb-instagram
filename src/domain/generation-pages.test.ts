@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { createOfferContent, type OfferContent } from '@/domain/offer'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import {
   appendGenerationPages,

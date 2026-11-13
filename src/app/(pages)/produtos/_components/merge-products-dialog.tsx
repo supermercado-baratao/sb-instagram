@@ -17,7 +17,7 @@ import {
   RadioGroup,
   RadioGroupItem
 } from '@/app/components/ui/shadcn/radio-group'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import {
   type MergePreviewResult,

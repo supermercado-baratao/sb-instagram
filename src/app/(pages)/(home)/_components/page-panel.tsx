@@ -31,7 +31,7 @@ import {
   posterLayouts,
   type PosterTemplate
 } from '@/domain/poster'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import { CLEAR_NOTE, ClearOfferButton } from './clear-offer-button'
 import type { MoveTarget } from './move-product-button'

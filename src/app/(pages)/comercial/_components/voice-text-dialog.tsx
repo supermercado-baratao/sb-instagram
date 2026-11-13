@@ -23,10 +23,10 @@ import {
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useGuardedDialog } from '@/app/hooks/use-guarded-dialog'
-import type { Product } from '@/domain/product'
 import type { Pronunciation } from '@/domain/pronunciation'
 import { getEditedVoiceText } from '@/domain/radio-script'
 import { suggestVoiceText } from '@/domain/spoken-text'
+import type { Product } from '@/models/product/product'
 
 import { saveProductVoiceTextAction } from './actions'
 

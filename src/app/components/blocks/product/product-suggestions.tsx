@@ -6,7 +6,7 @@ import {
   AutocompleteStatus
 } from '@/app/components/ui/custom/autocomplete'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 type ProductSuggestionsProps = {
   suggestions: Product[]

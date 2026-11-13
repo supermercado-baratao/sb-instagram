@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { applyBackup, BackupError, discardBackup } from '@/infra/backup'
 import { database } from '@/infra/database/client'
-import { renameOutdatedPhotos } from '@/infra/product'
+import { productModel } from '@/models/product/model'
 
 export type ApplyBackupResult =
   { status: 'restored' } | { status: 'error'; message: string }
@@ -16,7 +16,7 @@ export const applyBackupAction = async (
     await applyBackup(database, token)
     // A backup from before #55 keeps a group's photo under its old main code, like an instance that
     // starts after updating
-    await renameOutdatedPhotos(database)
+    await productModel.renameOutdatedPhotos(database)
   } catch (error) {
     return {
       status: 'error',

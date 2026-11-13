@@ -14,10 +14,10 @@ import {
 } from '@/domain/poster'
 import {
   isValidCode,
-  isValidProductId,
   normalizeCodes,
   type Product
-} from '@/domain/product'
+} from '@/models/product/product'
+import { isProductId } from '@/models/product/schema'
 
 export type GenerationPageItem = {
   position: number
@@ -67,8 +67,7 @@ const isGenerationPageItem = (value: unknown): value is GenerationPageItem =>
   (value.position as number) >= 0 &&
   (value.position as number) < PAGE_PRODUCT_COUNT &&
   (value.productId === null ||
-    (typeof value.productId === 'string' &&
-      isValidProductId(value.productId))) &&
+    (typeof value.productId === 'string' && isProductId(value.productId))) &&
   isCodeList(value.codes) &&
   Number.isSafeInteger(value.priceInCents) &&
   (value.priceInCents as number) >= 0

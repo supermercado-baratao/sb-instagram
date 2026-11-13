@@ -6,7 +6,7 @@ import {
   VALIDITY_PLACEHOLDER
 } from '@/app/helpers/offer-poster'
 import { createOfferContent } from '@/domain/offer'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 const product: Product = {
   id: '0b6f3c1e-5d2a-4f8b-9c1d-2e3f4a5b6c7d',

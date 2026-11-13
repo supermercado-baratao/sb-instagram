@@ -4,11 +4,8 @@ import {
   type CatalogProduct,
   isCatalogDescriptionName
 } from '@/domain/catalog'
-import {
-  getCodeType,
-  normalizeSearchText,
-  type Product
-} from '@/domain/product'
+import { normalizeSearchText } from '@/infra/database/search-text'
+import { getCodeType, type Product } from '@/models/product/product'
 
 export type CatalogExportFolder = 'ean' | 'no-ean'
 

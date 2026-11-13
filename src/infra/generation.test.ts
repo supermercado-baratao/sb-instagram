@@ -9,7 +9,6 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { describe, expect, onTestFinished, test } from 'vitest'
 
 import { createOfferContent, type OfferContent } from '@/domain/offer'
-import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import {
@@ -21,6 +20,7 @@ import {
 import { registerSearchText } from '@/infra/database/search-text'
 import { savePronunciations } from '@/infra/pronunciation'
 import { saveRadioScriptTemplate } from '@/infra/radio-script'
+import type { Product } from '@/models/product/product'
 
 import {
   copyGenerationPages,

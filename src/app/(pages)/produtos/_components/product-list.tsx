@@ -3,7 +3,11 @@ import { Badge } from '@/app/components/ui/shadcn/badge'
 import { Checkbox } from '@/app/components/ui/shadcn/checkbox'
 import { getCatalogPhotoUrl, getPhotoUrl } from '@/app/helpers/product-photo'
 import type { CatalogStatus as Status } from '@/domain/catalog-export'
-import type { CatalogMatch, Product, ProductListItem } from '@/domain/product'
+import type {
+  CatalogMatch,
+  Product,
+  ProductListItem
+} from '@/models/product/product'
 
 import { CatalogStatus } from './catalog-status'
 import { DeleteProductButton } from './delete-product-button'

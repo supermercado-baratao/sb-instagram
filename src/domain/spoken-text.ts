@@ -1,5 +1,5 @@
-import { type ProductDetails } from '@/domain/product'
 import { applyPronunciations, type Pronunciation } from '@/domain/pronunciation'
+import { type ProductDetails } from '@/models/product/product'
 
 const ONES = [
   'zero',

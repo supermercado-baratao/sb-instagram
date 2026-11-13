@@ -1,4 +1,4 @@
-import { isSameCodeSet } from '@/domain/product'
+import { isSameCodeSet } from '@/models/product/product'
 
 export type ProductFormValues = {
   description: string

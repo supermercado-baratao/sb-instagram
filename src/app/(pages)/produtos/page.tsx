@@ -7,7 +7,7 @@ import { requireBrandSettings } from '@/entry/brand'
 import { checkCatalogPhotos, listCatalogStatuses } from '@/infra/catalog/export'
 import { database } from '@/infra/database/client'
 import { listNoEanImages } from '@/infra/photo'
-import { listProducts } from '@/infra/product'
+import { productModel } from '@/models/product/model'
 
 import { ProductEditor } from './_components/product-editor'
 import { parseProductListFilter } from './_components/products-href'
@@ -28,7 +28,7 @@ const ProductsPage = async ({ searchParams }: PageProps<'/produtos'>) => {
   const query = readParameter(params.q).trim()
   const filter = parseProductListFilter(readParameter(params.origem))
   const statuses = await listCatalogStatuses(database)
-  const productPage = await listProducts(database, {
+  const productPage = await productModel.list(database, {
     query,
     filter,
     page: Number(readParameter(params.pagina)),

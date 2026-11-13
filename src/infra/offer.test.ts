@@ -6,7 +6,6 @@ import { describe, expect, test } from 'vitest'
 
 import { createOfferContent, type OfferContent } from '@/domain/offer'
 import { PAGE_PRODUCT_COUNT } from '@/domain/poster'
-import type { Product } from '@/domain/product'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import {
@@ -16,6 +15,7 @@ import {
   productCodes,
   products
 } from '@/infra/database/schema'
+import type { Product } from '@/models/product/product'
 
 import {
   findOffer,

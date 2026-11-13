@@ -9,7 +9,7 @@ import {
   DialogTitle
 } from '@/app/components/ui/shadcn/dialog'
 import { getPhotoUrl } from '@/app/helpers/product-photo'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 export type ProductChoice = {
   code: string

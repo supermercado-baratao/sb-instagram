@@ -42,7 +42,7 @@ import {
 } from '@/domain/brand'
 import { createOfferContent, createOfferPage } from '@/domain/offer'
 import { DEFAULT_POSTER_LAYOUT } from '@/domain/poster'
-import { PHOTO_MAX_MEGABYTES } from '@/domain/product'
+import { PHOTO_MAX_MEGABYTES } from '@/models/product/product'
 
 import { saveBrandSettingsAction } from './actions'
 import { getTemplateLabel, TemplateFields } from './template-fields'

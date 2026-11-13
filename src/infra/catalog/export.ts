@@ -21,14 +21,13 @@ import {
   getCatalogExportImagePath,
   type SkippedProduct
 } from '@/domain/catalog-export'
-import { getCodeType, type Product } from '@/domain/product'
 import { eanDirectory, noEanDirectory } from '@/infra/catalog/directory'
 import { prepareCatalogImage } from '@/infra/catalog/optimize'
 import { readCatalogCodes } from '@/infra/catalog/product'
-import { catalogExports, products } from '@/infra/database/schema'
-import { searchText } from '@/infra/database/search-text'
+import { catalogExports } from '@/infra/database/schema'
 import { photosDirectory } from '@/infra/photos-directory'
-import { attachCodes, firstProductCode } from '@/infra/product'
+import { getCodeType, type Product } from '@/models/product/product'
+import { productRepo } from '@/repositories/product-repo'
 
 type Database = BetterSQLite3Database
 
@@ -143,14 +142,9 @@ const prepareImage = async (original: Buffer): Promise<PhotoOutcome> => {
 
 const listProductsInExportOrder = (database: Database) =>
   // A single product takes its EAN before the groups that also have it
-  attachCodes(
-    database,
-    database
-      .select()
-      .from(products)
-      .orderBy(searchText(products.description), firstProductCode)
-      .all()
-  ).toSorted((a, b) => a.codes.length - b.codes.length)
+  productRepo
+    .listAll(database)
+    .toSorted((a, b) => a.codes.length - b.codes.length)
 
 type EvaluateOptions = {
   ean: string

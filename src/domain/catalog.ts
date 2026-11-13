@@ -1,4 +1,4 @@
-import { isValidEan } from '@/domain/ean'
+import { isValidEan } from '@/models/product/ean'
 
 export type CatalogProduct = {
   // Name and brand as one text, like the store's products (#99)

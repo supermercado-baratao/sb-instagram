@@ -40,7 +40,7 @@ import {
   setSlot
 } from '@/domain/offer'
 import type { Brand, PosterTemplate } from '@/domain/poster'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import {
   generateOfferAction,

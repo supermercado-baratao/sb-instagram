@@ -31,7 +31,7 @@ import {
   type Product,
   type ProductListFilter,
   type ProductPage
-} from '@/domain/product'
+} from '@/models/product/product'
 
 import { CatalogExportButton } from './catalog-export-button'
 import { PRODUCTS_HEADING_ID } from './delete-product-button'

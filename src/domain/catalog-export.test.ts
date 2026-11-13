@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import {
   type CatalogExportContext,

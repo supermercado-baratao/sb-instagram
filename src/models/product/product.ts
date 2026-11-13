@@ -1,5 +1,5 @@
 import { CATALOG_IMAGE_EXTENSION, CATALOG_IMAGE_RULES } from '@/domain/catalog'
-import { isValidEan } from '@/domain/ean'
+import { isValidEan } from '@/models/product/ean'
 
 export type CodeType = 'ean' | 'internal'
 
@@ -55,6 +55,9 @@ const CODE_PATTERN = /^[\w.-]+$/
 
 export const isValidCode = (code: string) => CODE_PATTERN.test(code)
 
+export const INVALID_CODE_MESSAGE =
+  'O código só pode ter letras sem acento, números, ponto, hífen e sublinhado.'
+
 // Sorted, so two products with the same codes in any order compare equal
 export const normalizeCodes = (codes: string[]) =>
   [
@@ -87,9 +90,6 @@ export const PRODUCTS_PAGE_SIZE = 50
 
 export const PRODUCT_SUGGESTION_LIMIT = 8
 
-export const normalizeSearchText = (text: string) =>
-  text.normalize('NFD').replaceAll(/\p{M}/gu, '').toLowerCase()
-
 export type ProductOrigin = 'store' | 'catalog'
 
 // The catalog only lists the products the store hasn't saved, so the two never repeat
@@ -106,54 +106,3 @@ export type ProductPage = {
   page: number
   pageCount: number
 }
-
-export const getSearchWords = (query: string) =>
-  normalizeSearchText(query).split(/\s+/).filter(Boolean)
-
-// Joining the fields lets a query mix them, e.g. a description and a unit ("sabonete 85"), like
-// the SQLite search of the store's products
-export const matchesProductQuery = (
-  { description, unit, codes }: ProductDetails & Pick<Product, 'codes'>,
-  query: string
-) => {
-  const fields = normalizeSearchText(
-    [description, unit ?? '', codes.join(' ')].join(' ')
-  )
-  return getSearchWords(query).every((word) => fields.includes(word))
-}
-
-const getSortKey = ({ product }: ProductListItem) =>
-  [normalizeSearchText(product.description), product.codes[0] ?? ''] as const
-
-// Plain code unit order, like SQLite's BINARY collation, so both origins sort alike
-const compareText = (a: string, b: string) => {
-  if (a === b) return 0
-  return a < b ? -1 : 1
-}
-
-export const compareProductListItems = (
-  a: ProductListItem,
-  b: ProductListItem
-) => {
-  const [descriptionA, codeA] = getSortKey(a)
-  const [descriptionB, codeB] = getSortKey(b)
-  return compareText(descriptionA, descriptionB) || compareText(codeA, codeB)
-}
-
-export const getProductPage = (
-  items: ProductListItem[],
-  page: number
-): ProductPage => {
-  const total = items.length
-  const pageCount = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE))
-  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount)
-  const start = (current - 1) * PRODUCTS_PAGE_SIZE
-  return {
-    items: items.slice(start, start + PRODUCTS_PAGE_SIZE),
-    total,
-    page: current,
-    pageCount
-  }
-}
-
-export { isUuid as isValidProductId } from '@/domain/uuid'

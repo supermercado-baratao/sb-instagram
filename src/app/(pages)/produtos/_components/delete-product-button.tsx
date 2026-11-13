@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger
 } from '@/app/components/ui/shadcn/alert-dialog'
 import { Button } from '@/app/components/ui/shadcn/button'
-import type { Product } from '@/domain/product'
+import type { Product } from '@/models/product/product'
 
 import { deleteProductAction } from '../actions'
 

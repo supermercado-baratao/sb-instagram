@@ -7,7 +7,6 @@ import {
   PRODUCTS_PATH,
   RADIO_AD_PATH
 } from '@/app/helpers/navigation'
-import { isValidProductId, type Product } from '@/domain/product'
 import {
   getPronunciationsError,
   isPronunciationList,
@@ -22,10 +21,12 @@ import {
   type RadioScriptClosingField,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
+import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { saveProductVoiceText } from '@/infra/product'
 import { savePronunciations } from '@/infra/pronunciation'
 import { saveRadioScriptTemplate } from '@/infra/radio-script'
+import { productModel } from '@/models/product/model'
+import type { Product } from '@/models/product/product'
 
 export type SaveRadioAdResult =
   | {
@@ -90,35 +91,24 @@ export const saveRadioAdAction = async (
 }
 
 export type SaveVoiceTextResult =
-  { status: 'saved'; product: Product } | { status: 'error'; message: string }
+  ActionError | { status: 'saved'; product: Product }
 
 // Saved at once, apart from the tab's own "Salvar", since it belongs to the product, like the
 // product dialog of the offer editor (#111)
 export const saveProductVoiceTextAction = async (
   id: unknown,
   voiceText: unknown
-): Promise<SaveVoiceTextResult> => {
-  // A Server Action is a public endpoint, so the arguments are checked again here
-  if (
-    typeof voiceText !== 'string' ||
-    typeof id !== 'string' ||
-    !isValidProductId(id)
-  ) {
-    return {
-      status: 'error',
-      message: 'Não foi possível salvar. Recarregue a página e tente de novo.'
+): Promise<SaveVoiceTextResult> =>
+  runAction(
+    {
+      fallback: 'Não foi possível salvar. Tente de novo.',
+      invalid: 'Não foi possível salvar. Recarregue a página e tente de novo.'
+    },
+    () => {
+      const product = productModel.saveVoiceText(database, { id, voiceText })
+      revalidatePath(RADIO_AD_PATH)
+      revalidatePath(OFFER_PATH)
+      revalidatePath(PRODUCTS_PATH)
+      return { status: 'saved' as const, product }
     }
-  }
-  const product = saveProductVoiceText(database, id, voiceText)
-  if (!product) {
-    return {
-      status: 'error',
-      message:
-        'Este produto foi excluído. Recarregue a página para ver a oferta atual.'
-    }
-  }
-  revalidatePath(RADIO_AD_PATH)
-  revalidatePath(OFFER_PATH)
-  revalidatePath(PRODUCTS_PATH)
-  return { status: 'saved', product }
-}
+  )

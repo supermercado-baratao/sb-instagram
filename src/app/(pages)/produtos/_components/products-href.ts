@@ -1,4 +1,4 @@
-import type { ProductListFilter } from '@/domain/product'
+import type { ProductListFilter } from '@/models/product/product'
 
 const FILTER_PARAMETERS = {
   store: 'loja',
