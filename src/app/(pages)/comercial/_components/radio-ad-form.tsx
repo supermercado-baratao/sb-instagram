@@ -16,15 +16,10 @@ import {
   FieldSet
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
-import {
-  RadioGroup,
-  RadioGroupItem
-} from '@/app/components/ui/shadcn/radio-group'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
 import { Textarea } from '@/app/components/ui/shadcn/textarea'
 import { useUnsavedChangesWarning } from '@/app/hooks/use-unsaved-changes-warning'
 import { type OfferContent, replaceProduct } from '@/domain/offer'
-import type { Product } from '@/domain/product'
 import {
   getPronunciationsError,
   INITIAL_PRONUNCIATIONS,
@@ -33,25 +28,17 @@ import {
   type PronunciationError
 } from '@/domain/pronunciation'
 import {
-  assignBlockItems,
   getRadioScript,
   getRadioScriptParts,
+  getRadioScriptRounds,
   getRadioScriptTemplateError,
-  type RadioScriptAssignment,
-  type RadioScriptProductBlock,
+  type RadioScriptClosingField,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
 
 import { saveRadioAdAction } from './actions'
-import {
-  ADD_PRODUCTS_BUTTON_ID,
-  describeMissingPages,
-  describePageNumbers,
-  getBlockInputId,
-  keyBlocks,
-  type KeyedRadioScriptBlock,
-  RadioScriptBlocksField
-} from './radio-script-blocks-field'
+import { ClosingSequenceField } from './closing-sequence-field'
+import { ClosingsField, getClosingInputId } from './closings-field'
 import { RadioScriptPreview } from './radio-script-preview'
 
 type RadioAdFormProps = {
@@ -63,7 +50,7 @@ type RadioAdFormProps = {
 
 type StatusError =
   | ({ source: 'pronunciations' } & Pick<PronunciationError, 'index' | 'field'>)
-  | { source: 'radioScript'; index?: number }
+  | { source: 'closings'; index: number; field: RadioScriptClosingField }
 
 type Status = {
   message: string
@@ -74,30 +61,12 @@ type Status = {
 
 const STATUS_ID = 'radio-ad-status'
 
+const OPENING_ID = 'radio-script-opening'
+
 const getRowId = (key: number) => `pronunciation-${key}`
 
 const getRowLabel = ({ term }: Pronunciation, index: number) =>
   term.trim() || `Novo termo ${index + 1}`
-
-const getPageWarnings = ({ blocks, unusedPages }: RadioScriptAssignment) => {
-  const warnings = []
-  if (unusedPages.length > 0) {
-    const pages = describePageNumbers(unusedPages)
-    warnings.push(
-      unusedPages.length === 1
-        ? `A ${pages} não entra em nenhum bloco de produtos.`
-        : `As ${pages} não entram em nenhum bloco de produtos.`
-    )
-  }
-  for (const [index, block] of blocks.entries()) {
-    if (block && block.missingPageCount > 0) {
-      warnings.push(
-        `Bloco ${index + 1}: ${describeMissingPages(block.missingPageCount)}`
-      )
-    }
-  }
-  return warnings
-}
 
 // A row still being filled would match every position of the text
 const getCompletePronunciations = (pronunciations: Pronunciation[]) =>
@@ -112,25 +81,8 @@ export const RadioAdForm = ({
 }: RadioAdFormProps) => {
   const [pronunciations, setPronunciations] = useState(initialPronunciations)
   const [saved, setSaved] = useState(initialPronunciations)
-  const [blocks, setBlocks] = useState(() =>
-    keyBlocks(initialRadioScript.blocks)
-  )
-  const [savedBlocks, setSavedBlocks] = useState(blocks)
-  const [priceMarkers, setPriceMarkers] = useState(
-    initialRadioScript.priceMarkers
-  )
-  const [savedPriceMarkers, setSavedPriceMarkers] = useState(priceMarkers)
-  const [speakRepeatedOnce, setSpeakRepeatedOnce] = useState(
-    initialRadioScript.speakRepeatedOnce
-  )
-  const [savedSpeakRepeatedOnce, setSavedSpeakRepeatedOnce] =
-    useState(speakRepeatedOnce)
-  const [splitEvenly, setSplitEvenly] = useState(initialRadioScript.splitEvenly)
-  const [savedSplitEvenly, setSavedSplitEvenly] = useState(splitEvenly)
-  const [productBlocks, setProductBlocks] = useState(
-    initialRadioScript.productBlocks
-  )
-  const [savedProductBlocks, setSavedProductBlocks] = useState(productBlocks)
+  const [template, setTemplate] = useState(initialRadioScript)
+  const [savedTemplate, setSavedTemplate] = useState(template)
   // New rows have no term yet, so each one gets a key that follows it
   const [keys, setKeys] = useState(() =>
     initialPronunciations.map((_, index) => index)
@@ -141,35 +93,19 @@ export const RadioAdForm = ({
   const [saving, startSave] = useTransition()
   const addButton = useRef<HTMLButtonElement>(null)
   const statusCount = useRef(0)
-  // An error about the whole sequence is shown inline, next to "Adicionar produtos"
-  const sequenceError =
-    status?.error?.source === 'radioScript' && status.error.index === undefined
-      ? status.message
-      : undefined
-  const dirty =
-    pronunciations !== saved ||
-    blocks !== savedBlocks ||
-    priceMarkers !== savedPriceMarkers ||
-    speakRepeatedOnce !== savedSpeakRepeatedOnce ||
-    splitEvenly !== savedSplitEvenly ||
-    productBlocks !== savedProductBlocks
+  const dirty = pronunciations !== saved || template !== savedTemplate
 
   useUnsavedChangesWarning(dirty)
 
-  const template: RadioScriptTemplate = {
-    blocks: blocks.map(({ block }) => block),
-    priceMarkers,
-    speakRepeatedOnce,
-    splitEvenly,
-    productBlocks
-  }
   const completePronunciations = getCompletePronunciations(pronunciations)
-  const assignment = offer && assignBlockItems(offer, template)
   const preview =
     offer && getRadioScript(offer, template, completePronunciations)
   const previewParts = offer
-    ? getRadioScriptParts(offer, template, completePronunciations).parts
+    ? getRadioScriptParts(offer, template, completePronunciations)
     : []
+  const roundCount = offer
+    ? getRadioScriptRounds(offer, template.speakRepeatedOnce).length
+    : undefined
 
   const nextStatusId = () => {
     statusCount.current += 1
@@ -178,6 +114,11 @@ export const RadioAdForm = ({
 
   const update = (next: Pronunciation[]) => {
     setPronunciations(next)
+    setStatus(undefined)
+  }
+
+  const updateTemplate = (changes: Partial<RadioScriptTemplate>) => {
+    setTemplate((current) => ({ ...current, ...changes }))
     setStatus(undefined)
   }
 
@@ -196,51 +137,27 @@ export const RadioAdForm = ({
       ?.focus()
   }
 
-  const showRadioScriptError = (message: string, index?: number) => {
+  const showClosingError = (
+    message: string,
+    index: number,
+    field: RadioScriptClosingField
+  ) => {
     flushSync(() =>
       setStatus({
         message,
-        error: { source: 'radioScript', index },
+        error: { source: 'closings', index, field },
         id: nextStatusId()
       })
     )
-    const selector =
-      index === undefined
-        ? `#${ADD_PRODUCTS_BUTTON_ID}`
-        : `#${getBlockInputId(blocks[index].key)}`
-    document.querySelector<HTMLElement>(selector)?.focus()
-  }
-
-  const updateBlocks = (next: KeyedRadioScriptBlock[]) => {
-    setBlocks(next)
-    setStatus(undefined)
+    document
+      .querySelector<HTMLElement>(
+        `#${getClosingInputId(template.closings[index].id, field)}`
+      )
+      ?.focus()
   }
 
   const announce = (message: string) =>
     setStatus({ message, id: nextStatusId() })
-
-  const productsBlocks = blocks.flatMap(({ block }, index) =>
-    block.type === 'products' && block.id !== undefined
-      ? [{ id: block.id, label: `Bloco ${index + 1}` }]
-      : []
-  )
-
-  // Saved with the page, since the block may not be saved yet
-  const moveProduct = (
-    { id: productId, description }: Product,
-    blockId: number | undefined
-  ) => {
-    const others = productBlocks.filter((move) => move.productId !== productId)
-    const move: RadioScriptProductBlock | undefined =
-      blockId === undefined ? undefined : { productId, blockId }
-    setProductBlocks(move ? [...others, move] : others)
-    const target = productsBlocks.find(({ id }) => id === blockId)
-    announce(
-      target
-        ? `${description} movido para o ${target.label.toLowerCase()}.`
-        : `${description} voltou ao lugar original.`
-    )
-  }
 
   const add = () => {
     const key = Math.max(-1, ...keys) + 1
@@ -266,8 +183,15 @@ export const RadioAdForm = ({
     event.preventDefault()
     const radioScript = template
     const radioScriptError = getRadioScriptTemplateError(radioScript)
-    if (radioScriptError) {
-      showRadioScriptError(radioScriptError.message, radioScriptError.index)
+    if (
+      radioScriptError?.index !== undefined &&
+      radioScriptError.field !== undefined
+    ) {
+      showClosingError(
+        radioScriptError.message,
+        radioScriptError.index,
+        radioScriptError.field
+      )
       return
     }
     const error = getPronunciationsError(pronunciations)
@@ -284,8 +208,11 @@ export const RadioAdForm = ({
         const { index, field, message } = result
         if (index !== undefined && field !== undefined) {
           showError({ index, field, message })
-        } else if (result.radioScriptError) {
-          showRadioScriptError(message, result.radioScriptIndex)
+        } else if (
+          result.closingIndex !== undefined &&
+          result.closingField !== undefined
+        ) {
+          showClosingError(message, result.closingIndex, result.closingField)
         } else {
           setStatus(undefined)
           // An error stays until it is closed, so it isn't missed (WCAG 2.2.1)
@@ -295,18 +222,8 @@ export const RadioAdForm = ({
       }
       setPronunciations(result.pronunciations)
       setSaved(result.pronunciations)
-      // Blank text blocks are dropped on save, so the keys start over from the saved blocks
-      const savedKeyed = keyBlocks(result.radioScript.blocks)
-      setBlocks(savedKeyed)
-      setSavedBlocks(savedKeyed)
-      setPriceMarkers(result.radioScript.priceMarkers)
-      setSavedPriceMarkers(result.radioScript.priceMarkers)
-      setSpeakRepeatedOnce(result.radioScript.speakRepeatedOnce)
-      setSavedSpeakRepeatedOnce(result.radioScript.speakRepeatedOnce)
-      setSplitEvenly(result.radioScript.splitEvenly)
-      setSavedSplitEvenly(result.radioScript.splitEvenly)
-      setProductBlocks(result.radioScript.productBlocks)
-      setSavedProductBlocks(result.radioScript.productBlocks)
+      setTemplate(result.radioScript)
+      setSavedTemplate(result.radioScript)
       setStatus(undefined)
       toast.success('Configurações salvas.')
     })
@@ -325,84 +242,25 @@ export const RadioAdForm = ({
         <form noValidate onSubmit={save} className="flex flex-col gap-10">
           <section
             aria-labelledby="radio-script-heading"
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-6"
           >
             <div className="flex flex-col gap-1">
               <h2 id="radio-script-heading" className="text-lg font-semibold">
                 Roteiro
               </h2>
               <p className="text-sm text-muted-foreground">
-                Os blocos entram no comercial nesta ordem. Um bloco de texto
-                entra como escrito, com as marcações de tom da voz, como
-                [animado]. Um bloco de produtos fala cada produto e o seu preço
-                por extenso.
+                Cada arte da oferta com produtos vira uma rodada do comercial,
+                na ordem das artes: a abertura, os produtos da arte com o preço
+                por extenso e um fechamento. Os textos entram como escritos, com
+                as marcações de tom da voz, como [animado].
               </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <p id="radio-script-split-label" className="text-sm font-medium">
-                Como os blocos de produtos recebem os produtos
-              </p>
-              <RadioGroup
-                aria-labelledby="radio-script-split-label"
-                value={splitEvenly ? 'evenly' : 'pages'}
-                onValueChange={(value) => {
-                  setSplitEvenly(value === 'evenly')
-                  // An error about a page count would stay with no field to fix
-                  setStatus(undefined)
-                }}
-                className="gap-3"
-              >
-                <label className="flex items-start gap-3 text-sm">
-                  <RadioGroupItem
-                    value="pages"
-                    className="mt-0.5"
-                    aria-labelledby="radio-script-split-pages"
-                    aria-describedby="radio-script-split-pages-description"
-                  />
-                  <span className="flex flex-col gap-0.5">
-                    <span id="radio-script-split-pages" className="font-medium">
-                      Por artes
-                    </span>
-                    <span
-                      id="radio-script-split-pages-description"
-                      className="text-muted-foreground"
-                    >
-                      Cada bloco recebe as próximas artes da oferta.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3 text-sm">
-                  <RadioGroupItem
-                    value="evenly"
-                    className="mt-0.5"
-                    aria-labelledby="radio-script-split-evenly"
-                    aria-describedby="radio-script-split-evenly-description"
-                  />
-                  <span className="flex flex-col gap-0.5">
-                    <span
-                      id="radio-script-split-evenly"
-                      className="font-medium"
-                    >
-                      Por igual
-                    </span>
-                    <span
-                      id="radio-script-split-evenly-description"
-                      className="text-muted-foreground"
-                    >
-                      Os blocos dividem os produtos da oferta em partes iguais,
-                      na ordem das artes.
-                    </span>
-                  </span>
-                </label>
-              </RadioGroup>
             </div>
             <label className="flex items-start gap-3 text-sm">
               <Checkbox
-                checked={speakRepeatedOnce}
-                onCheckedChange={(checked) => {
-                  setSpeakRepeatedOnce(checked)
-                  setStatus(undefined)
-                }}
+                checked={template.speakRepeatedOnce}
+                onCheckedChange={(checked) =>
+                  updateTemplate({ speakRepeatedOnce: checked })
+                }
                 className="mt-0.5"
                 aria-labelledby="radio-script-repeated"
                 aria-describedby="radio-script-repeated-description"
@@ -416,22 +274,40 @@ export const RadioAdForm = ({
                   className="text-muted-foreground"
                 >
                   Um produto que aparece em mais de uma arte entra só na
-                  primeira, no roteiro e na lista de produtos.
+                  primeira, no roteiro e na lista de produtos. Uma arte que fica
+                  sem produtos não tem rodada.
                 </span>
               </span>
             </label>
-            <RadioScriptBlocksField
-              blocks={blocks}
-              blockItems={assignment?.blocks}
-              splitEvenly={splitEvenly}
-              invalidIndex={
-                status?.error?.source === 'radioScript'
-                  ? status.error.index
-                  : undefined
+            <Field>
+              <FieldLabel htmlFor={OPENING_ID}>Abertura</FieldLabel>
+              <Textarea
+                id={OPENING_ID}
+                aria-describedby={`${OPENING_ID}-description`}
+                value={template.opening}
+                onChange={(event) =>
+                  updateTemplate({ opening: event.target.value })
+                }
+              />
+              <FieldDescription id={`${OPENING_ID}-description`}>
+                Entra no começo de cada rodada, antes dos produtos.
+              </FieldDescription>
+            </Field>
+            <ClosingsField
+              closings={template.closings}
+              sequence={template.sequence}
+              invalid={
+                status?.error?.source === 'closings' ? status.error : undefined
               }
               errorId={STATUS_ID}
-              sequenceError={sequenceError}
-              onChange={updateBlocks}
+              onChange={(closings) => updateTemplate({ closings })}
+              onAnnounce={announce}
+            />
+            <ClosingSequenceField
+              closings={template.closings}
+              sequence={template.sequence}
+              roundCount={roundCount}
+              onChange={(sequence) => updateTemplate({ sequence })}
               onAnnounce={announce}
             />
             <Field className="max-w-md">
@@ -441,14 +317,16 @@ export const RadioAdForm = ({
               <Textarea
                 id="radio-script-price-markers"
                 aria-describedby="radio-script-price-markers-description"
-                value={priceMarkers.join('\n')}
+                value={template.priceMarkers.join('\n')}
                 onChange={(event) =>
-                  setPriceMarkers(event.target.value.split('\n'))
+                  updateTemplate({
+                    priceMarkers: event.target.value.split('\n')
+                  })
                 }
               />
               <FieldDescription id="radio-script-price-markers-description">
-                Um por linha, usados em ciclo a partir do primeiro em cada bloco
-                de produtos, como por apenas, somente, somente.
+                Um por linha, usados em ciclo a partir do primeiro em cada
+                rodada, como por apenas, somente, somente.
               </FieldDescription>
             </Field>
           </section>
@@ -564,7 +442,7 @@ export const RadioAdForm = ({
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div aria-live="polite" className="min-h-5">
-              {status && !sequenceError && (
+              {status && (
                 <p
                   key={status.id}
                   id={STATUS_ID}
@@ -600,9 +478,6 @@ export const RadioAdForm = ({
           script={preview}
           parts={previewParts}
           pronunciations={completePronunciations}
-          warnings={assignment ? getPageWarnings(assignment) : []}
-          productsBlocks={productsBlocks}
-          onMoveProduct={moveProduct}
           onProductSaved={(product) =>
             setOffer(
               (current) =>

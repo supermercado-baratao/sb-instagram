@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition
@@ -144,7 +145,9 @@ export const ProductForm = ({
     newPhoto: uploadPreview !== undefined || catalogPreview !== undefined
   })
 
-  useEffect(() => {
+  // A layout effect, since a state set in a passive one renders a task later, and an Esc pressed
+  // right after typing would close the dialog without asking
+  useLayoutEffect(() => {
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
 

@@ -19,6 +19,7 @@ import {
   getRadioScriptTemplateError,
   isRadioScriptTemplate,
   normalizeRadioScriptTemplate,
+  type RadioScriptClosingField,
   type RadioScriptTemplate
 } from '@/domain/radio-script'
 import { database } from '@/infra/database/client'
@@ -34,8 +35,8 @@ export type SaveRadioAdResult =
     }
   | ({ status: 'error' } & Partial<PronunciationError> & {
         message: string
-        radioScriptError?: boolean
-        radioScriptIndex?: number
+        closingIndex?: number
+        closingField?: RadioScriptClosingField
       })
 
 export const saveRadioAdAction = async (
@@ -66,8 +67,8 @@ export const saveRadioAdAction = async (
     return {
       status: 'error',
       message: radioScriptError.message,
-      radioScriptError: true,
-      radioScriptIndex: radioScriptError.index
+      closingIndex: radioScriptError.index,
+      closingField: radioScriptError.field
     }
   }
   const error = getPronunciationsError(pronunciations)

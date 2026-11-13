@@ -1,10 +1,8 @@
 import { cn } from 'cn'
-import { CircleAlert, Copy } from 'lucide-react'
+import { Copy } from 'lucide-react'
 import { useState } from 'react'
-import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
-import { Alert, AlertDescription } from '@/app/components/ui/shadcn/alert'
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
   Tabs,
@@ -20,7 +18,6 @@ import {
   type RadioScriptPart
 } from '@/domain/radio-script'
 
-import { MoveToBlockMenu, type ProductsBlockOption } from './move-to-block-menu'
 import { VoiceTextDialog } from './voice-text-dialog'
 
 type RadioScriptPreviewProps = {
@@ -28,16 +25,8 @@ type RadioScriptPreviewProps = {
   script: RadioScript | undefined
   parts: RadioScriptPart[]
   pronunciations: Pronunciation[]
-  warnings: string[]
-  productsBlocks: ProductsBlockOption[]
   onProductSaved: (product: Product) => void
-  onMoveProduct: (product: Product, blockId: number | undefined) => void
 }
-
-const SCRIPT_PANEL_ID = 'radio-script-preview-script'
-
-const getMoveButtonId = (productId: string, pageNumber: number) =>
-  `radio-script-move-${productId}-${pageNumber}`
 
 // The panel scrolls itself: Base UI already makes it a tab stop, named by its tab (WCAG 2.1.1)
 const PANEL_CLASS_NAME =
@@ -82,10 +71,7 @@ export const RadioScriptPreview = ({
   script,
   parts,
   pronunciations,
-  warnings,
-  productsBlocks,
-  onProductSaved,
-  onMoveProduct
+  onProductSaved
 }: RadioScriptPreviewProps) => {
   const [tab, setTab] = useState<PreviewTab>('script')
   const text = script
@@ -111,20 +97,6 @@ export const RadioScriptPreview = ({
           Alterações não salvas na Oferta não aparecem aqui.
         </p>
       </div>
-      {/* Not a live region: it changes on every key typed in the form, which would be announced
-        over and over; each block also shows its own pages */}
-      {warnings.length > 0 && (
-        <Alert role={undefined}>
-          <CircleAlert aria-hidden />
-          <AlertDescription>
-            <ul className="flex flex-col gap-1">
-              {warnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
       {script ? (
         <Tabs
           value={tab}
@@ -148,11 +120,7 @@ export const RadioScriptPreview = ({
               {COPY[tab].label}
             </Button>
           </div>
-          <TabsContent
-            id={SCRIPT_PANEL_ID}
-            value="script"
-            className={PANEL_CLASS_NAME}
-          >
+          <TabsContent value="script" className={PANEL_CLASS_NAME}>
             {parts.length === 0 ? (
               <p className={EMPTY_CLASS_NAME}>O roteiro está vazio.</p>
             ) : (
@@ -165,51 +133,20 @@ export const RadioScriptPreview = ({
                   ) : (
                     // Each product's line has its own way to change what it speaks (#111)
                     <ul key={partIndex} className="flex flex-col gap-1">
-                      {part.lines.map(({ item, line }) => {
-                        const moveId = getMoveButtonId(
-                          item.product.id,
-                          item.pageNumber
-                        )
-                        return (
-                          // A product is spoken once per page at most, so the key follows it when it
-                          // moves to another block
-                          <li
-                            key={`${item.product.id}-${item.pageNumber}`}
-                            className="flex items-start gap-1"
-                          >
-                            <span className="flex-1 py-1">{line}</span>
-                            <VoiceTextDialog
-                              product={item.product}
-                              pronunciations={pronunciations}
-                              onSaved={onProductSaved}
-                            />
-                            <MoveToBlockMenu
-                              id={moveId}
-                              description={item.product.description}
-                              blockId={part.blockId}
-                              moved={item.moved}
-                              blocks={productsBlocks}
-                              onMove={(blockId) => {
-                                // The line moves to another list and remounts there, with its menu
-                                flushSync(() =>
-                                  onMoveProduct(item.product, blockId)
-                                )
-                                // Back on a page no block takes, or as the only block's product,
-                                // the line has no menu any more, and the panel keeps the focus
-                                // close by
-                                const target =
-                                  document.querySelector<HTMLElement>(
-                                    `#${moveId}`
-                                  ) ??
-                                  document.querySelector<HTMLElement>(
-                                    `#${SCRIPT_PANEL_ID}`
-                                  )
-                                target?.focus()
-                              }}
-                            />
-                          </li>
-                        )
-                      })}
+                      {part.lines.map(({ item, line }) => (
+                        // A product is spoken once per page at most
+                        <li
+                          key={`${item.product.id}-${item.pageNumber}`}
+                          className="flex items-start gap-1"
+                        >
+                          <span className="flex-1 py-1">{line}</span>
+                          <VoiceTextDialog
+                            product={item.product}
+                            pronunciations={pronunciations}
+                            onSaved={onProductSaved}
+                          />
+                        </li>
+                      ))}
                     </ul>
                   )
                 )}

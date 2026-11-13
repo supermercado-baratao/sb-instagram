@@ -10,7 +10,6 @@ import {
   type OfferContent
 } from '@/domain/offer'
 import { isValidCode, normalizeCode, type Product } from '@/domain/product'
-import { getRadioScriptWarning } from '@/domain/radio-script'
 import { database } from '@/infra/database/client'
 import { createGeneration } from '@/infra/generation'
 import {
@@ -43,8 +42,7 @@ export type RestoreOfferResult =
   | { status: 'error'; message: string }
 
 export type GenerateOfferResult =
-  | { status: 'generated'; number: number; warning?: string }
-  | { status: 'error'; message: string }
+  { status: 'generated'; number: number } | { status: 'error'; message: string }
 
 export const lookupSlotProduct = async (
   rawCode: string
@@ -131,13 +129,7 @@ export const generateOfferAction = async (): Promise<GenerateOfferResult> => {
     if (!generation) {
       return { status: 'error', message: 'Salve a oferta antes de gerar.' }
     }
-    return {
-      status: 'generated',
-      number: generation.number,
-      warning: generation.radioScript
-        ? getRadioScriptWarning(generation.radioScript)
-        : undefined
-    }
+    return { status: 'generated', number: generation.number }
   } catch {
     return {
       status: 'error',

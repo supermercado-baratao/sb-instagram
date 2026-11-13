@@ -12,7 +12,12 @@ import {
 
 import type { GenerationPage } from '@/domain/generation-pages'
 import type { OfferSnapshot } from '@/domain/offer'
-import type { RadioScript, RadioScriptBlock } from '@/domain/radio-script'
+import type {
+  LegacyRadioScriptBlock,
+  RadioScript,
+  RadioScriptClosing,
+  RadioScriptClosingSequence
+} from '@/domain/radio-script'
 
 export const products = sqliteTable(
   'products',
@@ -193,33 +198,19 @@ export const pronunciations = sqliteTable(
   (table) => [primaryKey({ columns: [table.term] })]
 )
 
-// One row per instance, like the brand
+// One row per instance, like the brand. `blocks` is the fixed sequence saved before #123, kept until
+// the store saves the page again: a row with `closings` null is converted on read, which also
+// covers a backup restored from before it
 export const radioScriptTemplate = sqliteTable(
   'radio_script_template',
   {
     id: integer().primaryKey(),
-    blocks: text({ mode: 'json' }).$type<RadioScriptBlock[]>().notNull(),
+    blocks: text({ mode: 'json' }).$type<LegacyRadioScriptBlock[]>(),
+    opening: text(),
+    closings: text({ mode: 'json' }).$type<RadioScriptClosing[]>(),
+    sequence: text({ mode: 'json' }).$type<RadioScriptClosingSequence>(),
     priceMarkers: text({ mode: 'json' }).$type<string[]>().notNull(),
-    speakRepeatedOnce: integer({ mode: 'boolean' }).notNull().default(true),
-    splitEvenly: integer({ mode: 'boolean' }).notNull().default(false)
+    speakRepeatedOnce: integer({ mode: 'boolean' }).notNull().default(true)
   },
   (table) => [check('radio_script_template_single_row', sql`${table.id} = 1`)]
-)
-
-// The products block a product was moved to, kept across offers (#111). `blockId` is the id of a
-// products block inside `radio_script_template.blocks` (JSON), so it has no foreign key; a move to a
-// block that is gone is ignored and dropped on the next save
-export const radioScriptProductBlocks = sqliteTable(
-  'radio_script_product_blocks',
-  {
-    productId: text().notNull(),
-    blockId: integer().notNull()
-  },
-  (table) => [
-    primaryKey({ columns: [table.productId] }),
-    foreignKey({
-      columns: [table.productId],
-      foreignColumns: [products.id]
-    }).onDelete('cascade')
-  ]
 )

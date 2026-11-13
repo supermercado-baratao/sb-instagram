@@ -1,67 +1,70 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 import { openEmptyOffer } from './offer-helpers'
+
+// A reused e2e server keeps the dictionary and the closings of a previous run. A closing in the
+// order can't be removed, so the order goes first, which enables its button
+const resetRadioAd = async (page: Page) => {
+  const removeButtons = page.getByRole('button', {
+    name: /^Remover /,
+    disabled: false
+  })
+  while ((await removeButtons.count()) > 0) await removeButtons.first().click()
+  await page.getByLabel('Abertura').fill('')
+  await expect(page.getByRole('button', { name: /^Remover / })).toHaveCount(0)
+}
 
 test('saves the radio ad settings and suggests the voice text through the dictionary', async ({
   page
 }) => {
   test.slow()
   await page.goto('/comercial')
-  // A reused e2e server keeps the dictionary and the blocks of a previous run
-  const removeButtons = page.getByRole('button', { name: /^Remover / })
-  while ((await removeButtons.count()) > 0) await removeButtons.first().click()
+  await resetRadioAd(page)
   await page.getByRole('button', { name: 'Adicionar termo' }).click()
   await page.getByLabel('Termo', { exact: true }).fill('cream cracker')
   await page.getByLabel('Como falar').fill('kreme cráquer')
-  await page.getByRole('button', { name: 'Adicionar texto' }).click()
-  await page
-    .getByRole('textbox', { name: 'Bloco 1, texto' })
-    .fill('[animado] Atenção!')
-  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
-  await expect(
-    page.getByText('Adicione ao menos um bloco de produtos.')
-  ).toBeVisible()
-  await page.getByRole('button', { name: 'Adicionar produtos' }).click()
-  await page
-    .getByRole('button', { name: 'Mover Bloco 2, produtos para antes' })
-    .click()
-  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
-  await expect(page.getByText('Configurações salvas.')).toBeVisible()
-  await page.reload()
-  await expect(
-    page.getByRole('spinbutton', { name: 'Bloco 1, produtos' })
-  ).toHaveValue('1')
-  await expect(
-    page.getByRole('textbox', { name: 'Bloco 2, texto' })
-  ).toHaveValue('[animado] Atenção!')
+  await page.getByLabel('Abertura').fill('[animado] Atenção!')
 
-  // A duplicated text block is the same block in two places, until it is separated
-  await page.getByRole('button', { name: 'Duplicar Bloco 2, texto' }).click()
-  const copy = page.getByRole('textbox', {
-    name: 'Bloco 3, texto, igual ao bloco 2'
-  })
-  await expect(copy).toBeFocused()
-  await copy.fill('Até já!')
-  const original = page.getByRole('textbox', {
-    name: 'Bloco 2, texto, igual ao bloco 3'
-  })
-  await expect(original).toHaveValue('Até já!')
+  await page
+    .getByRole('button', { name: 'Adicionar fechamento', exact: true })
+    .click()
+  const closingText = page.getByRole('textbox', { name: 'Texto' })
+  await expect(closingText).toBeFocused()
+  await closingText.fill('Até já!')
+  const closingName = page.getByRole('textbox', { name: 'Nome' })
+  await expect(closingName).toHaveValue('Fechamento 1')
+  await closingName.fill(' ')
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+  await expect(page.getByText('Dê um nome ao fechamento.')).toBeVisible()
+  await expect(closingName).toBeFocused()
+  await closingName.fill('Final')
+
+  await page
+    .getByRole('button', { name: 'Adicionar fechamento ao fim' })
+    .click()
+  await expect(
+    page.getByRole('combobox', { name: 'Fechamento 1º do fim' })
+  ).toBeFocused()
+  await expect(
+    page.getByRole('row', { name: /^1( \(oferta salva\))? Final$/ })
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Remover Final', exact: true })
+  ).toHaveAccessibleDescription(
+    'Em uso na ordem dos fechamentos. Tire-o de lá para remover.'
+  )
+
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Configurações salvas.')).toBeVisible()
   await page.reload()
-  await expect(copy).toHaveValue('Até já!')
-  await page
-    .getByRole('button', { name: 'Separar Bloco 3, texto, igual ao bloco 2' })
-    .click()
-  const separated = page.getByRole('textbox', {
-    name: 'Bloco 3, texto',
-    exact: true
-  })
-  await expect(separated).toBeFocused()
-  await separated.fill('Tchau!')
+  await expect(page.getByLabel('Abertura')).toHaveValue('[animado] Atenção!')
+  await expect(page.getByRole('textbox', { name: 'Nome' })).toHaveValue('Final')
+  await expect(page.getByRole('textbox', { name: 'Texto' })).toHaveValue(
+    'Até já!'
+  )
   await expect(
-    page.getByRole('textbox', { name: 'Bloco 2, texto', exact: true })
-  ).toHaveValue('Até já!')
+    page.getByRole('combobox', { name: 'Fechamento 1º do fim' })
+  ).toContainText('Final')
 
   const dialog = page.getByRole('dialog', { name: 'Cadastrar produto' })
   await page.goto('/produtos')
@@ -78,7 +81,7 @@ test('saves the radio ad settings and suggests the voice text through the dictio
   ).toHaveValue('biscoito kreme cráquer vitarella, quatrocentos gramas')
 })
 
-test('previews the pages of each block and the radio ad before saving', async ({
+test('previews the radio ad of the saved offer before saving', async ({
   page
 }) => {
   test.slow()
@@ -100,18 +103,12 @@ test('previews the pages of each block and the radio ad before saving', async ({
   await expect(page.getByText('Oferta salva.')).toBeVisible()
 
   await page.goto('/comercial')
-  // A reused e2e server keeps the dictionary and the blocks of a previous run
-  const removeButtons = page.getByRole('button', { name: /^Remover / })
-  while ((await removeButtons.count()) > 0) await removeButtons.first().click()
+  await resetRadioAd(page)
   await page.getByLabel('Antes de cada preço').fill('por apenas')
-  await page.getByRole('button', { name: 'Adicionar produtos' }).click()
+  await expect(
+    page.getByRole('row', { name: /^1 \(oferta salva\) sem fechamento$/ })
+  ).toBeVisible()
 
-  const pageCount = page.getByRole('spinbutton', {
-    name: 'Bloco 1, produtos, arte 1'
-  })
-  await expect(pageCount).toHaveAccessibleDescription(
-    /Recebe a arte 1: Arroz agulhinha\./
-  )
   const script = page.getByRole('tabpanel', { name: 'Roteiro' })
   await expect(script).toHaveText(
     '- arroz agulhinha, por apenas: três e cinquenta'
@@ -123,11 +120,6 @@ test('previews the pages of each block and the radio ad before saving', async ({
   await expect(script).toHaveText(
     '- arroz agulhínha, por apenas: três e cinquenta'
   )
-
-  await pageCount.fill('2')
-  await expect(
-    page.getByText('Bloco 1: Falta 1 arte com produtos na oferta salva.')
-  ).toBeVisible()
 
   await page.getByRole('tab', { name: 'Lista de produtos' }).click()
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -182,7 +174,7 @@ test('previews the pages of each block and the radio ad before saving', async ({
   ).toHaveValue('Arroz tipo um')
 })
 
-test('speaks repeated products once, splits them evenly and moves one to another block', async ({
+test('speaks repeated products once and closes each round by its position', async ({
   page
 }) => {
   test.slow()
@@ -222,53 +214,49 @@ test('speaks repeated products once, splits them evenly and moves one to another
   await expect(page.getByText('Oferta salva.')).toBeVisible()
 
   await page.goto('/comercial')
-  const removeButtons = page.getByRole('button', { name: /^Remover / })
-  while ((await removeButtons.count()) > 0) await removeButtons.first().click()
+  await resetRadioAd(page)
   await page.getByLabel('Antes de cada preço').fill('')
-  await page.getByRole('radio', { name: 'Por artes' }).click()
   const repeated = page.getByRole('checkbox', {
     name: 'Falar uma vez só os produtos repetidos'
   })
   await expect(repeated).toBeChecked()
-  await page.getByRole('button', { name: 'Adicionar produtos' }).click()
-  await page.getByRole('button', { name: 'Adicionar produtos' }).click()
 
+  const addClosing = page.getByRole('button', {
+    name: 'Adicionar fechamento',
+    exact: true
+  })
+  await addClosing.click()
+  await page.getByRole('textbox', { name: 'Nome' }).fill('Curto')
+  await page.getByRole('textbox', { name: 'Texto' }).fill('Tchau.')
+  await addClosing.click()
+  await page.getByRole('textbox', { name: 'Nome' }).nth(1).fill('Final')
+  await page.getByRole('textbox', { name: 'Texto' }).nth(1).fill('Fim.')
+  await page
+    .getByRole('button', { name: 'Adicionar fechamento ao meio' })
+    .click()
+  await page
+    .getByRole('button', { name: 'Adicionar fechamento ao fim' })
+    .click()
+  await page.getByRole('combobox', { name: 'Fechamento 1º do fim' }).click()
+  await page.getByRole('option', { name: 'Final' }).click()
   await expect(
-    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, arte 2' })
-  ).toHaveAccessibleDescription(/Recebe a arte 2: Cebola\./)
-  await repeated.click()
-  await expect(
-    page.getByRole('spinbutton', { name: 'Bloco 2, produtos, arte 2' })
-  ).toHaveAccessibleDescription(/Recebe a arte 2: Batata, Cebola\./)
-  await repeated.click()
+    page.getByRole('row', { name: /^3 Curto, Curto, Final$/ })
+  ).toBeVisible()
 
-  await page.getByRole('radio', { name: 'Por igual' }).click()
   const script = page.getByRole('tabpanel', { name: 'Roteiro' })
   await expect(script).toHaveText(
-    '- alho: um real- batata: dois reais- cebola: três reais'
+    '- alho: um real- batata: dois reaisTchau.- cebola: três reaisFim.'
   )
-  await expect(page.getByText('Bloco 1, produtos, 2 produtos')).toBeVisible()
-
-  await page
-    .getByRole('button', { name: 'Mover Alho para outro bloco' })
-    .click()
-  await page.getByRole('menuitem', { name: 'Mover para Bloco 2' }).click()
-  await expect(
-    page.getByRole('button', { name: 'Mover Alho para outro bloco' })
-  ).toBeFocused()
+  await repeated.click()
   await expect(script).toHaveText(
-    '- batata: dois reais- cebola: três reais- alho: um real'
+    '- alho: um real- batata: dois reaisTchau.- batata: dois reais- cebola: três reaisFim.'
   )
+  await repeated.click()
+
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Configurações salvas.')).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Bloco 2, produtos, 1 produto')).toBeVisible()
   await expect(script).toHaveText(
-    '- batata: dois reais- cebola: três reais- alho: um real'
+    '- alho: um real- batata: dois reaisTchau.- cebola: três reaisFim.'
   )
-
-  // The next tests expect the blocks to take pages again
-  await page.getByRole('radio', { name: 'Por artes' }).click()
-  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
-  await expect(page.getByText('Configurações salvas.')).toBeVisible()
 })
