@@ -25,7 +25,10 @@ import {
 } from '@/app/components/ui/shadcn/field'
 import { Input } from '@/app/components/ui/shadcn/input'
 import { Spinner } from '@/app/components/ui/shadcn/spinner'
-import type { BackupChange, PrepareBackupResponse } from '@/domain/backup'
+import type {
+  BackupChange,
+  PrepareBackupResponse
+} from '@/models/backup/backup'
 
 import { applyBackupAction, discardBackupAction } from './actions'
 

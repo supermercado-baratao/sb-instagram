@@ -2,39 +2,32 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { applyBackup, BackupError, discardBackup } from '@/infra/backup'
+import { type ActionError, runAction } from '@/entry/action'
 import { database } from '@/infra/database/client'
-import { productModel } from '@/models/product/model'
+import { backupModel } from '@/models/backup/model'
 
-export type ApplyBackupResult =
-  { status: 'restored' } | { status: 'error'; message: string }
+export type ApplyBackupResult = ActionError | { status: 'restored' }
 
 export const applyBackupAction = async (
   token: string
-): Promise<ApplyBackupResult> => {
-  try {
-    await applyBackup(database, token)
-    // A backup from before #55 keeps a group's photo under its old main code, like an instance that
-    // starts after updating
-    await productModel.renameOutdatedPhotos(database)
-  } catch (error) {
-    return {
-      status: 'error',
-      message:
-        error instanceof BackupError
-          ? error.message
-          : 'Não foi possível restaurar o backup. Os dados atuais não mudaram.'
+): Promise<ApplyBackupResult> =>
+  runAction(
+    {
+      fallback:
+        'Não foi possível restaurar o backup. Os dados atuais não mudaram.'
+    },
+    async () => {
+      await backupModel.apply(database, token)
+      // Every page shows restored data, including the header's brand
+      revalidatePath('/', 'layout')
+      return { status: 'restored' as const }
     }
-  }
-  // Every page shows restored data, including the header's brand
-  revalidatePath('/', 'layout')
-  return { status: 'restored' }
-}
+  )
 
 export const discardBackupAction = async (token: string) => {
   try {
-    await discardBackup(token)
+    await backupModel.discard(token)
   } catch {
-    // Left for removeUnfinishedBackups on the next start
+    // Left for removeUnfinished on the next start
   }
 }

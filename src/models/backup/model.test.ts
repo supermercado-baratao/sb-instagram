@@ -17,20 +17,13 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { unzipSync, zipSync } from 'fflate'
 import { describe, expect, onTestFinished, test } from 'vitest'
 
-import { createBackupManifest } from '@/domain/backup'
 import { migrationsFolder } from '@/infra/database/file'
 import { relations } from '@/infra/database/relations'
 import { brand, generations, products } from '@/infra/database/schema'
+import { AppError } from '@/infra/errors'
 
-import {
-  applyBackup,
-  BackupError,
-  createBackupArchive,
-  discardBackup,
-  prepareBackup,
-  removeUnfinishedBackups,
-  summarizeDatabase
-} from './backup'
+import { createBackupManifest } from './backup'
+import { backupModel } from './model'
 
 const temporaryFolder = async (prefix: string) => {
   const folder = await mkdtemp(path.join(tmpdir(), prefix))
@@ -121,7 +114,7 @@ describe('backup', () => {
     await mkdir(path.join(source.dataDirectory, 'generations', '.tmp-x'))
 
     const archive = await collect(
-      createBackupArchive(source.database, {
+      backupModel.createArchive(source.database, {
         dataDirectory: source.dataDirectory
       })
     )
@@ -144,17 +137,19 @@ describe('backup', () => {
     await writeFile(path.join(target.dataDirectory, 'photos', 'old.png'), 'old')
     await writeFile(path.join(target.dataDirectory, 'notas.txt'), 'kept')
 
-    const prepared = await prepareBackup(inChunks(archive), {
+    const prepared = await backupModel.prepare(inChunks(archive), {
       dataDirectory: target.dataDirectory
     })
-    expect(prepared.summary).toEqual(summarizeDatabase(source.database))
-    expect(summarizeDatabase(target.database).brandName).toBe('Outro Mercado')
+    expect(prepared.summary).toEqual(backupModel.summarize(source.database))
+    expect(backupModel.summarize(target.database).brandName).toBe(
+      'Outro Mercado'
+    )
 
-    await applyBackup(target.database, prepared.token, {
+    await backupModel.apply(target.database, prepared.token, {
       dataDirectory: target.dataDirectory
     })
 
-    expect(summarizeDatabase(target.database)).toEqual(prepared.summary)
+    expect(backupModel.summarize(target.database)).toEqual(prepared.summary)
     const [generation] = target.database.select().from(generations).all()
     expect(generation.id).toBe(3)
     expect(
@@ -184,13 +179,13 @@ describe('backup', () => {
   test('refuses a file that is not a backup', async () => {
     const { dataDirectory } = await setup('Mercado')
     const notZip = inChunks(encode('not a zip'))
-    await expect(prepareBackup(notZip, { dataDirectory })).rejects.toThrow(
-      BackupError
-    )
+    await expect(
+      backupModel.prepare(notZip, { dataDirectory })
+    ).rejects.toThrow(AppError)
     const notBackup = inChunks(zipSync({ 'notes.txt': encodeManifest() }))
-    await expect(prepareBackup(notBackup, { dataDirectory })).rejects.toThrow(
-      BackupError
-    )
+    await expect(
+      backupModel.prepare(notBackup, { dataDirectory })
+    ).rejects.toThrow(AppError)
     expect(await readdir(dataDirectory)).toEqual([])
   })
 
@@ -203,8 +198,8 @@ describe('backup', () => {
       'files/photos/../../escaped.txt': new TextEncoder().encode('x')
     })
     await expect(
-      prepareBackup(inChunks(archive), { dataDirectory })
-    ).rejects.toThrow(BackupError)
+      backupModel.prepare(inChunks(archive), { dataDirectory })
+    ).rejects.toThrow(AppError)
     expect(await readdir(dataDirectory)).toEqual([])
     expect(await readdir(path.dirname(dataDirectory))).not.toContain(
       'escaped.txt'
@@ -225,7 +220,7 @@ describe('backup', () => {
       )
     })
     await expect(
-      prepareBackup(inChunks(archive), { dataDirectory })
+      backupModel.prepare(inChunks(archive), { dataDirectory })
     ).rejects.toThrow('versão mais nova')
   })
 
@@ -247,30 +242,36 @@ describe('backup', () => {
       'database.sqlite': await createDatabaseFile(folder, () => {}, older)
     })
 
-    const prepared = await prepareBackup(inChunks(archive), { dataDirectory })
-    await applyBackup(database, prepared.token, { dataDirectory })
-    expect(summarizeDatabase(database).brandName).toBeNull()
+    const prepared = await backupModel.prepare(inChunks(archive), {
+      dataDirectory
+    })
+    await backupModel.apply(database, prepared.token, { dataDirectory })
+    expect(backupModel.summarize(database).brandName).toBeNull()
   })
 
   test('discards a backup the store did not confirm', async () => {
     const source = await setup('Mercado')
     const archive = await collect(
-      createBackupArchive(source.database, {
+      backupModel.createArchive(source.database, {
         dataDirectory: source.dataDirectory
       })
     )
     const target = await setup('Outro Mercado')
-    const prepared = await prepareBackup(inChunks(archive), {
+    const prepared = await backupModel.prepare(inChunks(archive), {
       dataDirectory: target.dataDirectory
     })
-    await discardBackup(prepared.token, { dataDirectory: target.dataDirectory })
+    await backupModel.discard(prepared.token, {
+      dataDirectory: target.dataDirectory
+    })
     expect(await readdir(target.dataDirectory)).toEqual([])
     await expect(
-      applyBackup(target.database, prepared.token, {
+      backupModel.apply(target.database, prepared.token, {
         dataDirectory: target.dataDirectory
       })
-    ).rejects.toThrow(BackupError)
-    expect(summarizeDatabase(target.database).brandName).toBe('Outro Mercado')
+    ).rejects.toThrow(AppError)
+    expect(backupModel.summarize(target.database).brandName).toBe(
+      'Outro Mercado'
+    )
   })
 
   test('removes the folders a restart interrupted', async () => {
@@ -278,7 +279,7 @@ describe('backup', () => {
     await mkdir(path.join(dataDirectory, '.backup-1'))
     await mkdir(path.join(dataDirectory, '.restore-1'))
     await mkdir(path.join(dataDirectory, 'photos'))
-    await removeUnfinishedBackups(dataDirectory)
+    await backupModel.removeUnfinished(dataDirectory)
     expect(await readdir(dataDirectory)).toEqual(['photos'])
   })
 })

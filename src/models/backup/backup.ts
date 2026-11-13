@@ -1,6 +1,6 @@
 import { LOGO_FILE_NAME } from '@/constants/brand'
 
-const BACKUP_FORMAT = 'sb-instagram-backup'
+export const BACKUP_FORMAT = 'sb-instagram-backup'
 
 export const BACKUP_VERSION = 1
 
@@ -45,18 +45,6 @@ export type PrepareBackupResponse =
     }
   | { status: 'error'; message: string }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-export const isBackupManifest = (value: unknown): value is BackupManifest =>
-  isRecord(value) &&
-  value.format === BACKUP_FORMAT &&
-  typeof value.version === 'number' &&
-  Number.isSafeInteger(value.version) &&
-  value.version >= 1 &&
-  typeof value.createdAt === 'string' &&
-  !Number.isNaN(Date.parse(value.createdAt))
-
 export const createBackupManifest = (createdAt: Date): BackupManifest => ({
   format: BACKUP_FORMAT,
   version: BACKUP_VERSION,
@@ -82,9 +70,6 @@ export const getBackupFilePath = (entryName: string) => {
   )
   return valid ? segments : undefined
 }
-
-export const isBackupDateParameter = (value: unknown): value is string =>
-  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
 
 export const getBackupDownloadName = (date: string) =>
   `sb-instagram-backup-${date}.zip`

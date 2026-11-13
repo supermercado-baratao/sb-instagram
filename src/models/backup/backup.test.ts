@@ -4,9 +4,9 @@ import {
   type BackupSummary,
   createBackupManifest,
   getBackupChanges,
-  getBackupFilePath,
-  isBackupManifest
+  getBackupFilePath
 } from './backup'
+import { backupManifestSchema } from './schema'
 
 describe('getBackupFilePath', () => {
   test.each([
@@ -32,7 +32,10 @@ describe('getBackupFilePath', () => {
   })
 })
 
-test('isBackupManifest checks the format and the date', () => {
+const isBackupManifest = (value: unknown) =>
+  backupManifestSchema.safeParse(value).success
+
+test('backupManifestSchema checks the format and the date', () => {
   const manifest = createBackupManifest(new Date())
   expect(isBackupManifest(manifest)).toBe(true)
   expect(

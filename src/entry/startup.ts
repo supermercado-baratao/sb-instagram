@@ -1,6 +1,6 @@
-import { removeUnfinishedBackups } from '@/infra/backup'
 import { database } from '@/infra/database/client'
 import { migrateDatabase } from '@/infra/database/migrate'
+import { backupModel } from '@/models/backup/model'
 import { generationModel } from '@/models/generation/model'
 import { productModel } from '@/models/product/model'
 
@@ -9,5 +9,5 @@ export const startInstance = async () => {
   migrateDatabase()
   await productModel.renameOutdatedPhotos(database)
   await generationModel.removeUnfinished()
-  await removeUnfinishedBackups()
+  await backupModel.removeUnfinished()
 }

@@ -1,6 +1,7 @@
-import { getBackupChanges, type PrepareBackupResponse } from '@/domain/backup'
-import { BackupError, prepareBackup, summarizeDatabase } from '@/infra/backup'
 import { database } from '@/infra/database/client'
+import { AppError } from '@/infra/errors'
+import type { PrepareBackupResponse } from '@/models/backup/backup'
+import { backupModel } from '@/models/backup/model'
 
 const respond = (body: PrepareBackupResponse, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -13,17 +14,13 @@ export const POST = async (request: Request) => {
     return respond({ status: 'error', message: 'Escolha um arquivo.' }, 400)
   }
   try {
-    const { token, manifest, summary } = await prepareBackup(
+    const preview = await backupModel.preview(
+      database,
       request.body as unknown as AsyncIterable<Uint8Array>
     )
-    return respond({
-      status: 'ready',
-      token,
-      createdAt: manifest.createdAt,
-      changes: getBackupChanges(summarizeDatabase(database), summary)
-    })
+    return respond({ status: 'ready', ...preview })
   } catch (error) {
-    if (error instanceof BackupError) {
+    if (error instanceof AppError) {
       return respond({ status: 'error', message: error.message }, 400)
     }
     return respond(
