@@ -61,7 +61,7 @@ docker compose up -d
 
 Na primeira vez, o Docker baixa a imagem do app (cerca de 1,3 GB), o que pode levar alguns minutos. Depois, o app fica rodando em segundo plano e volta sozinho quando o computador é reiniciado.
 
-Abra [http://localhost:3000](http://localhost:3000) no navegador desse computador. No primeiro acesso, o app pede a marca do mercado (nome, logo, slogan, @ do Instagram e as cores dos modelos). O app começa com um único modelo, em cores genéricas: troque pelas cores da sua marca, a principal escura (fundo do pôster) e a de destaque viva (rodapé e preço). Dá para digitar o código da cor (ex.: `#1c398e`) ao lado de cada seletor. Depois de salvar, as ofertas e os produtos ficam liberados.
+Abra [http://localhost:3000](http://localhost:3000) no navegador desse computador. No primeiro acesso, o app pede a marca do mercado (nome, logo, slogan, @ do Instagram e as cores dos modelos). O app começa com um único modelo, em cores genéricas: troque pelas cores da sua marca, a principal escura (fundo do pôster) e a de destaque viva (rodapé e preço). Dá para digitar o código da cor (ex.: `#1c398e`) ao lado de cada seletor. Depois de salvar, as ofertas e os produtos ficam liberados. Se você já tem um backup do app (de outro computador ou o [backup de exemplo](./backup.md#experimentando-com-o-backup-de-exemplo)), não precisa configurar a marca: restaure-o em **Já tem um backup?**, abaixo do formulário, a partir da versão `1.1.1` (veja [Num computador novo](./backup.md#num-computador-novo)).
 
 Para parar o app, use `docker compose stop`. Para iniciá-lo de novo, `docker compose up -d`.
 
