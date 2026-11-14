@@ -56,6 +56,16 @@ Abra [http://localhost:3000](http://localhost:3000) no navegador. Fora do Docker
 
 No primeiro acesso, o app pede a marca do mercado (nome, logo, slogan, @ do Instagram e as cores dos modelos) antes de liberar as ofertas e os produtos. Para mudar depois, use **Configurações** → **Marca** (`/configuracoes`).
 
+### Dados de exemplo
+
+Para ver o app em uso sem cadastrar tudo do zero, restaure o backup de exemplo, com a marca, os produtos com fotos, a oferta, o comercial e uma oferta no histórico do Supermercado Baratão:
+
+1. Baixe o [`backup-exemplo.zip`](https://github.com/supermercado-baratao/sb-instagram/releases/download/v1.1.0/backup-exemplo.zip) (cerca de 64 MB), anexado à release `v1.1.0`.
+2. Configure qualquer marca no primeiro acesso, só para liberar o app.
+3. Em **Configurações** → **Backup** (`/configuracoes/backup`), restaure o arquivo. A restauração substitui todos os dados da instância.
+
+O exemplo precisa da versão `1.1.0` ou mais nova do app: uma versão mais antiga recusa o backup.
+
 ### Usando uma imagem sem EAN
 
 Os produtos sem código de barras (carnes, hortifrúti, padaria) são identificados pelo código interno do seu mercado, o mesmo usado no caixa ou na balança. O catálogo não conhece esse código, então a foto é associada a ele no seu mercado:
@@ -202,6 +212,7 @@ Abaixo estão os destaques das convenções.
    ```
 
 3. Acompanhe o workflow `release` no GitHub Actions. No fim, o release da versão aparece em [Releases](https://github.com/supermercado-baratao/sb-instagram/releases), sem passo manual. A versão segue o [Semantic Versioning](https://semver.org/lang/pt-BR/): `X` para mudanças incompatíveis, `Y` para funcionalidades novas e `Z` para correções.
+4. Quando o backup de exemplo mudar, anexe o novo `backup-exemplo.zip` à release (`gh release upload vX.Y.Z backup-exemplo.zip`) e atualize o link em [Dados de exemplo](#dados-de-exemplo).
 
 ### Configuração do assistente de IA
 
