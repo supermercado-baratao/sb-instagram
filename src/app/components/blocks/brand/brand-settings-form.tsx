@@ -14,6 +14,7 @@ import {
 import { flushSync } from 'react-dom'
 import { toast } from 'sonner'
 
+import { RESTORE_BACKUP_SECTION_ID } from '@/app/components/blocks/backup/restore-backup-form'
 import { Poster } from '@/app/components/blocks/poster'
 import { Button } from '@/app/components/ui/shadcn/button'
 import {
@@ -223,9 +224,21 @@ export const BrandSettingsForm = ({
           {firstSetup ? 'Boas-vindas! Configure a sua marca' : 'Marca'}
         </h1>
         <p className="text-muted-foreground">
-          {firstSetup
-            ? 'Antes de montar as ofertas, conte como o mercado aparece nos pôsteres. Dá para mudar tudo depois.'
-            : 'Como o mercado aparece em todos os pôsteres.'}
+          {firstSetup ? (
+            <>
+              Antes de montar as ofertas, conte como o mercado aparece nos
+              pôsteres. Dá para mudar tudo depois. Já tem um backup?{' '}
+              <a
+                href={`#${RESTORE_BACKUP_SECTION_ID}`}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Restaure o backup
+              </a>{' '}
+              em vez de configurar a marca.
+            </>
+          ) : (
+            'Como o mercado aparece em todos os pôsteres.'
+          )}
         </p>
       </header>
 
