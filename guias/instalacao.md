@@ -99,5 +99,6 @@ Depois, rode `docker compose up -d` de novo e acesse o app pela nova porta (`htt
 
 ## Próximos passos
 
+- [Como usar o app](./uso.md): da primeira configuração à oferta gerada.
 - [Atualização](./atualizacao.md): como instalar uma versão nova.
 - [Backup e restauração](./backup.md): como guardar uma cópia dos dados do mercado.
