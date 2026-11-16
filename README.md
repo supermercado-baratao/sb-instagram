@@ -21,6 +21,7 @@ Ainda não fazem parte da primeira versão: login, leitura do código pela câme
 Os guias passo a passo, para quem não é desenvolvedor, ficam na pasta [`guias/`](./guias/):
 
 - [Instalação](./guias/instalacao.md): instalar o Docker, subir o app e abri-lo nas outras máquinas da rede.
+- [Como usar o app](./guias/uso.md): o trabalho da semana, dos produtos à oferta gerada e ao comercial, com capturas de tela.
 - [Atualização](./guias/atualizacao.md): instalar uma versão nova sem perder os dados.
 - [Backup e restauração](./guias/backup.md): guardar e recuperar uma cópia dos dados do mercado.
 
@@ -101,6 +102,7 @@ Abaixo estão os destaques das convenções.
 ### Idioma
 
 - **Português:** este README, o `CONTRIBUTING.md`, os guias para os mercados em `guias/`, as issues (título e corpo), o template de issue e todos os textos exibidos no app.
+- O [guia de uso](./guias/uso.md) cita os botões e campos do app e mostra capturas de tela e GIFs (`guias/imagens/uso/`): uma mudança numa tela ou num texto que ele mostra atualiza o guia e a imagem.
 - **Inglês:** código (nomes e comentários), mensagens de commit, nomes de branch, pull requests (título e corpo), `AGENTS.md`, `docs/` e o workflow de IA em `.claude/`.
 
 ### Ferramentas
